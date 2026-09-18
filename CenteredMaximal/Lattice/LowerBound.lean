@@ -75,57 +75,46 @@ private theorem mem_union_of_abs {a b x : ℝ} (ha : a < |x|) (hb : |x| < b) :
   · rw [abs_of_neg hx] at ha hb
     exact Or.inr ⟨by linarith, by linarith⟩
 
-theorem volume_slots_le :
-    volume slots ≤ (ENNReal.ofReal slotW + ENNReal.ofReal slotW) *
-      (ENNReal.ofReal slotH + ENNReal.ofReal slotH) := by
-  set I := Ioo (root / 2) (2 * hgap - sideLHL2 / 2) ∪ Ioo (-(2 * hgap - sideLHL2 / 2)) (-(root / 2))
-  set J := Ioo (sideH1 / 2) (vgap - sideLH2 / 2) ∪ Ioo (-(vgap - sideLH2 / 2)) (-(sideH1 / 2))
-  have hsub : slots ⊆ univ.pi ![I, J] := by
-    rintro z ⟨h₁, h₂, h₃, h₄⟩
-    simp only [Set.mem_univ_pi, Fin.forall_fin_two, Matrix.cons_val_zero, Matrix.cons_val_one]
-    exact ⟨mem_union_of_abs h₁ h₂, mem_union_of_abs h₃ h₄⟩
-  have hI : volume I ≤ ENNReal.ofReal slotW + ENNReal.ofReal slotW := by
-    refine (measure_union_le _ _).trans (le_of_eq ?_)
-    rw [Real.volume_Ioo, Real.volume_Ioo, slotW]
-    congr 2
-    all_goals ring
-  have hJ : volume J ≤ ENNReal.ofReal slotH + ENNReal.ofReal slotH := by
-    refine (measure_union_le _ _).trans (le_of_eq ?_)
-    rw [Real.volume_Ioo, Real.volume_Ioo, slotH]
-    congr 2
-    all_goals ring
-  calc volume slots ≤ volume (univ.pi ![I, J]) := measure_mono hsub
-    _ = volume I * volume J := by
-        rw [volume_pi_pi, Fin.prod_univ_two]
-        rfl
-    _ ≤ _ := by gcongr
+private theorem volume_preimage_abs_Ioo_le {a b : ℝ} : volume (abs ⁻¹' Ioo a b) ≤
+    ENNReal.ofReal (b - a) + ENNReal.ofReal (b - a) :=
+  calc volume (abs ⁻¹' Ioo a b) ≤ volume (Ioo a b ∪ Ioo (-b) (-a)) :=
+        measure_mono fun _ ⟨ha, hb⟩ ↦ mem_union_of_abs ha hb
+    _ ≤ _ := (measure_union_le _ _).trans_eq <| by simp [neg_add_eq_sub]
 
+/-- The four open slots, each a `slotW × slotH` rectangle, have total area at most
+`4 slotW slotH`, written in `ℝ≥0∞` as `(slotW + slotW) * (slotH + slotH)`. -/
+theorem volume_slots_le : volume slots ≤ (ENNReal.ofReal slotW + ENNReal.ofReal slotW) *
+    (ENNReal.ofReal slotH + ENNReal.ofReal slotH) :=
+  calc volume slots
+    _ ≤ volume (univ.pi ![abs ⁻¹' Ioo (root / 2) (2 * hgap - sideLHL2 / 2),
+          abs ⁻¹' Ioo (sideH1 / 2) (vgap - sideLH2 / 2)]) :=
+      measure_mono fun _ ⟨h₁, h₂, h₃, h₄⟩ ↦ mem_univ_pi.2 <| Fin.forall_fin_two.2 ⟨⟨h₁, h₂⟩, h₃, h₄⟩
+    _ = _ * _ := (volume_pi_pi _).trans (Fin.prod_univ_two _)
+    _ ≤ _ := mul_le_mul' volume_preimage_abs_Ioo_le volume_preimage_abs_Ioo_le
+
+/-- The slots do not exhaust the period cell: `2 hgap vgap - 4 slotW slotH`, the real lower bound
+on the area of `goodSet` in `volume_goodSet_ge`, is positive. -/
 theorem area_pos : 0 < 2 * hgap * vgap - 4 * (slotW * slotH) := by
-  have hW : slotW < 0.3904 := by
+  -- each slot fits strictly inside its quadrant `hgap × vgap / 2` of the cell
+  have hW : slotW < hgap := by
     unfold slotW
-    linarith [hgap_lt, sideLHL2_gt, root_gt]
-  have hH : slotH < 0.0437 := by
+    linarith [two_mul_hgap_le_sideLHL2, one_le_root]
+  have hH : slotH < vgap / 2 := by
     unfold slotH
-    linarith [vgap_lt, sideLH2_gt, sideH1_gt]
-  nlinarith [mul_lt_mul'' hW hH slotW_pos.le slotH_pos.le,
-    mul_lt_mul'' hgap_gt vgap_gt (by norm_num) (by norm_num)]
+    linarith [vgap_le_sideLH2, one_le_sideH1]
+  linarith [mul_lt_mul_of_nonneg hW hH slotW_pos.le slotH_pos.le]
 
-theorem volume_goodSet_ge :
-    ENNReal.ofReal (2 * hgap * vgap - 4 * (slotW * slotH)) ≤ volume goodSet := by
-  have hW := slotW_pos.le
-  have hH := slotH_pos.le
-  calc ENNReal.ofReal (2 * hgap * vgap - 4 * (slotW * slotH))
-      = ENNReal.ofReal (2 * hgap * vgap) - (ENNReal.ofReal slotW + ENNReal.ofReal slotW) *
-          (ENNReal.ofReal slotH + ENNReal.ofReal slotH) := by
-        rw [← ENNReal.ofReal_add hW hW, ← ENNReal.ofReal_add hH hH,
-          ← ENNReal.ofReal_mul (by linarith), ← ENNReal.ofReal_sub _ (by positivity)]
-        congr 1
-        ring
-    _ ≤ volume cell - volume slots := by
-        rw [volume_cell]
-        gcongr
-        exact volume_slots_le
-    _ ≤ volume goodSet := le_measure_sdiff
+/-- The witnessed part `goodSet = cell \ slots` of the period cell has area at least
+`2 hgap vgap - 4 slotW slotH`: the area of `cell` (`volume_cell`) minus the bound `volume_slots_le`
+on the four slots. The real number under `ENNReal.ofReal` is positive (`area_pos`), so the bound is
+not vacuous. -/
+theorem volume_goodSet_ge : ENNReal.ofReal (2 * hgap * vgap - 4 * (slotW * slotH)) ≤
+    volume goodSet := by
+  -- the left side is `volume cell - 4 * (slotW * slotH)`, computed in `ℝ≥0∞`
+  rw [ENNReal.ofReal_sub _ (mul_pos four_pos (mul_pos slotW_pos slotH_pos)).le, ← volume_cell,
+    ENNReal.ofReal_mul zero_le_four, ENNReal.ofReal_mul slotW_pos.le, ENNReal.ofReal_ofNat]
+  -- `volume_slots_le` bounds the slots, and `volume cell - volume slots ≤ volume (cell \ slots)`
+  exact (tsub_le_tsub_left (volume_slots_le.trans_eq (by ring)) _).trans le_measure_sdiff
 
 theorem volume_goodCopy (k l : ℤ) : volume (goodCopy k l) = volume goodSet :=
   measure_preimage_add volume (-shift k l) goodSet
@@ -140,150 +129,108 @@ theorem mem_goodCopy {k l : ℤ} {z : Fin 2 → ℝ} :
     fin_cases i <;> simp [shift] <;> ring
   rw [goodCopy, Set.mem_preimage, this]
 
-/-- Integers `a, b` with `|a t - b t| < t` for some `t > 0` are equal. -/
-private theorem int_eq_of_mul_sub_lt {a b : ℤ} {t : ℝ} (ht : 0 < t) (h₁ : a * t - b * t < t)
-    (h₂ : b * t - a * t < t) : a = b := by
-  have h₃ : ((a - b : ℤ) : ℝ) < 1 := by
-    push_cast
-    nlinarith
-  have h₄ : ((b - a : ℤ) : ℝ) < 1 := by
-    push_cast
-    nlinarith
-  have h₅ : a - b < 1 := by exact_mod_cast h₃
-  have h₆ : b - a < 1 := by exact_mod_cast h₄
-  omega
-
+/-- The translates `goodCopy k l`, `(k, l) : ℤ × ℤ`, of `goodSet` are pairwise disjoint. The index
+set is all of `ℤ × ℤ`: restrict it to a finite box with `Set.PairwiseDisjoint.subset` before adding
+up volumes with `measure_biUnion_finset`, as `ofReal_le_volume_levelSet` does. -/
 theorem pairwiseDisjoint_goodCopy :
     (univ : Set (ℤ × ℤ)).PairwiseDisjoint fun p => goodCopy p.1 p.2 := by
   rintro ⟨k, l⟩ - ⟨k', l'⟩ - hne
-  refine Set.disjoint_left.2 fun z hz hz' => hne ?_
-  rw [mem_goodCopy] at hz hz'
-  have hc := mem_cell.1 hz.1
-  have hc' := mem_cell.1 hz'.1
-  simp only [Matrix.cons_val_zero, Matrix.cons_val_one] at hc hc'
-  have hh := hgap_pos
-  have hv : 0 < vgap := by linarith [vgap_gt]
-  have hk : k = k' := int_eq_of_mul_sub_lt (t := 2 * hgap) (by linarith) (by linarith)
-    (by linarith)
-  have hl : l = l' := int_eq_of_mul_sub_lt (t := vgap) hv (by linarith) (by linarith)
-  rw [hk, hl]
+  refine Set.disjoint_left.2 fun z hz hz' ↦ hne ?_
+  simp only [mem_goodCopy, goodSet, Set.mem_sdiff, mem_cell, Matrix.cons_val_zero,
+    Matrix.cons_val_one] at hz hz'
+  -- distinct integers are at distance at least one, but `z` lying in both half-open cells puts
+  -- `k, k'` (in units of `2 * hgap`) and `l, l'` (in units of `vgap`) less than one apart
+  refine Prod.ext (Int.pairwise_one_le_dist.eq ?_) (Int.pairwise_one_le_dist.eq ?_) <;>
+    refine not_le.2 <| (Int.dist_eq _ _).trans_lt <| abs_sub_lt_iff.2 ⟨?_, ?_⟩ <;> nlinarith
 
+/-- Every point `z` of the translate `goodCopy k l` has a level-one witness `(L, A)` whose atoms lie
+in `nearBox k l`. This is `exists_isWitness_of_abs` (the cell centred at the origin) moved to the
+cell with index `(k, l)`; `nearBox_subset_atomBox` then puts the atoms inside `atomBox N` when
+`|k|, |l| ≤ N`, as in `ofReal_le_volume_levelSet`. -/
 theorem exists_isWitness_of_mem_goodCopy {k l : ℤ} {z : Fin 2 → ℝ} (hz : z ∈ goodCopy k l) :
     ∃ L A, A ⊆ nearBox k l ∧ IsWitness (z 0) (z 1) L A := by
-  rw [mem_goodCopy] at hz
-  obtain ⟨hcell, hslot⟩ := hz
-  have hc := mem_cell.1 hcell
-  simp only [Matrix.cons_val_zero, Matrix.cons_val_one] at hc
-  have hslot' : ¬ (root / 2 < |z 0 - 2 * k * hgap| ∧
-      |z 0 - 2 * k * hgap| < 2 * hgap - sideLHL2 / 2 ∧
-      sideH1 / 2 < |z 1 - l * vgap| ∧ |z 1 - l * vgap| < vgap - sideLH2 / 2) := by
-    simpa [slots] using hslot
-  obtain ⟨L, A, hA, hw⟩ := exists_isWitness_of_abs (abs_le.2 ⟨hc.1.1, hc.1.2.le⟩)
-    (abs_le.2 ⟨hc.2.1, hc.2.2.le⟩) hslot'
-  refine ⟨L, _, map_addRight_subset_nearBox hA k l, ?_⟩
-  simpa using hw.translate k l
+  -- the untranslated point lies in the cell centred at the origin and (unfolding `slots`) outside
+  -- the four slots, so it has a witness with atoms in `nearBox 0 0`
+  obtain ⟨hcell, hslot⟩ := mem_goodCopy.1 hz
+  obtain ⟨⟨hx₁, hx₂⟩, hy₁, hy₂⟩ := mem_cell.1 hcell
+  obtain ⟨L, A, hA, hw⟩ :=
+    exists_isWitness_of_abs (abs_le.2 ⟨hx₁, hx₂.le⟩) (abs_le.2 ⟨hy₁, hy₂.le⟩) hslot
+  -- translating the witness by `(2 * k, l)` moves it to `z` and its atoms into `nearBox k l`
+  exact ⟨L, _, map_addRight_subset_nearBox hA k l, by simpa using hw.translate k l⟩
 
+/-- For `|k|, |l| ≤ N`, the atoms `nearBox k l` available to a witness in the cell with index
+`(k, l)` are kept in `atomBox N`: the columns `2k - 2, …, 2k + 2` lie in `-2N - 2, …, 2N + 2` and
+the rows `l - 1, …, l + 1` lie in `-N - 1, …, N + 1`. -/
 theorem nearBox_subset_atomBox {N : ℕ} {k l : ℤ} (hk : |k| ≤ N) (hl : |l| ≤ N) :
     nearBox k l ⊆ atomBox N := by
-  obtain ⟨hk₁, hk₂⟩ := abs_le.1 hk
-  obtain ⟨hl₁, hl₂⟩ := abs_le.1 hl
-  exact Finset.product_subset_product (Finset.Icc_subset_Icc (by omega) (by omega))
-    (Finset.Icc_subset_Icc (by omega) (by omega))
+  grind [nearBox, atomBox]
 
-/-- The level set of `smeared N ε` at height `1 - 2ε` contains `(2N + 1)²` disjoint copies of
-`goodSet`. -/
+/-- The level set of `smeared N ε` at height `1 - 2ε` has measure at least `(2N + 1)²` times the
+lower bound `2 hgap vgap - 4 slotW slotH` on the area of `goodSet` (`volume_goodSet_ge`), for every
+`ε > 0`: it contains the `(2N + 1)²` disjoint copies `goodCopy k l`, `|k|, |l| ≤ N`, of `goodSet`.
+This is the level-set side of the weak type inequality in `ofReal_mul_phi_le`. -/
 theorem ofReal_le_volume_levelSet (N : ℕ) {ε : ℝ} (hε : 0 < ε) :
     ENNReal.ofReal ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH))) ≤
       volume {z | ENNReal.ofReal (1 - 2 * ε) < maximalFunction (smeared N ε) z} := by
+  -- the `(2N + 1)²` indices `(k, l)` with `|k|, |l| ≤ N`
   set S := Finset.Icc (-(N : ℤ)) N ×ˢ Finset.Icc (-(N : ℤ)) N
-  have hcard : S.card = (2 * N + 1) ^ 2 := by
-    rw [Finset.card_product, Int.card_Icc]
-    have : ((N : ℤ) + 1 - -(N : ℤ)).toNat = 2 * N + 1 := by omega
-    rw [this, sq]
-  have hsub : (⋃ p ∈ S, goodCopy p.1 p.2) ⊆
-      {z | ENNReal.ofReal (1 - 2 * ε) < maximalFunction (smeared N ε) z} := by
-    intro z hz
-    simp only [Set.mem_iUnion] at hz
-    obtain ⟨p, hp, hz⟩ := hz
-    obtain ⟨hk, hl⟩ := Finset.mem_product.1 hp
-    obtain ⟨L, A, hA, hw⟩ := exists_isWitness_of_mem_goodCopy hz
-    exact lt_maximalFunction_smeared hε (hA.trans (nearBox_subset_atomBox
-      (abs_le.2 (Finset.mem_Icc.1 hk)) (abs_le.2 (Finset.mem_Icc.1 hl)))) hw
+  have hcard : S.card = (2 * N + 1) ^ 2 := by grind [Finset.card_product, Int.card_Icc]
   calc ENNReal.ofReal ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH)))
-      = ∑ _p ∈ S, ENNReal.ofReal (2 * hgap * vgap - 4 * (slotW * slotH)) := by
-        rw [Finset.sum_const, hcard, nsmul_eq_mul, ENNReal.ofReal_mul (by positivity)]
-        congr 1
-        rw [← ENNReal.ofReal_natCast]
-        push_cast
-        rfl
+      = S.card • ENNReal.ofReal (2 * hgap * vgap - 4 * (slotW * slotH)) := by
+        rw [← ENNReal.ofReal_nsmul, hcard, nsmul_eq_mul]
+        norm_cast
+    -- each copy `goodCopy k l` is a translate of `goodSet`, so has at least that area
     _ ≤ ∑ p ∈ S, volume (goodCopy p.1 p.2) :=
-        Finset.sum_le_sum fun p _ => (volume_goodCopy p.1 p.2).symm ▸ volume_goodSet_ge
+        S.card_nsmul_le_sum _ _ fun p _ ↦ volume_goodSet_ge.trans_eq (volume_goodCopy ..).symm
+    -- the copies are pairwise disjoint
     _ = volume (⋃ p ∈ S, goodCopy p.1 p.2) :=
-        (measure_biUnion_finset (pairwiseDisjoint_goodCopy.subset (Set.subset_univ _))
-          fun p _ => measurableSet_goodCopy p.1 p.2).symm
-    _ ≤ _ := measure_mono hsub
+        (measure_biUnion_finset (pairwiseDisjoint_goodCopy.subset (subset_univ _))
+          fun p _ ↦ measurableSet_goodCopy p.1 p.2).symm
+    -- every point of a copy has a witness with atoms in `nearBox k l ⊆ atomBox N`, so it lies in
+    -- the level set
+    _ ≤ _ := measure_mono <| iUnion₂_subset fun p hp z hz ↦ by
+        obtain ⟨L, A, hA, hw⟩ := exists_isWitness_of_mem_goodCopy hz
+        refine lt_maximalFunction_smeared hε (hA.trans <| nearBox_subset_atomBox ?_ ?_) hw <;> grind
 
-/-- A weak type bound is at least `((2N + 1)/(2N + 3))³ Φ` for every `N`. -/
+private theorem ofReal_mul_ofReal_le_of_isWeakTypeBound {C : ℝ≥0∞} (hC : IsWeakTypeBound 2 C)
+    (N : ℕ) {ε : ℝ} (hε : 0 < ε) :
+    ENNReal.ofReal (1 - 2 * ε) *
+        ENNReal.ofReal ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH))) ≤
+      C * ENNReal.ofReal ((2 * N + 3) ^ 2 * (1 + heavy)) :=
+  -- the weak type inequality for `smeared N ε` at level `1 - 2ε`, with the level set bounded below
+  -- by `ofReal_le_volume_levelSet` and the mass `‖smeared N ε‖₁` bounded above
+  (mul_le_mul_right (ofReal_le_volume_levelSet N hε) _).trans <|
+    (hC _ (integrable_smeared N ε) _).trans <| mul_le_mul_right
+      ((lintegral_smeared N hε).trans_le <| ENNReal.ofReal_le_ofReal (sum_colWeight_atomBox_le N)) _
+
+private theorem div_pow_three_mul_phi_eq (N : ℕ) : ((2 * N + 1) / (2 * N + 3)) ^ 3 * phi =
+    (2 * N + 1) / (2 * N + 3) * ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH))) /
+      ((2 * N + 3) ^ 2 * (1 + heavy)) := by
+  rw [phi_eq]
+  have := heavy_pos
+  field_simp
+
+/-- A weak type bound in dimension two is at least `((2N + 1)/(2N + 3))³ Φ`, for every `N`. This is
+the finite-`N` form of `ofReal_phi_le`, which lets `N → ∞`. -/
 theorem ofReal_mul_phi_le {C : ℝ≥0∞} (hC : IsWeakTypeBound 2 C) (N : ℕ) :
     ENNReal.ofReal (((2 * N + 1) / (2 * N + 3)) ^ 3 * phi) ≤ C := by
-  set ε : ℝ := 1 / (2 * N + 3) with hε_def
-  have hε : 0 < ε := by positivity
-  set q : ℝ := (2 * N + 1) / (2 * N + 3) with hq_def
-  have hq : 1 - 2 * ε = q := by
-    rw [hε_def, hq_def]
+  -- test the weak type bound on `smeared N ε` with `ε = 1 / (2N + 3)`, whose level `1 - 2ε` is
+  -- `(2N + 1)/(2N + 3)`, and divide by the mass bound `(2N + 3)² (1 + heavy)`
+  have hq : 1 - 2 * (1 / (2 * N + 3)) = ((2 * N + 1) / (2 * N + 3) : ℝ) := by
     field_simp
     ring
-  have hq₀ : 0 ≤ q := by positivity
-  have hX := area_pos
-  have hD : 0 < (2 * N + 3) ^ 2 * (1 + heavy) := by
-    have := heavy_pos
-    positivity
-  have key := hC (smeared N ε) (integrable_smeared N ε) (ENNReal.ofReal (1 - 2 * ε))
-  rw [lintegral_smeared N hε] at key
-  have h₂ : ENNReal.ofReal (q * ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH)))) ≤
-      C * ENNReal.ofReal ((2 * N + 3) ^ 2 * (1 + heavy)) :=
-    calc ENNReal.ofReal (q * ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH))))
-        = ENNReal.ofReal q *
-            ENNReal.ofReal ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH))) :=
-          ENNReal.ofReal_mul hq₀
-      _ ≤ ENNReal.ofReal (1 - 2 * ε) *
-            volume {z | ENNReal.ofReal (1 - 2 * ε) < maximalFunction (smeared N ε) z} := by
-          rw [← hq]
-          gcongr
-          exact ofReal_le_volume_levelSet N hε
-      _ ≤ C * ENNReal.ofReal (∑ p ∈ atomBox N, colWeight p.1) := key
-      _ ≤ C * ENNReal.ofReal ((2 * N + 3) ^ 2 * (1 + heavy)) := by
-          gcongr
-          exact sum_colWeight_atomBox_le N
-  calc ENNReal.ofReal (q ^ 3 * phi)
-      = ENNReal.ofReal (q * ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH)))) /
-          ENNReal.ofReal ((2 * N + 3) ^ 2 * (1 + heavy)) := by
-        rw [← ENNReal.ofReal_div_of_pos hD, phi_eq, hq_def]
-        congr 1
-        have := heavy_pos
-        field_simp
-    _ ≤ C := ENNReal.div_le_of_le_mul h₂
+  rw [div_pow_three_mul_phi_eq,
+    ENNReal.ofReal_div_of_pos (mul_pos (by positivity) (add_pos one_pos heavy_pos)),
+    ENNReal.ofReal_mul (by positivity), ← hq]
+  exact ENNReal.div_le_of_le_mul (ofReal_mul_ofReal_le_of_isWeakTypeBound hC N (by positivity))
 
-/-- `(2N + 1)/(2N + 3) → 1`. -/
-theorem tendsto_ratio : Tendsto (fun N : ℕ => ((2 * N + 1) / (2 * N + 3) : ℝ)) atTop (𝓝 1) := by
-  have hlow : Tendsto (fun N : ℕ => (1 - 1 / ((N : ℝ) + 1) : ℝ)) atTop (𝓝 1) := by
-    simpa using (tendsto_const_nhds (x := (1 : ℝ))).sub tendsto_one_div_add_atTop_nhds_zero_nat
-  refine tendsto_of_tendsto_of_tendsto_of_le_of_le hlow tendsto_const_nhds (fun N => ?_)
-    (fun N => ?_)
-  · have hN : (0 : ℝ) ≤ N := N.cast_nonneg
-    have h : (1 : ℝ) - 1 / (N + 1) = N / (N + 1) := by
-      field_simp
-      ring
-    rw [h, div_le_div_iff₀ (by positivity) (by positivity)]
-    nlinarith
-  · have hN : (0 : ℝ) ≤ N := N.cast_nonneg
-    rw [div_le_one (by positivity)]
-    linarith
-
-/-- Every weak type bound in dimension two is at least `Φ`. -/
+/-- Every weak type bound in dimension two is at least `Φ`. Taking the infimum over all such `C`
+with `le_weakTypeConstant` gives `Φ ≤ c₂`; `ofReal_mul_phi_le` is the weaker bound
+`((2N + 1)/(2N + 3))³ Φ ≤ C` for a single `N`. -/
 theorem ofReal_phi_le {C : ℝ≥0∞} (hC : IsWeakTypeBound 2 C) : ENNReal.ofReal phi ≤ C := by
-  have hlim : Tendsto (fun N : ℕ => ((2 * N + 1) / (2 * N + 3) : ℝ) ^ 3 * phi) atTop (𝓝 phi) := by
-    simpa using (tendsto_ratio.pow 3).mul_const phi
-  exact le_of_tendsto' (ENNReal.tendsto_ofReal hlim) (ofReal_mul_phi_le hC)
+  -- the finite-`N` bounds `ofReal_mul_phi_le` tend to `Φ`, as `(2N + 1)/(2N + 3) → 1`
+  refine le_of_tendsto' (x := atTop) (ENNReal.tendsto_ofReal ?_) (ofReal_mul_phi_le hC)
+  simpa [add_comm] using
+    ((tendsto_add_mul_div_add_mul_atTop_nhds (1 : ℝ) 3 2 two_ne_zero).pow 3).mul_const phi
 
 end CenteredMaximal.Lattice
