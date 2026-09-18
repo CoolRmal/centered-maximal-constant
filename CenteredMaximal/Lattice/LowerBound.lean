@@ -174,7 +174,8 @@ theorem exists_isWitness_of_mem_goodCopy {k l : ℤ} {z : Fin 2 → ℝ} (hz : z
   obtain ⟨hcell, hslot⟩ := hz
   have hc := mem_cell.1 hcell
   simp only [Matrix.cons_val_zero, Matrix.cons_val_one] at hc
-  have hslot' : ¬ (root / 2 < |z 0 - 2 * k * hgap| ∧ |z 0 - 2 * k * hgap| < 2 * hgap - sideLHL2 / 2 ∧
+  have hslot' : ¬ (root / 2 < |z 0 - 2 * k * hgap| ∧
+      |z 0 - 2 * k * hgap| < 2 * hgap - sideLHL2 / 2 ∧
       sideH1 / 2 < |z 1 - l * vgap| ∧ |z 1 - l * vgap| < vgap - sideLH2 / 2) := by
     simpa [slots] using hslot
   obtain ⟨L, A, hA, hw⟩ := exists_isWitness_of_abs (abs_le.2 ⟨hc.1.1, hc.1.2.le⟩)

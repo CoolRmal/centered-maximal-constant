@@ -43,9 +43,7 @@ jobs:
               echo "$file has $lines lines"
               exit 1
             fi
-            if awk 'length($0) > 100 { exit 1 }' "$file"; then
-              :
-            else
+            if ! python3 -c 'import sys; sys.exit(any(len(l.rstrip("\n")) > 100 for l in open(sys.argv[1], encoding="utf-8")))' "$file"; then
               echo "$file has a line longer than 100 characters"
               exit 1
             fi
