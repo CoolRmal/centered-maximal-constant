@@ -8,6 +8,7 @@ module
 public import CenteredMaximal.Basic
 public import CenteredMaximal.Lattice.Witness
 public import Mathlib.MeasureTheory.Integral.IntegrableOn
+import Mathlib.Algebra.BigOperators.Group.Finset.Interval
 
 /-!
 # Smearing the lattice into an integrable function
@@ -56,46 +57,30 @@ theorem integrable_smeared (N : ℕ) (ε : ℝ) : Integrable (smeared N ε) := b
   exact (integrable_indicator_iff measurableSet_closedBall).2
     (integrableOn_const measure_closedBall_lt_top.ne)
 
-/-- Consecutive columns `0, …, 2m` carry mass `(m + 1) + m · heavy`. -/
+/-- Consecutive columns `0, …, 2m` carry mass `(m + 1) + m · heavy`: the `m + 1` even columns
+have mass `1` and the `m` odd columns have mass `heavy`. -/
 theorem sum_range_colWeight (m : ℕ) :
     ∑ n ∈ Finset.range (2 * m + 1), colWeight n = (m + 1) + m * heavy := by
-  induction m with
-  | zero => simp [colWeight]
-  | succ m ih =>
-    rw [show 2 * (m + 1) + 1 = 2 * m + 1 + 1 + 1 by ring, Finset.sum_range_succ,
-      Finset.sum_range_succ, ih]
-    have h₁ : colWeight ((2 * m + 1 : ℕ) : ℤ) = heavy := by
-      simp [colWeight, parity_simps]
-    have h₂ : colWeight ((2 * m + 1 + 1 : ℕ) : ℤ) = 1 := by
-      simp [colWeight, parity_simps]
-    rw [h₁, h₂]
-    push_cast
-    ring
+  -- each step adds the odd column `2m + 1` (mass `heavy`) and the even column `2m + 2` (mass `1`)
+  induction m <;> grind [colWeight, Finset.sum_range_succ, Finset.sum_range_zero]
 
-/-- The columns of `atomBox N` carry total mass `(2N + 3) + (2N + 2) · heavy`. -/
+/-- The columns `-2N - 2, …, 2N + 2` of `atomBox N` carry total mass `(2N + 3) + (2N + 2) · heavy`:
+the `2N + 3` even columns have mass `1` and the `2N + 2` odd columns have mass `heavy`. -/
 theorem sum_colWeight_Icc (N : ℕ) :
     ∑ c ∈ Icc (-2 * (N : ℤ) - 2) (2 * N + 2), colWeight c = (2 * N + 3) + (2 * N + 2) * heavy := by
-  rw [Int.Icc_eq_finset_map, Finset.sum_map,
-    show (2 * (N : ℤ) + 2 + 1 - (-2 * N - 2)).toNat = 2 * (2 * N + 2) + 1 by omega]
-  have h : ∀ n : ℕ, colWeight (-2 * (N : ℤ) - 2 + n) = colWeight n := fun n => by
-    rw [show -2 * (N : ℤ) - 2 + n = n + 2 * (-(N : ℤ) - 1) by ring, colWeight_add_two_mul]
-  simp only [Function.Embedding.trans_apply, Nat.castEmbedding_apply, addLeftEmbedding_apply, h,
-    sum_range_colWeight]
-  push_cast
-  ring
+  -- `colWeight` is even, so the sum is twice the sum over `0, …, 2N + 2` minus the middle column
+  convert Finset.sum_Icc_of_even_eq_range colWeight_neg (2 * (N + 1)) using 3 <;>
+    grind [colWeight, sum_range_colWeight (N + 1)]
 
+/-- The atoms of `atomBox N` carry total mass `(2N + 3) · ((2N + 3) + (2N + 2) · heavy)`: each of
+its `2N + 3` rows carries the column mass of `sum_colWeight_Icc`. See `sum_colWeight_atomBox_le`
+for the cruder bound `(2N + 3)² · (1 + heavy)`. -/
 theorem sum_colWeight_atomBox (N : ℕ) :
     ∑ p ∈ atomBox N, colWeight p.1 = (2 * N + 3) * ((2 * N + 3) + (2 * N + 2) * heavy) := by
-  have hcard : (Icc (-(N : ℤ) - 1) (N + 1)).card = 2 * N + 3 := by
-    rw [Int.card_Icc]
-    omega
-  have hrow : ∀ c ∈ Icc (-2 * (N : ℤ) - 2) (2 * N + 2),
-      ∑ r ∈ Icc (-(N : ℤ) - 1) (N + 1), colWeight (c, r).1 = (2 * N + 3) * colWeight c := by
-    intro c _
-    simp only [Finset.sum_const, hcard, nsmul_eq_mul]
-    push_cast
-    ring
-  rw [atomBox, Finset.sum_product, Finset.sum_congr rfl hrow, ← Finset.mul_sum, sum_colWeight_Icc]
+  -- sum each row over the columns (`sum_colWeight_Icc`), then over the `2N + 3` rows
+  have hcard : #(Icc (-(N : ℤ) - 1) (N + 1)) = 2 * N + 3 := by grind [Int.card_Icc]
+  simp only [atomBox, sum_product_right, sum_colWeight_Icc, sum_const, hcard, nsmul_eq_mul]
+  norm_cast
 
 theorem sum_colWeight_atomBox_le (N : ℕ) :
     ∑ p ∈ atomBox N, colWeight p.1 ≤ (2 * N + 3) ^ 2 * (1 + heavy) := by
@@ -131,57 +116,54 @@ theorem lintegral_smeared (N : ℕ) {ε : ℝ} (hε : 0 < ε) :
   refine Finset.sum_congr rfl fun p _ => ?_
   rw [lintegral_indicator_const measurableSet_closedBall, ofReal_div_sq_mul_volume hε]
 
-/-- The square of side `L + ε` about a witnessed point carries the smeared mass of the witness. -/
+private theorem IsWitness.closedBall_atom_subset_closedBall {z : Fin 2 → ℝ} {L : ℝ}
+    {A : Finset (ℤ × ℤ)} (hw : IsWitness (z 0) (z 1) L A) (ε : ℝ) {p : ℤ × ℤ} (hp : p ∈ A) :
+    closedBall (atom p) (ε / 2) ⊆ closedBall z ((L + ε) / 2) := by
+  -- every atom of a witness lies within `L / 2` of `z` in the sup metric
+  have : dist (atom p) z ≤ L / 2 := by
+    rw [dist_pi_le_iff', Fin.forall_fin_two]
+    simpa [atom, Real.dist_eq] using hw.2.2 p hp
+  exact closedBall_subset_closedBall' (by linarith)
+
+/-- If `(L, A)` witnesses level one at `z` and `atomBox N` keeps every atom of `A`, then the closed
+square of side `L + ε` centred at `z` (a `closedBall` in the sup metric) carries smeared mass at
+least `L ^ 2`. Unlike `lintegral_smeared`, which integrates over the whole plane, this bounds the
+mass inside a single square, as `lt_maximalFunction_smeared` needs. -/
 theorem ofReal_sq_le_setLIntegral_smeared {N : ℕ} {ε : ℝ} (hε : 0 < ε) {z : Fin 2 → ℝ} {L : ℝ}
     {A : Finset (ℤ × ℤ)} (hA : A ⊆ atomBox N) (hw : IsWitness (z 0) (z 1) L A) :
-    ENNReal.ofReal (L ^ 2) ≤ ∫⁻ y in closedBall z ((L + ε) / 2), ‖smeared N ε y‖ₑ := by
-  obtain ⟨hL, hm, hd⟩ := hw
-  have hsub : ∀ p ∈ A, closedBall (atom p) (ε / 2) ⊆ closedBall z ((L + ε) / 2) := by
-    intro p hp
-    apply closedBall_subset_closedBall'
-    have : dist (atom p) z ≤ L / 2 := by
-      rw [dist_pi_le_iff (by linarith)]
-      intro i
-      fin_cases i
-      · simpa [atom, Real.dist_eq] using (hd p hp).1
-      · simpa [atom, Real.dist_eq] using (hd p hp).2
-    linarith
-  calc ENNReal.ofReal (L ^ 2) ≤ ENNReal.ofReal (∑ p ∈ A, colWeight p.1) :=
-        ENNReal.ofReal_le_ofReal hm
-    _ = ∑ p ∈ A, ENNReal.ofReal (colWeight p.1) :=
-        ENNReal.ofReal_sum_of_nonneg fun _ _ => (colWeight_pos _).le
-    _ = ∑ p ∈ A, ∫⁻ y in closedBall z ((L + ε) / 2), (closedBall (atom p) (ε / 2)).indicator
-          (fun _ => ENNReal.ofReal (colWeight p.1 / ε ^ 2)) y := by
-        refine Finset.sum_congr rfl fun p hp => ?_
-        rw [lintegral_indicator_const measurableSet_closedBall,
-          Measure.restrict_apply measurableSet_closedBall, Set.inter_eq_left.2 (hsub p hp),
-          ofReal_div_sq_mul_volume hε]
+    ENNReal.ofReal (L ^ 2) ≤ ∫⁻ y in closedBall z ((L + ε) / 2), ‖smeared N ε y‖ₑ :=
+  calc ENNReal.ofReal (L ^ 2) ≤ ∑ p ∈ A, ENNReal.ofReal (colWeight p.1) :=
+        (ENNReal.ofReal_le_ofReal hw.2.1).trans_eq
+          (ENNReal.ofReal_sum_of_nonneg fun _ _ ↦ (colWeight_pos _).le)
     _ = ∫⁻ y in closedBall z ((L + ε) / 2), ∑ p ∈ A, (closedBall (atom p) (ε / 2)).indicator
-          (fun _ => ENNReal.ofReal (colWeight p.1 / ε ^ 2)) y :=
-        (lintegral_finsetSum _ fun _ _ => measurable_const.indicator measurableSet_closedBall).symm
-    _ ≤ ∫⁻ y in closedBall z ((L + ε) / 2), ‖smeared N ε y‖ₑ := by
-        refine lintegral_mono fun y => ?_
-        rw [enorm_smeared]
-        exact Finset.sum_le_sum_of_subset hA
+          (fun _ ↦ ENNReal.ofReal (colWeight p.1 / ε ^ 2)) y := by
+        -- each smeared atom of `A` lies inside the square, so it contributes its whole mass
+        rw [lintegral_finsetSum _ fun _ _ ↦ measurable_const.indicator measurableSet_closedBall]
+        refine sum_congr rfl fun p hp ↦ ?_
+        rw [lintegral_indicator_const measurableSet_closedBall,
+          Measure.restrict_eq_self _ (hw.closedBall_atom_subset_closedBall ε hp),
+          ofReal_div_sq_mul_volume hε]
+    _ ≤ _ := lintegral_mono fun y ↦ (sum_le_sum_of_subset hA).trans_eq (enorm_smeared N ε y).symm
 
-/-- At a witnessed point the maximal function of the smeared lattice exceeds `1 - 2ε`. -/
+/-- If `(L, A)` witnesses level one at `z` and `atomBox N` keeps every atom of `A`, then the maximal
+function of `smeared N ε` at `z` exceeds `1 - 2ε`. The bound is uniform in `N` and in the witness,
+so it holds at every point that has some witness inside `atomBox N`. Compare
+`ofReal_sq_le_setLIntegral_smeared`, which bounds the mass of the square of side `L + ε` rather than
+the maximal function. -/
 theorem lt_maximalFunction_smeared {N : ℕ} {ε : ℝ} (hε : 0 < ε) {z : Fin 2 → ℝ} {L : ℝ}
     {A : Finset (ℤ × ℤ)} (hA : A ⊆ atomBox N) (hw : IsWitness (z 0) (z 1) L A) :
     ENNReal.ofReal (1 - 2 * ε) < maximalFunction (smeared N ε) z := by
   have hL : 1 ≤ L := hw.1
-  have hr : 0 < (L + ε) / 2 := by linarith
+  have hr : 0 < (L + ε) / 2 := by positivity
   refine lt_of_lt_of_le ?_ (le_maximalFunction _ z hr)
   rw [volume_closedBall_eq z hr.le]
   calc ENNReal.ofReal (1 - 2 * ε) < ENNReal.ofReal (L ^ 2 / (L + ε) ^ 2) := by
         rw [ENNReal.ofReal_lt_ofReal_iff (by positivity), lt_div_iff₀ (by positivity)]
-        have hL₁ : 0 ≤ L - 1 := by linarith
-        nlinarith [mul_nonneg (mul_nonneg hε.le (by linarith : (0 : ℝ) ≤ L)) hL₁,
-          mul_nonneg (sq_nonneg ε) hL₁, pow_pos hε 2, pow_pos hε 3]
+        -- `L² - (1 - 2ε)(L + ε)² = 2εL(L - 1) + ε²(4L - 1) + 2ε³` is positive since `1 ≤ L`
+        nlinarith [pow_pos hε 3, mul_nonneg hε.le (sub_nonneg.2 hL)]
     _ = (ENNReal.ofReal ((2 * ((L + ε) / 2)) ^ 2))⁻¹ * ENNReal.ofReal (L ^ 2) := by
-        rw [show (2 * ((L + ε) / 2)) ^ 2 = (L + ε) ^ 2 by ring,
-          ENNReal.ofReal_div_of_pos (by positivity), ENNReal.div_eq_inv_mul]
-    _ ≤ _ := by
-        gcongr
-        exact ofReal_sq_le_setLIntegral_smeared hε hA hw
+        rw [mul_div_cancel₀ _ two_ne_zero, ENNReal.ofReal_div_of_pos (by positivity),
+          ENNReal.div_eq_inv_mul]
+    _ ≤ _ := mul_le_mul_right (ofReal_sq_le_setLIntegral_smeared hε hA hw) _
 
 end CenteredMaximal.Lattice
