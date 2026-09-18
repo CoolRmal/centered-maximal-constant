@@ -150,7 +150,7 @@ the Lean statements are the ones used verbatim in [P §4.2] ✓.
 
 ## Result 3: `weakTypeConstant_two_gt` — assembly of `lt_phi` and Result 2.
 
-## Result 4: `lt_phi`, `phi_lt` — proved (`Challenge.lean`, `Numerics.lean`).
+## Result 4: `lt_phi`, `phi_lt` — proved in `Numerics.lean`.
 
 ## Feasibility
 

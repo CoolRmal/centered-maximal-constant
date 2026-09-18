@@ -11,7 +11,7 @@ public import CenteredMaximal.Statement
 # Numerical enclosure of `Φ`
 
 `1.685 < Φ < 1.686`, from rational enclosures of `√2`, `√11`, `√22`, `√(70 + 8√22)` and
-`√(17 + 4√22)`. The same proof appears in `Challenge.lean`.
+`√(17 + 4√22)`.
 -/
 
 @[expose] public section

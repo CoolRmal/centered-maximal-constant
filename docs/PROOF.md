@@ -152,8 +152,7 @@ If `C` is a weak type bound, apply it with `α = 1 - 2ε` and `ε = 1/(2N + 3)`,
 ## 7. Numerics
 
 `1.685 < Φ < 1.686` follows from rational enclosures of `√2`, `√11`, `√22`, `√(70 + 8√22)` and
-`√(17 + 4√22)` by interval arithmetic on the closed form (`phi_mem_Ioo`). The same proof is in
-`Challenge.lean`. High-precision evaluation gives `Φ = 1.68550999335552518466528…`.
+`√(17 + 4√22)` by interval arithmetic on the closed form (`phi_mem_Ioo`). High-precision evaluation gives `Φ = 1.68550999335552518466528…`.
 
 ## 8. Relation to the exploratory computation
 

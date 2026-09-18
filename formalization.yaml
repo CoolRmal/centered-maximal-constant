@@ -4,7 +4,7 @@ project:
   name: A lower bound 1.6855 for the planar centred Hardy-Littlewood maximal constant over squares
   description: |-
     Let c_d be the weak type (1,1) constant of the centred Hardy-Littlewood maximal operator over axis-parallel cubes in R^d: the least C such that alpha |{Mf > alpha}| <= C ||f||_1 for every integrable f and every level alpha. The value of c_d is unknown for every d >= 2. The previously published lower bound in the plane is c_2 >= 3/4 - sqrt(2)/4 + sqrt(6)/2 = 1.62119..., obtained by Aldaz (2000) from a rectangular lattice of unit Dirac masses; the best known upper bound is c_2 <= 4.
-    This development proves c_2 >= Phi = 1.68550999335552518..., where Phi = ((77 + 16 sqrt 22)/2 - (8 + sqrt 22 - sqrt(70 + 8 sqrt 22))(11 + sqrt 22 - 2 sqrt 2 - 2 sqrt 11 - sqrt(17 + 4 sqrt 22)))/(26 + 4 sqrt 22) is an algebraic number of degree 16. The extremal configuration found is a lattice with unequal masses: columns at spacing h = (5 + sqrt 22)/6 carrying masses alternating 1 and w = (17 + 4 sqrt 22)/9, rows at spacing h + 1. Its level-one set covers the period cell except four thin slots, and truncating and smearing the lattice gives integrable test functions. The development also proves the classical covering bound c_d <= 2^d in every dimension, and the challenge file itself proves 1.685 < Phi < 1.686.
+    This development proves c_2 >= Phi = 1.68550999335552518..., where Phi = ((77 + 16 sqrt 22)/2 - (8 + sqrt 22 - sqrt(70 + 8 sqrt 22))(11 + sqrt 22 - 2 sqrt 2 - 2 sqrt 11 - sqrt(17 + 4 sqrt 22)))/(26 + 4 sqrt 22) is an algebraic number of degree 16. The extremal configuration found is a lattice with unequal masses: columns at spacing h = (5 + sqrt 22)/6 carrying masses alternating 1 and w = (17 + 4 sqrt 22)/9, rows at spacing h + 1. Its level-one set covers the period cell except four thin slots, and truncating and smearing the lattice gives integrable test functions. The development also proves the classical covering bound c_d <= 2^d in every dimension, and 1.685 < Phi < 1.686.
   authors:
   - Yongxi Lin
   license: Apache-2.0
@@ -97,7 +97,7 @@ related_formalizations:
   note: Contains a centred maximal function over balls in finite-dimensional normed spaces with the weak type bound 4^n (TauCeti/MeasureTheory/Integral/MaximalFunction.lean). This development does not use it; its challenge imports only Mathlib.
 status:
   scope: |-
-    Formalized in full, with complete proof terms using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), its consequence c_2 > 1.685 (CenteredMaximal.weakTypeConstant_two_gt), the upper bound c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), and 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt, proved both in Challenge.lean and in the solution). The maximal function, the weak type bounds, the constant c_d and Phi are defined in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and the level set is measured with Lebesgue outer measure, so no measurability or finiteness assumption is hidden in the statement.
+    Formalized in full, with complete proof terms using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), its consequence c_2 > 1.685 (CenteredMaximal.weakTypeConstant_two_gt), the upper bound c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), and 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt). The maximal function, the weak type bounds, the constant c_d and Phi are defined in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and the level set is measured with Lebesgue outer measure, so no measurability or finiteness assumption is hidden in the statement.
     Not formalized, and why. (i) That the level-one set of the extremal lattice has area exactly 2hV - 4ab: only the lower bound is needed, and the exact value is established by the exploratory symbolic computation, which is not in this repository. (ii) Optimality of Phi: none is claimed; numerical searches over weighted product lattices and several non-product families found nothing larger, but unit-weight motifs with three or four atoms per cell were not searched substantially. (iii) The restricted optimality of the unit rectangular lattice at the seed 3(2 + sqrt6)/8, certified in exact rational arithmetic during the exploration, is not part of the Lean development. (iv) Sharpness of 2^d: the upper bound is the classical covering bound and is not claimed to be sharp for Lebesgue measure.
   sorry_count: 0
   sorry_in_definitions: 0
@@ -127,7 +127,7 @@ automation:
       spend_usd: subscription-based
       hardware: local machine for Lean builds, API-only for inference
     prompting_notes: |-
-      Goal-directed with human instructions on scope: define c_d in general dimension in the challenge, include the upper bound c_d <= 2^d, prove the numerical value of Phi inside the challenge, and meet the comparator and Palomar standards.
+      Goal-directed with human instructions on scope: define c_d in general dimension in the challenge, include the upper bound c_d <= 2^d, state the numerical value of Phi in the challenge, and meet the comparator and Palomar standards.
   - method: manual
     models: []
     framework: n/a
@@ -172,12 +172,12 @@ alignment:
     lean: CenteredMaximal.lt_phi
     module: Solution
     status: proved
-    note: Compared declaration; also proved inside Challenge.lean.
+    note: Compared declaration; pins down the size of the explicit constant Phi.
   - source: 'Numerical value: Phi < 1.686'
     lean: CenteredMaximal.phi_lt
     module: Solution
     status: proved
-    note: Compared declaration; also proved inside Challenge.lean.
+    note: Compared declaration; pins down the size of the explicit constant Phi.
   - source: 'Phi is the covered area per unit mass: Phi = (2hV - 4ab)/(1 + w)'
     lean: CenteredMaximal.Lattice.phi_eq
     module: CenteredMaximal.Lattice.Constants

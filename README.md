@@ -24,8 +24,8 @@ and every `α`. `Challenge.lean` defines `maximalFunction`, `IsWeakTypeBound`, `
 | `CenteredMaximal.weakTypeConstant_le_two_pow` | `c_d ≤ 2ᵈ` for every `d` |
 | `CenteredMaximal.ofReal_phi_le_weakTypeConstant_two` | `Φ ≤ c₂` |
 | `CenteredMaximal.weakTypeConstant_two_gt` | `1.685 < c₂` |
-| `CenteredMaximal.lt_phi` | `1.685 < Φ` (proved inside `Challenge.lean`) |
-| `CenteredMaximal.phi_lt` | `Φ < 1.686` (proved inside `Challenge.lean`) |
+| `CenteredMaximal.lt_phi` | `1.685 < Φ` |
+| `CenteredMaximal.phi_lt` | `Φ < 1.686` |
 
 In Mathlib `Fin d → ℝ` carries the sup norm, so `Metric.closedBall x r` is exactly the cube
 `Q(x, r)`; `volume` is Lebesgue measure. The maximal function takes values in `[0, ∞]` and the level
@@ -99,7 +99,7 @@ inside its `landrun` sandbox on `comparator.json`. The compared theorems depend 
 
 | path | content |
 |---|---|
-| `Challenge.lean` | definitions and statements (Mathlib imports only); proof of `1.685 < Φ < 1.686` |
+| `Challenge.lean` | definitions and statements (Mathlib imports only) |
 | `Solution.lean` | the compared theorems, from the development |
 | `CenteredMaximal/Statement.lean` | the challenge definitions, repeated verbatim |
 | `CenteredMaximal/Basic.lean` | basic API for the maximal function and the constant |

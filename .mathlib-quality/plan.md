@@ -16,8 +16,8 @@ and states, as the compared declarations,
 theorem weakTypeConstant_le_two_pow (d : ℕ) : weakTypeConstant d ≤ 2 ^ d
 theorem ofReal_phi_le_weakTypeConstant_two : ENNReal.ofReal phi ≤ weakTypeConstant 2
 theorem weakTypeConstant_two_gt : ENNReal.ofReal (1685 / 1000) < weakTypeConstant 2
-theorem lt_phi : (1685 / 1000 : ℝ) < phi          -- proved inside Challenge.lean
-theorem phi_lt : phi < 1686 / 1000                -- proved inside Challenge.lean
+theorem lt_phi : (1685 / 1000 : ℝ) < phi
+theorem phi_lt : phi < 1686 / 1000
 ```
 
 Gates: leanprover/comparator with axioms `propext`, `Quot.sound`, `Classical.choice`; no
@@ -52,11 +52,11 @@ under 100 characters; Palomar metadata (`formalization.yaml`, licence, README, l
 ## File structure
 
 ```
-Challenge.lean                         statement (Mathlib imports only) + proof of 1.685 < Φ < 1.686
+Challenge.lean                         definitions and statements (Mathlib imports only)
 Solution.lean                          the five compared theorems, from the development
 CenteredMaximal/Statement.lean         the challenge definitions, verbatim
 CenteredMaximal/Basic.lean             API: averages ≤ maximal function, cube volume, sInf lemmas
-CenteredMaximal/Numerics.lean          1.685 < Φ < 1.686 (same proof as the challenge)
+CenteredMaximal/Numerics.lean          1.685 < Φ < 1.686
 CenteredMaximal/UpperBound.lean        c_d ≤ 2ᵈ
 CenteredMaximal/Lattice/Constants.lean u, w, h, V, witness sides, slot, identities, phi_eq
 CenteredMaximal/Lattice/Witness.lean   colWeight, IsWitness, six witnesses, coverage, symmetries
