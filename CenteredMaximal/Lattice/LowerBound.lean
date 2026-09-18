@@ -154,8 +154,8 @@ theorem nearBox_subset_atomBox {N : ℕ} {k l : ℤ} (hk : |k| ≤ N) (hl : |l| 
 
 /-- The level set of `smeared N ε` at height `1 - 2ε` has measure at least `(2N + 1)²` times the
 lower bound `2 hgap vgap - 4 slotW slotH` on the area of `goodSet` (`ofReal_le_volume_goodSet`), for
-every `ε > 0`: it contains the `(2N + 1)²` disjoint copies `goodCopy k l`, `|k|, |l| ≤ N`, of `goodSet`.
-This is the level-set side of the weak type inequality in `ofReal_mul_phi_le`. -/
+every `ε > 0`: it contains the `(2N + 1)²` disjoint copies `goodCopy k l`, `|k|, |l| ≤ N`, of
+`goodSet`. This is the level-set side of the weak type inequality in `ofReal_mul_phi_le`. -/
 theorem ofReal_le_volume_levelSet (N : ℕ) {ε : ℝ} (hε : 0 < ε) :
     ENNReal.ofReal ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH))) ≤
       volume {z | ENNReal.ofReal (1 - 2 * ε) < maximalFunction (smeared N ε) z} := by
