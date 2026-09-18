@@ -21,7 +21,7 @@ integrable `f`, and the strict versus non-strict level set gives the same consta
 ## 2. The upper bound `c_d ≤ 2ᵈ`
 
 **2.1 (dimension zero).** `ℝ⁰` is a point of measure `1`, every cube is the whole space, and
-`M f = ‖f‖₁`. Hence `α |{M f > α}| ≤ ‖f‖₁` (`isWeakTypeBound_one_of_dim_zero`).
+`M f = ‖f‖₁`. Hence `α |{M f > α}| ≤ ‖f‖₁` (`isWeakTypeBound_zero_one`).
 
 **2.2 (bounded radii).** Let `d ≥ 1`, `0 < α < ∞`, `K = ‖f‖₁ < ∞`. If `α |Q(x, r)| < K` then
 `(2r)ᵈ < K/α`. If `2r ≥ 1` then `(2r)ᵈ ≥ 2r`, so in all cases `r ≤ max(1, K/α)`
@@ -134,7 +134,7 @@ whole smeared square of every atom of `A`, so its integral is at least `L²` and
 
 ## 6. The lower bound `Φ ≤ c₂`
 
-`goodSet = cell \ slots` has area at least `|cell| - 4ab = 2hV - 4ab` (`volume_goodSet_ge`). Its
+`goodSet = cell \ slots` has area at least `|cell| - 4ab = 2hV - 4ab` (`ofReal_le_volume_goodSet`). Its
 translates `goodCopy k l = goodSet + (2kh, lV)` are pairwise disjoint (the cells are half-open) and
 have the same area. For `|k|, |l| ≤ N` the atoms `nearBox k l` are kept in `atomBox N`, so every
 point of `goodCopy k l` lies in the level set `{M(smeared N ε) > 1 - 2ε}`. Hence

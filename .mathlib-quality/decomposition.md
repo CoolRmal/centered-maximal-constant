@@ -28,7 +28,7 @@ families at the cost of `τ > 1`, which is exactly the "epsilon of room" of the 
   `IsWeakTypeBound.mono` (`1 ≤ 2⁰`); `d > 0` by U3 for every `τ ∈ (1, 2)` and `ge_of_tendsto` along
   `𝓝[>] 1`. *Attacks:* composition — U3 holds for each `τ > 1` and the right side is continuous in
   `τ` when `‖f‖₁ < ∞` (integrable) ✓; edge `α = ⊤` gives an empty level set ✓; `α = 0` trivial ✓.
-- **U1** (leaf, mathlib): `isWeakTypeBound_one_of_dim_zero`. Source quote [P §2.1]: "`ℝ⁰` is a point
+- **U1** (leaf, mathlib): `isWeakTypeBound_zero_one`. Source quote [P §2.1]: "`ℝ⁰` is a point
   of measure `1`, every cube is the whole space, and `M f = ‖f‖₁`." Discharge:
   `Real.volume_pi_closedBall` (card 0 gives `ofReal 1`), `Subsingleton` of `Fin 0 → ℝ`,
   `iSup₂_le`. *Attacks:* [1] counterexample: volume of `Fin 0 → ℝ` is `Measure.pi` over an empty
@@ -132,7 +132,7 @@ the Lean statements are the ones used verbatim in [P §4.2] ✓.
 
 ### Assembly (`Lattice/LowerBound.lean`)
 
-- **L1** (leaves): `measurableSet_goodSet`, `volume_goodSet_ge`, `volume_goodCopy`,
+- **L1** (leaves): `measurableSet_goodSet`, `ofReal_le_volume_goodSet`, `volume_goodCopy`,
   `pairwiseDisjoint_goodCopy`, `nearBox_subset_atomBox`. Quote [P §6]: "`goodSet = cell \ slots`
   has area at least `|cell| - 4ab`", "Its translates … are pairwise disjoint (the cells are
   half-open)". Discharge: `le_measure_diff`, `measure_union_le`, `Real.volume_pi_Ico`,
@@ -146,7 +146,8 @@ the Lean statements are the ones used verbatim in [P §4.2] ✓.
 - **L4** (internal): `ofReal_mul_phi_le` = weak type inequality at `α = ofReal (1 - 2ε)` with
   `ε = 1/(2N + 3)`, S3 + S2 bound + L3 + `phi_eq`; algebra `q (2N+1)² / (2N+3)² = q³`.
   *Attack:* `1 - 2ε = (2N + 1)/(2N + 3) > 0` ✓.
-- **L5** (internal): `ofReal_phi_le` — `ge_of_tendsto'` with `q_N ≥ 1 - 1/(N + 1) → 1`.
+- **L5** (internal): `ofReal_phi_le` — `le_of_tendsto'` with `q_N = (2N + 1)/(2N + 3) → 1`
+  (Mathlib `tendsto_add_mul_div_add_mul_atTop_nhds`).
 
 ## Result 4: `lt_phi`, `phi_lt` — proved in `Numerics.lean`.
 

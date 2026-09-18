@@ -33,7 +33,7 @@ variable {d : ℕ}
 
 /-- In dimension `0` the space `Fin 0 → ℝ` is a single point of volume `1`, and `1` is a weak type
 bound. This is the case `d = 0` of `isWeakTypeBound_two_pow`. -/
-theorem isWeakTypeBound_one_of_dim_zero : IsWeakTypeBound 0 1 := by
+theorem isWeakTypeBound_zero_one : IsWeakTypeBound 0 1 := by
   intro f _ α
   rcases eq_empty_or_nonempty {x | α < maximalFunction f x} with hE | ⟨x, hx⟩
   · simp [hE]
@@ -93,7 +93,7 @@ private theorem mul_tsum_volume_le_lintegral {f : (Fin d → ℝ) → ℝ} {α :
 
 /-- Weak type bound with an epsilon of room: in positive dimension,
 `α |{M f > α}| ≤ (1 + τ)ᵈ ‖f‖₁` for every `τ > 1`. Letting `τ → 1` gives the bound `2ᵈ` of
-`isWeakTypeBound_two_pow`; the case `d = 0` is `isWeakTypeBound_one_of_dim_zero`. -/
+`isWeakTypeBound_two_pow`; the case `d = 0` is `isWeakTypeBound_zero_one`. -/
 theorem mul_volume_le_of_one_lt (hd : 0 < d) {f : (Fin d → ℝ) → ℝ} (hf : Integrable f) (α : ℝ≥0∞)
     {τ : ℝ} (hτ : 1 < τ) :
     α * volume {x | α < maximalFunction f x} ≤ ENNReal.ofReal ((1 + τ) ^ d) * ∫⁻ x, ‖f x‖ₑ := by
@@ -123,7 +123,7 @@ theorem mul_volume_le_of_one_lt (hd : 0 < d) {f : (Fin d → ℝ) → ℝ} (hf :
 `(1 + τ)ᵈ` for each fixed `τ > 1`, and only in positive dimension. -/
 theorem isWeakTypeBound_two_pow (d : ℕ) : IsWeakTypeBound d (2 ^ d) := by
   rcases d.eq_zero_or_pos with rfl | hd
-  · simpa using isWeakTypeBound_one_of_dim_zero
+  · simpa using isWeakTypeBound_zero_one
   intro f hf α
   -- let `τ → 1⁺` in the bounds `α |{M f > α}| ≤ (1 + τ)ᵈ ‖f‖₁` of `mul_volume_le_of_one_lt`
   refine ge_of_tendsto (x := 𝓝[>] (1 : ℝ)) (ENNReal.Tendsto.mul_const ?_ (.inr hf.2.ne))

@@ -92,23 +92,10 @@ theorem volume_slots_le : volume slots ≤ (ENNReal.ofReal slotW + ENNReal.ofRea
     _ = _ * _ := (volume_pi_pi _).trans (Fin.prod_univ_two _)
     _ ≤ _ := mul_le_mul' volume_preimage_abs_Ioo_le volume_preimage_abs_Ioo_le
 
-/-- The slots do not exhaust the period cell: `2 hgap vgap - 4 slotW slotH`, the real lower bound
-on the area of `goodSet` in `volume_goodSet_ge`, is positive. -/
-theorem area_pos : 0 < 2 * hgap * vgap - 4 * (slotW * slotH) := by
-  -- each slot fits strictly inside its quadrant `hgap × vgap / 2` of the cell
-  have hW : slotW < hgap := by
-    unfold slotW
-    linarith [two_mul_hgap_le_sideLHL2, one_le_root]
-  have hH : slotH < vgap / 2 := by
-    unfold slotH
-    linarith [vgap_le_sideLH2, one_le_sideH1]
-  linarith [mul_lt_mul_of_nonneg hW hH slotW_pos.le slotH_pos.le]
-
 /-- The witnessed part `goodSet = cell \ slots` of the period cell has area at least
 `2 hgap vgap - 4 slotW slotH`: the area of `cell` (`volume_cell`) minus the bound `volume_slots_le`
-on the four slots. The real number under `ENNReal.ofReal` is positive (`area_pos`), so the bound is
-not vacuous. -/
-theorem volume_goodSet_ge : ENNReal.ofReal (2 * hgap * vgap - 4 * (slotW * slotH)) ≤
+on the four slots. -/
+theorem ofReal_le_volume_goodSet : ENNReal.ofReal (2 * hgap * vgap - 4 * (slotW * slotH)) ≤
     volume goodSet := by
   -- the left side is `volume cell - 4 * (slotW * slotH)`, computed in `ℝ≥0∞`
   rw [ENNReal.ofReal_sub _ (mul_pos four_pos (mul_pos slotW_pos slotH_pos)).le, ← volume_cell,
@@ -166,8 +153,8 @@ theorem nearBox_subset_atomBox {N : ℕ} {k l : ℤ} (hk : |k| ≤ N) (hl : |l| 
   grind [nearBox, atomBox]
 
 /-- The level set of `smeared N ε` at height `1 - 2ε` has measure at least `(2N + 1)²` times the
-lower bound `2 hgap vgap - 4 slotW slotH` on the area of `goodSet` (`volume_goodSet_ge`), for every
-`ε > 0`: it contains the `(2N + 1)²` disjoint copies `goodCopy k l`, `|k|, |l| ≤ N`, of `goodSet`.
+lower bound `2 hgap vgap - 4 slotW slotH` on the area of `goodSet` (`ofReal_le_volume_goodSet`), for
+every `ε > 0`: it contains the `(2N + 1)²` disjoint copies `goodCopy k l`, `|k|, |l| ≤ N`, of `goodSet`.
 This is the level-set side of the weak type inequality in `ofReal_mul_phi_le`. -/
 theorem ofReal_le_volume_levelSet (N : ℕ) {ε : ℝ} (hε : 0 < ε) :
     ENNReal.ofReal ((2 * N + 1) ^ 2 * (2 * hgap * vgap - 4 * (slotW * slotH))) ≤
@@ -181,7 +168,8 @@ theorem ofReal_le_volume_levelSet (N : ℕ) {ε : ℝ} (hε : 0 < ε) :
         norm_cast
     -- each copy `goodCopy k l` is a translate of `goodSet`, so has at least that area
     _ ≤ ∑ p ∈ S, volume (goodCopy p.1 p.2) :=
-        S.card_nsmul_le_sum _ _ fun p _ ↦ volume_goodSet_ge.trans_eq (volume_goodCopy ..).symm
+        S.card_nsmul_le_sum _ _ fun _ _ ↦
+          ofReal_le_volume_goodSet.trans_eq (volume_goodCopy ..).symm
     -- the copies are pairwise disjoint
     _ = volume (⋃ p ∈ S, goodCopy p.1 p.2) :=
         (measure_biUnion_finset (pairwiseDisjoint_goodCopy.subset (subset_univ _))
