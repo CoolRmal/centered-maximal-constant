@@ -148,8 +148,6 @@ the Lean statements are the ones used verbatim in [P §4.2] ✓.
   *Attack:* `1 - 2ε = (2N + 1)/(2N + 3) > 0` ✓.
 - **L5** (internal): `ofReal_phi_le` — `ge_of_tendsto'` with `q_N ≥ 1 - 1/(N + 1) → 1`.
 
-## Result 3: `weakTypeConstant_two_gt` — assembly of `lt_phi` and Result 2.
-
 ## Result 4: `lt_phi`, `phi_lt` — proved in `Numerics.lean`.
 
 ## Feasibility

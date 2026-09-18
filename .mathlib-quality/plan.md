@@ -15,7 +15,6 @@ and states, as the compared declarations,
 ```lean
 theorem weakTypeConstant_le_two_pow (d : ℕ) : weakTypeConstant d ≤ 2 ^ d
 theorem ofReal_phi_le_weakTypeConstant_two : ENNReal.ofReal phi ≤ weakTypeConstant 2
-theorem weakTypeConstant_two_gt : ENNReal.ofReal (1685 / 1000) < weakTypeConstant 2
 theorem lt_phi : (1685 / 1000 : ℝ) < phi
 theorem phi_lt : phi < 1686 / 1000
 ```

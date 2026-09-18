@@ -23,7 +23,6 @@ and every `α`. `Challenge.lean` defines `maximalFunction`, `IsWeakTypeBound`, `
 |---|---|
 | `CenteredMaximal.weakTypeConstant_le_two_pow` | `c_d ≤ 2ᵈ` for every `d` |
 | `CenteredMaximal.ofReal_phi_le_weakTypeConstant_two` | `Φ ≤ c₂` |
-| `CenteredMaximal.weakTypeConstant_two_gt` | `1.685 < c₂` |
 | `CenteredMaximal.lt_phi` | `1.685 < Φ` |
 | `CenteredMaximal.phi_lt` | `Φ < 1.686` |
 

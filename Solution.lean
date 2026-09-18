@@ -37,9 +37,4 @@ theorem weakTypeConstant_le_two_pow (d : ℕ) : weakTypeConstant d ≤ 2 ^ d :=
 theorem ofReal_phi_le_weakTypeConstant_two : ENNReal.ofReal phi ≤ weakTypeConstant 2 :=
   le_weakTypeConstant fun _ hC => Lattice.ofReal_phi_le hC
 
-/-- `c₂ > 1.685`. -/
-theorem weakTypeConstant_two_gt : ENNReal.ofReal (1685 / 1000) < weakTypeConstant 2 :=
-  ((ENNReal.ofReal_lt_ofReal_iff (lt_trans (by norm_num) lt_phi)).2 lt_phi).trans_le
-    ofReal_phi_le_weakTypeConstant_two
-
 end CenteredMaximal

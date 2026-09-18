@@ -97,7 +97,7 @@ related_formalizations:
   note: Contains a centred maximal function over balls in finite-dimensional normed spaces with the weak type bound 4^n (TauCeti/MeasureTheory/Integral/MaximalFunction.lean). This development does not use it; its challenge imports only Mathlib.
 status:
   scope: |-
-    Formalized in full, with complete proof terms using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), its consequence c_2 > 1.685 (CenteredMaximal.weakTypeConstant_two_gt), the upper bound c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), and 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt). The maximal function, the weak type bounds, the constant c_d and Phi are defined in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and the level set is measured with Lebesgue outer measure, so no measurability or finiteness assumption is hidden in the statement.
+    Formalized in full, with complete proof terms using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), the upper bound c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), and 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt). The maximal function, the weak type bounds, the constant c_d and Phi are defined in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and the level set is measured with Lebesgue outer measure, so no measurability or finiteness assumption is hidden in the statement.
     Not formalized, and why. (i) That the level-one set of the extremal lattice has area exactly 2hV - 4ab: only the lower bound is needed, and the exact value is established by the exploratory symbolic computation, which is not in this repository. (ii) Optimality of Phi: none is claimed; numerical searches over weighted product lattices and several non-product families found nothing larger, but unit-weight motifs with three or four atoms per cell were not searched substantially. (iii) The restricted optimality of the unit rectangular lattice at the seed 3(2 + sqrt6)/8, certified in exact rational arithmetic during the exploration, is not part of the Lean development. (iv) Sharpness of 2^d: the upper bound is the classical covering bound and is not claimed to be sharp for Lebesgue measure.
   sorry_count: 0
   sorry_in_definitions: 0
@@ -158,11 +158,6 @@ alignment:
     module: Solution
     status: proved
     note: Compared declaration; the principal result.
-  - source: 'Consequence: c_2 > 1.685'
-    lean: CenteredMaximal.weakTypeConstant_two_gt
-    module: Solution
-    status: proved
-    note: Compared declaration; combines the principal result with 1.685 < Phi.
   - source: 'Classical upper bound (Tao, 245A Notes 5, Exercise 42): c_d <= 2^d in every dimension'
     lean: CenteredMaximal.weakTypeConstant_le_two_pow
     module: Solution

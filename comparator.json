@@ -4,7 +4,6 @@
   "theorem_names": [
     "CenteredMaximal.weakTypeConstant_le_two_pow",
     "CenteredMaximal.ofReal_phi_le_weakTypeConstant_two",
-    "CenteredMaximal.weakTypeConstant_two_gt",
     "CenteredMaximal.lt_phi",
     "CenteredMaximal.phi_lt"
   ],

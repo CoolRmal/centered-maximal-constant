@@ -23,7 +23,6 @@ This file states:
   with centred cubes);
 * `ofReal_phi_le_weakTypeConstant_two`: `Φ ≤ c₂`, where `Φ = 1.68550999…` is the explicit
   algebraic number `phi`; the previously published lower bound is `c₂ ≥ 1.62119…` (Aldaz, 2000);
-* `weakTypeConstant_two_gt`: consequently `c₂ > 1.685`;
 * `lt_phi` and `phi_lt`: `1.685 < Φ < 1.686`, so that the size of the explicit constant `Φ` is
   part of the statement.
 
@@ -87,10 +86,6 @@ theorem weakTypeConstant_le_two_pow (d : ℕ) : weakTypeConstant d ≤ 2 ^ d := 
 /-- **Lower bound.** `Φ ≤ c₂`. The previously published lower bound was
 `c₂ ≥ 3/4 - √2/4 + √6/2 = 1.62119…` (Aldaz, 2000, Proposition 1.4 with `n = 2`). -/
 theorem ofReal_phi_le_weakTypeConstant_two : ENNReal.ofReal phi ≤ weakTypeConstant 2 := by
-  sorry
-
-/-- `c₂ > 1.685`. -/
-theorem weakTypeConstant_two_gt : ENNReal.ofReal (1685 / 1000) < weakTypeConstant 2 := by
   sorry
 
 end CenteredMaximal
