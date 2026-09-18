@@ -60,7 +60,6 @@ this into integrable test functions, giving `C ≥ ((2N + 1)/(2N + 3))³ Φ` for
 | `≥ 3/2`, `> 1.47` | Aldaz, Czechoslovak Math. J. 50 (2000), Remark 1.3, Proposition 1.2 |
 | `≥ (11 + √61)/12 ≈ 1.5675` | Melas, Ann. of Math. 157 (2003) (the exact one-dimensional constant) with `c_{d+1} ≥ c_d` (Aldaz, 2011) |
 | `≥ 3/4 - √2/4 + √6/2 ≈ 1.6212` | Aldaz (2000), Proposition 1.4 with `n = 2`: a unit rectangular lattice |
-| `≥ 3(2 + √6)/8 ≈ 1.6686` | unit rectangular lattice with spacings `3/2`, `(2 + √6)/4`; from the research brief behind this project, not claimed as published |
 | **`≥ Φ ≈ 1.6855`** | **this repository**: a lattice with unequal masses |
 | `≤ 4` | the `2ᵈ` covering bound (Tao, *245A Notes 5*, Exercise 42), formalized here |
 
