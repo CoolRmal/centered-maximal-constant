@@ -31,125 +31,105 @@ namespace CenteredMaximal
 
 variable {d : ℕ}
 
-/-- In dimension `0` the space is a point, and `1` is a weak type bound. -/
+/-- In dimension `0` the space `Fin 0 → ℝ` is a single point of volume `1`, and `1` is a weak type
+bound. This is the case `d = 0` of `isWeakTypeBound_two_pow`. -/
 theorem isWeakTypeBound_one_of_dim_zero : IsWeakTypeBound 0 1 := by
   intro f _ α
-  have hM : ∀ x, maximalFunction f x ≤ ∫⁻ y, ‖f y‖ₑ := fun x => iSup₂_le fun r hr => by
-    rw [volume_closedBall_eq x hr.le, pow_zero, ENNReal.ofReal_one, inv_one, one_mul]
-    exact setLIntegral_le_lintegral _ _
-  rcases Set.eq_empty_or_nonempty {x | α < maximalFunction f x} with hE | ⟨x, hx⟩
+  rcases eq_empty_or_nonempty {x | α < maximalFunction f x} with hE | ⟨x, hx⟩
   · simp [hE]
-  have huniv : (univ : Set (Fin 0 → ℝ)) = closedBall 0 1 :=
-    (Set.eq_univ_of_forall fun y => by
-      rw [Subsingleton.elim y 0]
-      exact mem_closedBall_self zero_le_one).symm
-  have hvol : volume {x | α < maximalFunction f x} ≤ 1 := by
-    calc volume {x | α < maximalFunction f x} ≤ volume (univ : Set (Fin 0 → ℝ)) :=
-          measure_mono (subset_univ _)
-      _ = 1 := by
-          rw [huniv, volume_closedBall_eq _ zero_le_one, pow_zero, ENNReal.ofReal_one]
-  calc α * volume {x | α < maximalFunction f x} ≤ α * 1 := by gcongr
-    _ ≤ 1 * ∫⁻ y, ‖f y‖ₑ := by
-        rw [mul_one, one_mul]
-        exact (hx.trans_le (hM x)).le
+  -- every cube in the one-point space has volume `1`, so `M f ≤ ‖f‖₁`
+  have hM : maximalFunction f x ≤ ∫⁻ y, ‖f y‖ₑ := iSup₂_le fun r hr ↦ by
+    simpa [volume_closedBall_eq x hr.le] using setLIntegral_le_lintegral _ _
+  calc α * volume {x | α < maximalFunction f x} ≤ α * 1 :=
+        mul_le_mul_right ((measure_mono (subset_univ _)).trans_eq (Measure.pi_empty_univ _)) α
+    _ ≤ 1 * ∫⁻ y, ‖f y‖ₑ := by simpa using (hx.trans_le hM).le
 
-/-- A cube whose volume times `α ∈ (0, ∞)` stays below a finite `K` has radius at most
-`max 1 (K / α)`, in positive dimension. -/
-theorem radius_le_of_mul_volume_lt (hd : 0 < d) {α K : ℝ≥0∞} (hα : 0 < α) (hα' : α ≠ ∞)
-    (hK : K ≠ ∞) {x : Fin d → ℝ} {r : ℝ} (hr : 0 < r) (h : α * volume (closedBall x r) < K) :
+/-- In positive dimension, a cube whose volume times `α ∈ (0, ∞)` stays below a finite `K` has
+radius at most `max 1 (K / α)`. With `K = ‖f‖₁` this is the uniform bound on the radii of the
+cubes in `mul_volume_le_of_one_lt`, which the Vitali covering lemma requires. -/
+theorem radius_le_of_mul_volume_lt (hd : 0 < d) {α K : ℝ≥0∞} (hα : 0 < α) (hα' : α ≠ ∞) (hK : K ≠ ∞)
+    {x : Fin d → ℝ} {r : ℝ} (hr : 0 < r) (h : α * volume (closedBall x r) < K) :
     r ≤ max 1 (K / α).toReal := by
-  by_contra hlt
-  rw [not_le] at hlt
-  have h₁ : 1 < r := (le_max_left _ _).trans_lt hlt
-  have h₂ : (K / α).toReal < r := (le_max_right _ _).trans_lt hlt
-  have h₃ : K / α ≤ volume (closedBall x r) := by
-    rw [volume_closedBall_eq x hr.le, ← ENNReal.ofReal_toReal (ENNReal.div_ne_top hK hα.ne')]
-    refine ENNReal.ofReal_le_ofReal ?_
-    calc (K / α).toReal ≤ 2 * r := by linarith
-      _ ≤ (2 * r) ^ d := le_self_pow₀ (by linarith) hd.ne'
-  have h₄ : α * (K / α) ≤ α * volume (closedBall x r) := by gcongr
-  rw [ENNReal.mul_div_cancel hα.ne' hα'] at h₄
-  exact h.not_ge h₄
+  by_contra! hlt
+  obtain ⟨h₁, h₂⟩ := max_lt_iff.1 hlt
+  -- then `|Q| = (2r)ᵈ ≥ 2r > K / α`, so `α |Q| ≥ K`, contradicting `h`
+  refine h.not_ge ?_
+  rw [volume_closedBall_eq x hr.le, ← ENNReal.div_le_iff' hα.ne' hα',
+    ENNReal.le_ofReal_iff_toReal_le (ENNReal.div_ne_top hK hα.ne') (by positivity)]
+  linarith [le_self_pow₀ (by linarith : 1 ≤ 2 * r) hd.ne']
 
-/-- The Vitali argument with an epsilon of room: `α |{M f > α}| ≤ (1 + τ)ᵈ ‖f‖₁` for `τ > 1`. -/
-theorem mul_volume_le_of_one_lt (hd : 0 < d) {f : (Fin d → ℝ) → ℝ} (hf : Integrable f)
-    (α : ℝ≥0∞) {τ : ℝ} (hτ : 1 < τ) :
+private theorem exists_mul_volume_lt_setLIntegral {f : (Fin d → ℝ) → ℝ} {x : Fin d → ℝ} {α : ℝ≥0∞}
+    (h : α < maximalFunction f x) :
+    ∃ r, 0 < r ∧ α * volume (closedBall x r) < ∫⁻ y in closedBall x r, ‖f y‖ₑ := by
+  obtain ⟨r, hr, hlt⟩ := exists_lt_average_of_lt_maximalFunction h
+  exact ⟨r, hr, ENNReal.mul_lt_of_lt_div (ENNReal.div_eq_inv_mul ▸ hlt)⟩
+
+private theorem subset_biUnion_closedBall_one_add_mul {X : Type*} [PseudoMetricSpace X]
+    {E u : Set X} {ρ : X → ℝ} {τ : ℝ}
+    (h : ∀ a ∈ E, ∃ b ∈ u, (closedBall a (ρ a) ∩ closedBall b (ρ b)).Nonempty ∧ ρ a ≤ τ * ρ b) :
+    E ⊆ ⋃ b ∈ u, closedBall b ((1 + τ) * ρ b) := fun a ha ↦
+  let ⟨b, hbu, hab, hρ⟩ := h a ha
+  mem_biUnion hbu <| (dist_le_add_of_nonempty_closedBall_inter_closedBall hab).trans (by linarith)
+
+private theorem volume_biUnion_closedBall_mul_le {u : Set (Fin d → ℝ)} (hu : u.Countable)
+    {ρ : (Fin d → ℝ) → ℝ} (hρ : ∀ b ∈ u, 0 ≤ ρ b) {c : ℝ} (hc : 0 ≤ c) :
+    volume (⋃ b ∈ u, closedBall b (c * ρ b)) ≤ ENNReal.ofReal (c ^ d) *
+      ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b)) := by
+  rw [← ENNReal.tsum_mul_left]
+  refine (measure_biUnion_le volume hu _).trans_eq (tsum_congr fun b ↦ ?_)
+  rw [volume_closedBall_eq _ (mul_nonneg hc (hρ b b.2)), volume_closedBall_eq _ (hρ b b.2),
+    ← ENNReal.ofReal_mul (by positivity), mul_left_comm, mul_pow]
+
+private theorem mul_tsum_volume_le_lintegral {f : (Fin d → ℝ) → ℝ} {α : ℝ≥0∞} {u : Set (Fin d → ℝ)}
+    (hu : u.Countable) {ρ : (Fin d → ℝ) → ℝ} (hdisj : u.PairwiseDisjoint fun b ↦ closedBall b (ρ b))
+    (hρ : ∀ b ∈ u, α * volume (closedBall b (ρ b)) ≤ ∫⁻ y in closedBall b (ρ b), ‖f y‖ₑ) :
+    α * ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b)) ≤ ∫⁻ x, ‖f x‖ₑ :=
+  calc α * ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b))
+      ≤ ∑' b : u, ∫⁻ y in closedBall (b : Fin d → ℝ) (ρ b), ‖f y‖ₑ :=
+        ENNReal.tsum_mul_left.symm.trans_le (ENNReal.tsum_le_tsum fun b ↦ hρ b b.2)
+    _ = ∫⁻ y in ⋃ b ∈ u, closedBall b (ρ b), ‖f y‖ₑ :=
+        (lintegral_biUnion hu (fun _ _ ↦ measurableSet_closedBall) hdisj _).symm
+    _ ≤ ∫⁻ x, ‖f x‖ₑ := setLIntegral_le_lintegral _ _
+
+/-- Weak type bound with an epsilon of room: in positive dimension,
+`α |{M f > α}| ≤ (1 + τ)ᵈ ‖f‖₁` for every `τ > 1`. Letting `τ → 1` gives the bound `2ᵈ` of
+`isWeakTypeBound_two_pow`; the case `d = 0` is `isWeakTypeBound_one_of_dim_zero`. -/
+theorem mul_volume_le_of_one_lt (hd : 0 < d) {f : (Fin d → ℝ) → ℝ} (hf : Integrable f) (α : ℝ≥0∞)
+    {τ : ℝ} (hτ : 1 < τ) :
     α * volume {x | α < maximalFunction f x} ≤ ENNReal.ofReal ((1 + τ) ^ d) * ∫⁻ x, ‖f x‖ₑ := by
-  set K := ∫⁻ x, ‖f x‖ₑ with hK_def
-  have hK : K ≠ ∞ := (hasFiniteIntegral_iff_enorm.1 hf.2).ne
-  rcases eq_or_ne α 0 with rfl | hα₀
+  rcases eq_zero_or_pos α with rfl | hα
   · simp
   rcases eq_or_ne α ∞ with rfl | hαt
   · simp
-  have hα : 0 < α := pos_iff_ne_zero.2 hα₀
   set E := {x | α < maximalFunction f x}
-  have hex : ∀ x ∈ E, ∃ r, 0 < r ∧
-      α * volume (closedBall x r) < ∫⁻ y in closedBall x r, ‖f y‖ₑ := by
-    intro x hx
-    obtain ⟨r, hr, hlt⟩ := exists_lt_average_of_lt_maximalFunction hx
-    refine ⟨r, hr, ?_⟩
-    have hv₀ : volume (closedBall x r) ≠ 0 := by
-      rw [volume_closedBall_eq x hr.le]
-      exact ENNReal.ofReal_ne_zero_iff.2 (by positivity)
-    rwa [← ENNReal.div_eq_inv_mul, ENNReal.lt_div_iff_mul_lt (Or.inl hv₀)
-      (Or.inl measure_closedBall_lt_top.ne)] at hlt
-  choose! ρ hρ₀ hρ using hex
-  have hR : ∀ x ∈ E, ρ x ≤ max 1 (K / α).toReal := fun x hx =>
-    radius_le_of_mul_volume_lt hd hα hαt hK (hρ₀ x hx)
-      ((hρ x hx).trans_le (setLIntegral_le_lintegral _ _))
+  -- every `x ∈ E` is the centre of a cube `Q_x` of radius `ρ x` with `α |Q_x| < ∫_{Q_x} |f|`
+  choose! ρ hρ₀ hρ using fun x (hx : x ∈ E) ↦ exists_mul_volume_lt_setLIntegral hx
+  -- the radii are bounded, so Vitali selects disjoint cubes `Q_b`, `b ∈ u`, such that every `Q_x`
+  -- meets some `Q_b` with `ρ x ≤ τ ρ b`
   obtain ⟨u, huE, hdisj, hcov⟩ := Vitali.exists_disjoint_subfamily_covering_enlargement
-    (fun x => closedBall x (ρ x)) E ρ τ hτ (fun x hx => (hρ₀ x hx).le) _ hR
-    fun x hx => ⟨x, mem_closedBall_self (hρ₀ x hx).le⟩
-  have hu : u.Countable := hdisj.countable_of_nonempty_interior fun x hx =>
+    (fun x ↦ closedBall x (ρ x)) E ρ τ hτ (fun x hx ↦ (hρ₀ x hx).le) _
+    (fun x hx ↦ radius_le_of_mul_volume_lt hd hα hαt (hasFiniteIntegral_iff_enorm.1 hf.2).ne
+      (hρ₀ x hx) ((hρ x hx).trans_le (setLIntegral_le_lintegral _ _)))
+    fun x hx ↦ ⟨x, mem_closedBall_self (hρ₀ x hx).le⟩
+  have hu : u.Countable := hdisj.countable_of_nonempty_interior fun x hx ↦
     ⟨x, interior_maximal ball_subset_closedBall isOpen_ball (mem_ball_self (hρ₀ x (huE hx)))⟩
-  have hcover : E ⊆ ⋃ b ∈ u, closedBall b ((1 + τ) * ρ b) := by
-    intro a ha
-    obtain ⟨b, hbu, ⟨z, hza, hzb⟩, hab⟩ := hcov a ha
-    refine mem_iUnion₂.2 ⟨b, hbu, ?_⟩
-    rw [mem_closedBall] at hza hzb ⊢
-    calc dist a b ≤ dist z a + dist z b := dist_triangle_left a b z
-      _ ≤ (1 + τ) * ρ b := by linarith
-  have hvol : volume E ≤
-      ENNReal.ofReal ((1 + τ) ^ d) * ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b)) :=
-    calc volume E ≤ volume (⋃ b ∈ u, closedBall b ((1 + τ) * ρ b)) := measure_mono hcover
-      _ ≤ ∑' b : u, volume (closedBall (b : Fin d → ℝ) ((1 + τ) * ρ b)) :=
-          measure_biUnion_le volume hu _
-      _ = ∑' b : u, ENNReal.ofReal ((1 + τ) ^ d) *
-            volume (closedBall (b : Fin d → ℝ) (ρ b)) := by
-          congr 1
-          ext b
-          have hb := hρ₀ b (huE b.2)
-          rw [volume_closedBall_eq _ (by positivity), volume_closedBall_eq _ hb.le,
-            ← ENNReal.ofReal_mul (by positivity), mul_left_comm, mul_pow]
-      _ = _ := ENNReal.tsum_mul_left
-  have hint : α * ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b)) ≤ K :=
-    calc α * ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b))
-        = ∑' b : u, α * volume (closedBall (b : Fin d → ℝ) (ρ b)) := ENNReal.tsum_mul_left.symm
-      _ ≤ ∑' b : u, ∫⁻ y in closedBall (b : Fin d → ℝ) (ρ b), ‖f y‖ₑ :=
-          ENNReal.tsum_le_tsum fun b => (hρ b (huE b.2)).le
-      _ = ∫⁻ y in ⋃ b ∈ u, closedBall b (ρ b), ‖f y‖ₑ :=
-          (lintegral_biUnion hu (fun _ _ => measurableSet_closedBall) hdisj _).symm
-      _ ≤ K := setLIntegral_le_lintegral _ _
-  calc α * volume E
-      ≤ α * (ENNReal.ofReal ((1 + τ) ^ d) *
-          ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b))) := by gcongr
-    _ = ENNReal.ofReal ((1 + τ) ^ d) *
-          (α * ∑' b : u, volume (closedBall (b : Fin d → ℝ) (ρ b))) := by ring
-    _ ≤ ENNReal.ofReal ((1 + τ) ^ d) * K := by gcongr
+  -- the centres of `E` lie in the `(1 + τ)`-enlarged `Q_b`, and the `Q_b` are disjoint
+  grw [subset_biUnion_closedBall_one_add_mul hcov,
+    volume_biUnion_closedBall_mul_le hu (fun b hb ↦ (hρ₀ b (huE hb)).le) (by linarith),
+    mul_left_comm, mul_tsum_volume_le_lintegral hu hdisj fun b hb ↦ (hρ b (huE hb)).le]
 
-/-- `2ᵈ` is a weak type bound in dimension `d`. -/
+/-- `2ᵈ` is a weak type bound in dimension `d`, so `weakTypeConstant d ≤ 2 ^ d` by
+`weakTypeConstant_le`. Compare `mul_volume_le_of_one_lt`, which gives only the weaker bound
+`(1 + τ)ᵈ` for each fixed `τ > 1`, and only in positive dimension. -/
 theorem isWeakTypeBound_two_pow (d : ℕ) : IsWeakTypeBound d (2 ^ d) := by
-  rcases Nat.eq_zero_or_pos d with rfl | hd
+  rcases d.eq_zero_or_pos with rfl | hd
   · simpa using isWeakTypeBound_one_of_dim_zero
   intro f hf α
-  have hK : ∫⁻ x, ‖f x‖ₑ ≠ ∞ := (hasFiniteIntegral_iff_enorm.1 hf.2).ne
-  have hpow : Tendsto (fun τ : ℝ => ENNReal.ofReal ((1 + τ) ^ d)) (𝓝[>] 1) (𝓝 (2 ^ d)) := by
-    have h : Tendsto (fun τ : ℝ => (1 + τ) ^ d) (𝓝 1) (𝓝 (2 ^ d)) := by
-      have hc : Continuous fun τ : ℝ => (1 + τ) ^ d := by fun_prop
-      simpa [one_add_one_eq_two] using hc.tendsto 1
-    have h' := ENNReal.tendsto_ofReal (h.mono_left (nhdsWithin_le_nhds (s := Ioi 1)))
-    rwa [ENNReal.ofReal_pow (by norm_num), ENNReal.ofReal_ofNat] at h'
-  exact ge_of_tendsto (ENNReal.Tendsto.mul_const hpow (Or.inr hK))
-    (eventually_nhdsWithin_of_forall fun τ hτ => mul_volume_le_of_one_lt hd hf α hτ)
+  -- let `τ → 1⁺` in the bounds `α |{M f > α}| ≤ (1 + τ)ᵈ ‖f‖₁` of `mul_volume_le_of_one_lt`
+  refine ge_of_tendsto (x := 𝓝[>] (1 : ℝ)) (ENNReal.Tendsto.mul_const ?_ (.inr hf.2.ne))
+    (eventually_nhdsWithin_of_forall fun _ ↦ mul_volume_le_of_one_lt hd hf α)
+  -- the constants converge: `(1 + τ)ᵈ → (1 + 1)ᵈ = 2ᵈ`
+  exact ((ENNReal.continuous_ofReal.comp (by fun_prop)).tendsto' 1 _
+    (by norm_num [ENNReal.ofReal_pow])).mono_left nhdsWithin_le_nhds
 
 end CenteredMaximal
