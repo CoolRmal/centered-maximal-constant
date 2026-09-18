@@ -33,7 +33,7 @@ under 100 characters; Palomar metadata (`formalization.yaml`, licence, README, l
 | [V] | Mathlib `Vitali.exists_disjoint_subfamily_covering_enlargement` | the covering step |
 | [A] | J. M. Aldaz, Czechoslovak Math. J. 50 (2000) 103–112, Lemma 1.1 and Prop. 1.4 | smearing device; previous record `1.6212` |
 | [B] | the research brief *Improving the planar centered maximal constant* (18 Sep 2026), pages 2–4 | lower-bound principle, finite-mass passage, seed `1.66856` |
-| [R] | `exploration/REPORT.md` | discovery of the configuration, exact certificate, literature search |
+| [R] | the exploratory report (kept outside this repository; summarised in `docs/HISTORY.md`) | discovery of the configuration, exact certificate, literature search |
 
 ## Mathlib inventory
 

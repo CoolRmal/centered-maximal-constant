@@ -30,5 +30,5 @@ skeleton (commit `5a6444f`), and the proof sketches are those of `decomposition.
 | T17 | UpperBound | `isWeakTypeBound_two_pow` (milestone) | T16 | open |
 | CLEANUP-6 | UpperBound | `/cleanup` | T17 | open |
 | CLEANUP-ALL | all | `/cleanup-all`, comparator run in CI | T14, CLEANUP-6 | open |
-| T18 | metadata | `formalization.yaml`, README with literature account, `docs/HISTORY.md`, `exploration/` | CLEANUP-ALL | open |
+| T18 | metadata | `formalization.yaml`, README with literature account, `docs/HISTORY.md` | CLEANUP-ALL | open |
 | CLEANUP-FINAL | all | final review (`/pre-submit` checklist) | T18 | open |
