@@ -46,13 +46,22 @@ Place a mass `1` at `(ih, jV)` for even `i` and a mass `w` for odd `i` (`i, j �
 
 All atoms in a column have the same mass, `1` or `w`, alternating from column to column. A fundamental
 domain is a `2h × V` rectangle, such as the shaded one, and carries mass `1 + w = u² ≈ 4.974`. The
-Lean proof uses the translate `cell = [-h, h) × [-V/2, V/2)`, centred on a unit mass. The set where
-the maximal function of this periodic measure is at least `1` covers every fundamental domain except
-four thin open slots of width `a ≈ 0.3868` and height `b ≈ 0.0414`, so it has area `2hV - 4ab` per
-mass `1 + w`, and `Φ = (2hV - 4ab)/(1 + w)`. Six explicit witness squares, reflected and translated,
-certify the covered part; truncating the lattice and smearing each atom over a small square turns
-this into integrable test functions, giving `C ≥ ((2N + 1)/(2N + 3))³ Φ` for every weak type bound
-`C` and every `N`.
+Lean proof uses the translate `cell = [-h, h) × [-V/2, V/2)`, centred on a unit mass. On this cell it
+shows that the maximal function `Mμ` of the periodic measure `μ` is at least `1` everywhere except in
+four thin open slots of width `a ≈ 0.3868` and height `b ≈ 0.0414`:
+
+![The period cell coloured by the witness square that certifies the maximal function is at least 1 there, with the four uncovered slots in red; a magnified quarter cell shows the case split](docs/coverage.svg)
+
+`exists_isWitness_of_nonneg` in `Witness.lean` splits the quarter `[0, h] × [0, V/2]` into the
+regions of panel (b), one for each of six witness squares (`isWitness_light`, …, `isWitness_lhl2`).
+A witness is a side `L` together with a set of atoms of total mass exactly `L²`, all of which lie in
+the closed square of side `L` centred at any point of its region, so that square has average `1`. The
+only points of the quarter left out form the open slot
+`(u/2, 2h - √(2(2 + w))/2) × (√w/2, V - √2 u/2)`. `exists_isWitness_of_abs` reflects the split in
+both axes, which gives the four slots of panel (a). The certified part therefore has area at least
+`2hV - 4ab` per mass `1 + w`, and `Φ = (2hV - 4ab)/(1 + w)`. Translating the witnesses to every cell,
+truncating the lattice and smearing each atom over a small square turns this into integrable test
+functions, giving `C ≥ ((2N + 1)/(2N + 3))³ Φ` for every weak type bound `C` and every `N`.
 
 `docs/PROOF.md` is the informal proof, step by step and with the name of each Lean declaration;
 `docs/HISTORY.md` records how the configuration was found.
