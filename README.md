@@ -44,7 +44,7 @@ Place a mass `1` at `(ih, jV)` for even `i` and a mass `w` for odd `i` (`i, j �
 
 ![The periodic measure: unit masses on the columns x = ih with i even, masses w on the columns with i odd, rows at spacing V; the shaded fundamental domain is a 2h × V rectangle holding one mass of each kind](docs/lattice.svg)
 
-Each column carries a single mass, `1` or `w`, alternating from column to column. A fundamental
+All atoms in a column have the same mass, `1` or `w`, alternating from column to column. A fundamental
 domain is a `2h × V` rectangle, such as the shaded one, and carries mass `1 + w = u² ≈ 4.974`. The
 Lean proof uses the translate `cell = [-h, h) × [-V/2, V/2)`, centred on a unit mass. The set where
 the maximal function of this periodic measure is at least `1` covers every fundamental domain except
