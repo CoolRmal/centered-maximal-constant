@@ -3,8 +3,8 @@ version: v0.4
 project:
   name: A lower bound 1.6855 for the planar centred Hardy-Littlewood maximal constant over squares
   description: |-
-    Let c_d be the weak type (1,1) constant of the centred Hardy-Littlewood maximal operator over axis-parallel cubes in R^d: the least C such that alpha |{Mf > alpha}| <= C ||f||_1 for every integrable f and every level alpha. The value of c_d is unknown for every d >= 2. The previously published lower bound in the plane is c_2 >= 3/4 - sqrt(2)/4 + sqrt(6)/2 = 1.62119..., obtained by Aldaz (2000) from a rectangular lattice of unit Dirac masses; the best known upper bound is c_2 <= 4.
-    This development proves c_2 >= Phi = 1.68550999335552518..., where Phi = ((77 + 16 sqrt 22)/2 - (8 + sqrt 22 - sqrt(70 + 8 sqrt 22))(11 + sqrt 22 - 2 sqrt 2 - 2 sqrt 11 - sqrt(17 + 4 sqrt 22)))/(26 + 4 sqrt 22) is an algebraic number of degree 16. The extremal configuration found is a lattice with unequal masses: columns at spacing h = (5 + sqrt 22)/6 carrying masses alternating 1 and w = (17 + 4 sqrt 22)/9, rows at spacing h + 1. Its level-one set covers the period cell except four thin slots, and truncating and smearing the lattice gives integrable test functions. The development also proves the classical covering bound c_d <= 2^d in every dimension, and 1.685 < Phi < 1.686.
+    Let c_d be the weak type (1,1) constant of the centred Hardy-Littlewood maximal operator over axis-parallel cubes in R^d: the least C such that alpha |{Mf > alpha}| <= C ||f||_1 for every integrable f and every level alpha. Its value is unknown for every d >= 2; in the plane the previously published lower bound is c_2 >= 3/4 - sqrt(2)/4 + sqrt(6)/2 = 1.62119... (Aldaz 2000) and the best known upper bound is 4.
+    This development proves c_2 >= Phi = 1.68550999335552518..., an explicit algebraic number of degree 16, from a lattice with unequal masses: columns at spacing h = (5 + sqrt 22)/6 carrying masses alternating 1 and w = (17 + 4 sqrt 22)/9, rows at spacing h + 1. It also proves the classical covering bound c_d <= 2^d in every dimension and 1.685 < Phi < 1.686.
   authors:
   - Yongxi Lin
   license: Apache-2.0
@@ -23,7 +23,7 @@ sources:
   type: original-proof
   relationship: other
   note: |-
-    The principal result is first presented in this repository (docs/PROOF.md, docs/HISTORY.md). Novelty qualification: a literature search on 2026-09-18 covered arXiv (about 15 API queries on the centred maximal operator, weak type constants, cubes, lattices and Dirac masses, and on the authors Aldaz, Melas, Perez Lazaro, Kosz, Iakovlev, Stromberg and Aubrun), the works citing Aldaz (2000) (8 in Semantic Scholar) and Melas (2003) (96), the complete history of the compilation page for constant 47a (4 commits, every issue and pull request, all 88 forks), a GitHub-wide code search, Zenodo, Hugging Face, Figshare, the Palomar registry, Epoch's FrontierMath open problems, erdosproblems.com, MathOverflow and google-deepmind/formal-conjectures, together with exact-number searches for 1.6211914, 1.668558, 1.6855 and 3(2+sqrt6)/8. No lower bound above 1.6212 for centred squares in the plane was found, and none of the values 1.66856, 1.6855 or (17 + 4 sqrt 22)/9 occurs. The most recent AI-driven work on the centred constant (AlphaEvolve, arXiv:2511.02864; arXiv:2608.23691) treats dimension one only. Not reached: OpenAlex's citation index (rate-limited; it counts one more citing work of Aldaz 2000 than Semantic Scholar), zbMATH's cited-by pages (HTTP 403) and paywalled full texts. Novelty is asserted on this basis alone.
+    The principal result is first presented in this repository (docs/PROOF.md, docs/HISTORY.md). Novelty: a literature search on 2026-09-18 covered arXiv (about 15 API queries), the works citing Aldaz (2000) and Melas (2003) in Semantic Scholar, the full history of the compilation page for constant 47a with its issues, pull requests and forks, a GitHub-wide code search, Zenodo, Hugging Face, Figshare, the Palomar registry, Epoch's FrontierMath open problems, erdosproblems.com, MathOverflow and google-deepmind/formal-conjectures, with exact-number searches for 1.6211914, 1.668558, 1.6855 and 3(2+sqrt6)/8. No lower bound above 1.6212 for centred squares in the plane was found; the most recent AI-driven work on the centred constant (arXiv:2511.02864, arXiv:2608.23691) treats dimension one only. Not reached: OpenAlex (rate-limited), zbMATH's cited-by pages (HTTP 403) and paywalled full texts. Novelty is asserted on this basis alone.
 - title: A remark on the centered n-dimensional Hardy-Littlewood maximal function
   authors:
   - J. M. Aldaz
@@ -32,14 +32,14 @@ sources:
   location: https://dml.cz/bitstream/handle/10338.dmlcz/127554/CzechMathJ_50-2000-1_14.pdf
   relationship: other
   note: |-
-    Relationship other, explained here. Proposition 1.4 with n = 2 gives the previous record c_2 >= 3/4 - sqrt2/4 + sqrt6/2 = 1.62119... from a rectangular lattice of unit masses (the paper states the general-n formula; the n = 2 value is its specialisation). Lemma 1.1 is the device by which a lattice of point masses becomes integrable test functions (smear each atom over a small cube and enlarge the witness cubes). The present development re-proves that device for weighted atoms from scratch (CenteredMaximal/Lattice/Smear.lean) rather than citing it, and improves the bound; no statement is transcribed.
+    Relationship other: Proposition 1.4 with n = 2 gives the previous record 1.62119... from a rectangular lattice of unit masses, and Lemma 1.1 is the device turning a lattice of point masses into integrable test functions. The development re-proves that device for weighted atoms (CenteredMaximal/Lattice/Smear.lean) and improves the bound; no statement is transcribed.
   license: unknown
   author_endorsement: not-contacted
 - title: Improving the planar centered maximal constant (research brief)
   type: other
   relationship: other
   note: |-
-    Relationship other, explained here. An unpublished research brief dated 2026-09-18, supplied by the maintainer, that framed the project: it recalled Aldaz's bound, proposed and proved the seed c_2 >= 3(2 + sqrt6)/8 = 1.66856... from the unit lattice with spacings 3/2 and (2 + sqrt6)/4 (making no novelty claim for it), set out the periodic-to-finite reduction and an exact block-rectangle evaluator, and suggested periodic motifs with weights. The weighted configuration, the value Phi and the proof here are not in the brief. The brief is not included in the repository and cannot be independently confirmed.
+    Relationship other: an unpublished brief dated 2026-09-18, supplied by the maintainer, which recalled Aldaz's bound, proved the seed c_2 >= 3(2 + sqrt6)/8 from a unit lattice (no novelty claimed for it), and suggested weighted periodic motifs. The weighted configuration, Phi and the proof here are not in the brief, which is not included in the repository.
 - title: '245A, Notes 5: Differentiation theorems (Exercise 42)'
   authors:
   - Terence Tao
@@ -47,7 +47,7 @@ sources:
   location: https://terrytao.wordpress.com/2010/10/16/245a-notes-5-differentiation-theorems/
   relationship: other
   note: |-
-    Relationship other, explained here. The upper bound c_d <= 2^d, formalized here as the compared theorem CenteredMaximal.weakTypeConstant_le_two_pow, is Exercise 42 of these notes (improve 3^d to 2^d for centred balls, since only the centres need to be covered). It is a formalization of a known result inside a submission whose principal result is original, so the relationship is recorded as other rather than formalizes, per the registry's rule that result origins are not mixed. The proof uses Mathlib's Vitali lemma with enlargement tau > 1 and lets tau tend to 1, which is the epsilon of room the exercise's hint asks for.
+    Relationship other: the upper bound c_d <= 2^d (CenteredMaximal.weakTypeConstant_le_two_pow) is Exercise 42 of these notes, a known result formalized inside a submission whose principal result is original. The proof uses Mathlib's Vitali lemma with enlargement tau > 1 and lets tau tend to 1.
   license: unknown
   author_endorsement: not-contacted
 - title: The best constant for the centered Hardy-Littlewood maximal inequality
@@ -66,7 +66,7 @@ sources:
   id: Rend. Circ. Mat. Palermo (2) 41 (1992), 342-352, doi:10.1007/BF02848939
   type: paper
   relationship: background
-  note: Earlier lattice lower bound c_n >= ((1 + 2^(1/n))/2)^n, about 1.4571 for n = 2. Context only; not consulted directly (its content is taken from Aldaz 2000).
+  note: Earlier lattice lower bound c_n >= ((1 + 2^(1/n))/2)^n, about 1.4571 for n = 2. Context only; content taken from Aldaz 2000.
   license: unknown
   author_endorsement: not-contacted
 - title: Some remarks on dimension-free estimates for the discrete Hardy-Littlewood maximal functions
@@ -79,25 +79,25 @@ sources:
   type: paper
   location: https://arxiv.org/abs/2010.07379
   relationship: background
-  note: Shows that the best weak type (1,1) constant of the centred maximal operator over cubes on R^d equals its discrete analogue on Z^d, which supports looking for extremal configurations among lattices of point masses. Context only.
+  note: Shows that the best weak type (1,1) constant over cubes on R^d equals its discrete analogue on Z^d, which supports searching among lattices of point masses. Context only.
   license: unknown
   author_endorsement: not-contacted
 - title: Centered Hardy-Littlewood maximal constant in dimension 2 (constant 47a)
   type: other
   location: https://teorth.github.io/optimizationproblems/constants/47a.html
   relationship: background
-  note: Public compilation of optimization constants; consulted 2026-09-18, when it listed 1.6211915 (Aldaz 2000) as the best lower bound and 4 as the best upper bound. Bibliographic checkpoint only.
+  note: Public compilation of optimization constants; consulted 2026-09-18, when it listed 1.6211915 as the best lower bound and 4 as the best upper bound.
 related_formalizations:
 - id: https://github.com/fpvandoorn/carleson
   relationship: independent
-  note: Formalizes an uncentred Hardy-Littlewood maximal function on doubling metric measure spaces with a non-sharp weak type bound. This development does not use it and states the centred operator and its sharp constant independently.
+  note: Formalizes an uncentred maximal function on doubling metric measure spaces with a non-sharp weak type bound. Not used here.
 - id: https://github.com/TauCetiProject/TauCeti
   relationship: independent
-  note: Contains a centred maximal function over balls in finite-dimensional normed spaces with the weak type bound 4^n (TauCeti/MeasureTheory/Integral/MaximalFunction.lean). This development does not use it; its challenge imports only Mathlib.
+  note: Contains a centred maximal function over balls with the weak type bound 4^n. Not used here; the challenge imports only Mathlib.
 status:
   scope: |-
-    Formalized in full, with complete proof terms using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), the upper bound c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), and 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt). The maximal function, the weak type bounds, the constant c_d and Phi are defined in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and the level set is measured with Lebesgue outer measure, so no measurability or finiteness assumption is hidden in the statement.
-    Not formalized, and why. (i) That the level-one set of the extremal lattice has area exactly 2hV - 4ab: only the lower bound is needed, and the exact value is established by the exploratory symbolic computation, which is not in this repository. (ii) Optimality of Phi: none is claimed; numerical searches over weighted product lattices and several non-product families found nothing larger, but unit-weight motifs with three or four atoms per cell were not searched substantially. (iii) The restricted optimality of the unit rectangular lattice at the seed 3(2 + sqrt6)/8, certified in exact rational arithmetic during the exploration, is not part of the Lean development. (iv) Sharpness of 2^d: the upper bound is the classical covering bound and is not claimed to be sharp for Lebesgue measure.
+    Formalized in full, using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), and 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt). The definitions live in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and level sets are measured with Lebesgue outer measure.
+    Not formalized: the exact area 2hV - 4ab of the level-one set (only the lower bound is needed); any optimality of Phi (none is claimed); the restricted optimality of the seed lattice certified during the exploration; sharpness of 2^d.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: []
@@ -108,30 +108,27 @@ automation:
     - claude-fable-5-1
     framework: Claude Code
     tool_setup: |-
-      Discovery and certification, before any Lean was written. The agent audited the research brief (twelve independent auditing agents with exact algebra, including a blind reimplementation of the brief's evaluator), wrote exact and floating-point evaluators of the level-one area for rectangular lattices and for weighted periodic product measures (Python with fractions and sympy, C++), searched seventeen weighted product families and several non-product motif families by Nelder-Mead with random restarts, identified the exact parameters from three edge collisions, and wrote an exact rational certificate. These exploratory programs are not in this repository. Six independent referee agents then attacked the certificate; all concluded it holds. The same session ran the literature search recorded under sources.
+      Discovery and certification, before any Lean was written: exact and floating-point evaluators of the level-one area for weighted periodic product measures (Python, C++), Nelder-Mead searches over seventeen weighted product families and several non-product motifs, identification of the exact parameters from three edge collisions, an exact rational certificate, and six independent referee agents attacking it. These exploratory programs are not in this repository. The same session ran the literature search recorded under sources.
     cost:
-      wall_time: one working day (2026-09-18); session wall time not separately recorded
+      wall_time: one working day (2026-09-18)
       spend_usd: subscription-based
       hardware: local machine for computation, API-only for inference
-    prompting_notes: |-
-      Human-directed: the maintainer supplied the research brief and asked for a certified improvement, then for a literature review, then for the Lean formalization.
+    prompting_notes: Human-directed; the maintainer supplied the research brief and asked for a certified improvement, then for a literature review and the formalization.
   - method: agent
     models:
     - claude-opus-5
     framework: Claude Code with the mathlib-quality plugin
     tool_setup: |-
-      The Lean 4 development was written by an agent against Mathlib, following a plan written first (.mathlib-quality/plan.md, decomposition.md, tickets.md): the challenge statement and a skeleton with every lemma stated, then the proofs file by file, each compiled and pushed; then a mathlib-quality /cleanup pass with one worker per substantive declaration. The Lean proof simplifies the exploratory certificate (six witnesses on a quarter cell instead of twelve on the full cell, and only a lower bound for the covered area).
+      The Lean 4 development was written against Mathlib from a plan written first (.mathlib-quality/), then a skeleton with every lemma stated, then the proofs file by file, then a mathlib-quality cleanup pass with one worker per substantive declaration. The Lean proof simplifies the exploratory certificate (six witnesses on a quarter cell instead of twelve on the full cell, and only a lower bound for the covered area).
     cost:
-      wall_time: part of the same working day; not separately recorded
+      wall_time: part of the same working day
       spend_usd: subscription-based
       hardware: local machine for Lean builds, API-only for inference
-    prompting_notes: |-
-      Goal-directed with human instructions on scope: define c_d in general dimension in the challenge, include the upper bound c_d <= 2^d, state the numerical value of Phi in the challenge, and meet the comparator and Palomar standards.
+    prompting_notes: Goal-directed with human instructions on scope, statements and the comparator and Palomar standards.
   - method: manual
     models: []
     framework: n/a
-    tool_setup: |-
-      Human direction and judgement: the research brief, the choice of targets and statements, and the decision to formalize.
+    tool_setup: Human direction and judgement; the research brief, the choice of targets and statements, and the decision to formalize.
     cost:
       wall_time: not tracked
       spend_usd: not tracked
@@ -139,16 +136,16 @@ automation:
     prompting_notes: n/a
   spend_usd: subscription-based; not separately tracked
   notes: |-
-    The mathematics (search, exact parameters, certificate) and the Lean formalization were produced by AI agents under the maintainer's direction, in two stages with an explicit handover: the formalization started from the verified certificate and its written account, summarised in docs/HISTORY.md. No AI system is listed as an author.
+    The mathematics and the Lean formalization were produced by AI agents under the maintainer's direction, in two stages with an explicit handover summarised in docs/HISTORY.md. No AI system is listed as an author.
 fidelity:
   divergences: |-
-    No cited source result is formalized for the principal theorem, which is stated here for the first time. The upper bound follows Tao's Exercise 42 with one change of route: Mathlib's Vitali lemma for arbitrary families needs an enlargement factor tau > 1, so the proof gives (1 + tau)^d for each tau > 1 and passes to the limit; the finite greedy covering of the notes is not formalized. The smearing of point masses into integrable functions follows Aldaz's Lemma 1.1 and the research brief, adapted to atoms of unequal mass.
+    No cited source result is formalized for the principal theorem, which is stated here for the first time. The upper bound follows Tao's Exercise 42 except that Mathlib's Vitali lemma needs an enlargement tau > 1, so the proof gives (1 + tau)^d for each tau > 1 and passes to the limit. The smearing of point masses follows Aldaz's Lemma 1.1, adapted to atoms of unequal mass.
 review:
   status: agent-reviewed
   reviewers:
   - six independent AI referee agents (Claude Code), for the exploratory certificate; no human review
   notes: |-
-    No external human review. The exploratory certificate was attacked by six independent referee agents (witness principle, weighted finite-mass passage, line-by-line code audit with three independent union-area algorithms, a recomputation from the definition of the measure alone at 60 digits, the exact algebra, and a whole-chain sceptic); all six concluded that the claim holds, and one non-cosmetic remark was judged not to be a flaw by three further agents. The Lean statement was checked by reading Challenge.lean against the informal definitions; the compared theorems' axioms were printed and are exactly propext, Classical.choice and Quot.sound; the repository contains no native_decide, Lean.ofReduceBool, admit or axiom declaration. The literature search is summarised under sources.
+    No external human review. The exploratory certificate was attacked by six independent referee agents and all concluded that the claim holds. The Lean statement was checked by reading Challenge.lean against the informal definitions; the compared theorems' axioms were printed and are exactly propext, Classical.choice and Quot.sound.
 alignment:
   namespace: CenteredMaximal
   statements:
@@ -161,17 +158,17 @@ alignment:
     lean: CenteredMaximal.weakTypeConstant_le_two_pow
     module: Solution
     status: proved
-    note: Compared declaration; shows the constant is finite, so the lower bound is about a genuine number.
+    note: Compared declaration; shows the constant is finite.
   - source: 'Numerical value: 1.685 < Phi'
     lean: CenteredMaximal.lt_phi
     module: Solution
     status: proved
-    note: Compared declaration; pins down the size of the explicit constant Phi.
+    note: Compared declaration.
   - source: 'Numerical value: Phi < 1.686'
     lean: CenteredMaximal.phi_lt
     module: Solution
     status: proved
-    note: Compared declaration; pins down the size of the explicit constant Phi.
+    note: Compared declaration.
   - source: 'Phi is the covered area per unit mass: Phi = (2hV - 4ab)/(1 + w)'
     lean: CenteredMaximal.Lattice.phi_eq
     module: CenteredMaximal.Lattice.Constants
@@ -183,4 +180,4 @@ alignment:
     status: proved
     note: The analytic core of the lower bound.
 acknowledgements: |-
-  Built on Lean 4 and Mathlib, and checked with Lean Comparator. The lattice approach to lower bounds for c_d goes back to Trinidad Menarguez and Soria and to Aldaz; the covering argument for the upper bound is classical. The search, certificate and formalization were carried out with Claude Code; no AI system is listed as an author, in line with Palomar's human-authorship requirement, and their roles are recorded under automation.
+  Built on Lean 4 and Mathlib, and checked with Lean Comparator. The lattice approach to lower bounds for c_d goes back to Trinidad Menarguez and Soria and to Aldaz; the covering argument for the upper bound is classical. The search, certificate and formalization were carried out with Claude Code; no AI system is listed as an author, in line with Palomar's human-authorship requirement.
