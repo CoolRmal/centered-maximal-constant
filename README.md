@@ -40,8 +40,14 @@ Put `u = (2 + √22)/3`, the positive root of `3u² - 4u - 6 = 0`, and
 * `h = (1 + u)/2 = (5 + √22)/6 ≈ 1.6151`,
 * `V = h + 1 = (11 + √22)/6 ≈ 2.6151`.
 
-Place a mass `1` at `(ih, jV)` for even `i` and a mass `w` for odd `i`. The set where the maximal
-function of this periodic measure is at least `1` covers the period cell `[0, 2h) × [0, V)` except
+Place a mass `1` at `(ih, jV)` for even `i` and a mass `w` for odd `i` (`i, j ∈ ℤ`):
+
+![The periodic measure: unit masses on the columns x = ih with i even, masses w on the columns with i odd, rows at spacing V; the shaded fundamental domain is a 2h × V rectangle holding one mass of each kind](docs/lattice.svg)
+
+Each column carries a single mass, `1` or `w`, alternating from column to column. A fundamental
+domain is a `2h × V` rectangle, such as the shaded one, and carries mass `1 + w = u² ≈ 4.974`. The
+Lean proof uses the translate `cell = [-h, h) × [-V/2, V/2)`, centred on a unit mass. The set where
+the maximal function of this periodic measure is at least `1` covers every fundamental domain except
 four thin open slots of width `a ≈ 0.3868` and height `b ≈ 0.0414`, so it has area `2hV - 4ab` per
 mass `1 + w`, and `Φ = (2hV - 4ab)/(1 + w)`. Six explicit witness squares, reflected and translated,
 certify the covered part; truncating the lattice and smearing each atom over a small square turns
