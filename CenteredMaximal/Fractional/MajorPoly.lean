@@ -68,21 +68,42 @@ theorem eval3_append (p q : Poly3) (w x y : ℝ) :
     eval3 (p ++ q) w x y = eval3 p w x y + eval3 q w x y := by
   simp [eval3, List.sum_append]
 
-/-- Adding one term to a polynomial, merging it into an existing term with the same exponent. -/
+/-- Adding one term to a polynomial, merging it into an existing term with the same exponent and
+**dropping a coefficient that cancels**.  Keeping the lists free of zero coefficients is what makes
+the certificate affordable: a triangle's `s`-form has a zero coefficient at two of its three
+vertices, and a zero coefficient dragged through a product of two cubics costs the kernel a
+hundred list steps for nothing. -/
 def insert3 (t : Exp3 × ℚ) : Poly3 → Poly3
-  | [] => [t]
-  | u :: p => if t.1 = u.1 then (t.1, t.2 + u.2) :: p else u :: insert3 t p
+  | [] => if t.2 = 0 then [] else [t]
+  | u :: p => if t.1 = u.1 then (if t.2 + u.2 = 0 then p else (t.1, t.2 + u.2) :: p)
+              else u :: insert3 t p
 
 /-- **Inserting a term adds its value.** -/
 theorem eval3_insert3 (t : Exp3 × ℚ) (p : Poly3) (w x y : ℝ) :
     eval3 (insert3 t p) w x y = (t.2 : ℝ) * mono3 t.1 w x y + eval3 p w x y := by
   induction p with
-  | nil => simp [insert3]
-  | cons u p ih =>
-      by_cases h : t.1 = u.1
-      · rw [insert3, if_pos h, eval3_cons, eval3_cons, h]
+  | nil =>
+      rw [insert3]
+      split
+      · rename_i h
+        rw [h, eval3_nil]
         push_cast
         ring
+      · rw [eval3_cons, eval3_nil]
+  | cons u p ih =>
+      by_cases h : t.1 = u.1
+      · rw [insert3, if_pos h]
+        split
+        · rename_i hz
+          rw [eval3_cons, h]
+          have hc : ((t.2 : ℚ) : ℝ) + ((u.2 : ℚ) : ℝ) = 0 := by
+            rw [← Rat.cast_add, hz, Rat.cast_zero]
+          have : ((t.2 : ℚ) : ℝ) * mono3 u.1 w x y + ((u.2 : ℚ) : ℝ) * mono3 u.1 w x y = 0 := by
+            rw [← add_mul, hc, zero_mul]
+          linarith
+        · rw [eval3_cons, eval3_cons, h]
+          push_cast
+          ring
       · rw [insert3, if_neg h, eval3_cons, ih, eval3_cons]
         ring
 

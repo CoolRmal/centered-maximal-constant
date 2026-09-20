@@ -22,12 +22,23 @@ performs both reductions and packages the result as a `Poly3` in the two cell co
   `fracCells` produces them**, and `majCells_eq`, which checks that against `fracCells.filter` by
   one kernel reduction.  Working from a literal, rather than from the filter itself, keeps the
   `790` per-triangle folds down to `374` steps each.
-* `cellMono`: the bicubic of the spline part on the cell `(k, l)`, in the two local coordinates
-  `s = 16 z₀ - k`, `t = 16 z₁ - l`, as a `Poly3` whose `λ₀`-exponent is `0` — so it is read by
-  `eval3 · 1 s t`.  The guard inside `cellTermG` skips a cell in four integer comparisons, which is
-  what makes the fold affordable.
+* `Rows4`, `cellRows`: the bicubic of the spline part on the cell `(k, l)`, in the two local
+  coordinates `s = 16 z₀ - k`, `t = 16 z₁ - l`, held as its **four coefficient rows in `t`**.  The
+  guard inside `cellRowsTerm` skips a cell in four integer comparisons, which is what makes the
+  fold affordable, and the row splitting is what later keeps the barycentric rewriting down to four
+  products of cubics instead of sixteen.
 * `splineSum_eq_eval3`: **the cell identity.**  For `k, l ≥ 0` and `0 ≤ s, t ≤ 1`,
-  `splineSum (k + s) (l + t) = eval3 (cellMono k l) 1 s t`.
+  `(cellRows k l).eval s t = majScaleQ · splineSum (k + s) (l + t)`.
+
+## Why the coefficients are scaled
+
+Every coefficient of `cellMono` is an **integer**: the bicubic is multiplied throughout by the
+positive constant `majScaleQ = 36 · majScaleM · (5 · 10^16)`, which clears both the certificate's
+denominator `5 · 10^16` and the `1/6` of the B-spline.  This is not cosmetic.  The kernel reduces
+`Rat.mul` through `Nat.gcd`, which is compiled by well-founded recursion and costs about `20 µs`
+per Euclidean step; with unreduced denominators of the order `10^18` a single rational
+multiplication costs over a millisecond and one triangle takes `2.5 s`.  With denominator `1`
+the two gcds terminate in three steps, and the same triangle takes about a tenth of that.
 
 ## Why a structure
 
@@ -213,73 +224,115 @@ theorem sum_map_eq_sum_map_filter {α : Type*} {f : α → ℝ} {p : α → Bool
 
 /-! ### The bicubic of one cell -/
 
-/-- The certificate coefficient of a cell, as a rational. -/
-def fracCoeffQ (n : ℤ) : ℚ := (n : ℚ) / 50000000000000000
+/-- The integer the certificate's coefficients are multiplied by before the `1/6` of the B-spline
+and the `5 · 10^16` of the certificate are cleared. -/
+def majScaleM : ℤ := 40000000000000
 
-theorem fracCoeffQ_cast (n : ℤ) : ((fracCoeffQ n : ℚ) : ℝ) = fracCoeff n := by
-  rw [fracCoeffQ, fracCoeff_eq]
-  push_cast
+/-- The positive constant the whole certificate is scaled by, `36 · majScaleM · 5 · 10^16`, which
+turns every coefficient of `cellMono` into an integer. -/
+def majScaleQ : ℚ := 72000000000000000000000000000000
+
+theorem majScaleQ_pos : 0 < majScaleQ := by rw [majScaleQ]; norm_num
+
+theorem majScaleQ_real : ((majScaleQ : ℚ) : ℝ) = 72000000000000000000000000000000 := by
+  rw [majScaleQ]
+  norm_num
+
+/-- A bicubic in the two cell coordinates, held as its four coefficient rows in `t`: the row `gᵢ`
+carries the cubic `∑ⱼ c_{ij} tʲ`.  Splitting the bicubic this way is what keeps the barycentric
+rewriting down to **four** products of cubics instead of sixteen. -/
+structure Rows4 where
+  /-- The coefficient of `s⁰`, a cubic in `t`. -/
+  g0 : Poly3
+  /-- The coefficient of `s¹`, a cubic in `t`. -/
+  g1 : Poly3
+  /-- The coefficient of `s²`, a cubic in `t`. -/
+  g2 : Poly3
+  /-- The coefficient of `s³`, a cubic in `t`. -/
+  g3 : Poly3
+
+namespace Rows4
+
+/-- The zero bicubic. -/
+def zero : Rows4 := ⟨[], [], [], []⟩
+
+/-- The sum of two bicubics. -/
+def add (a b : Rows4) : Rows4 :=
+  ⟨add3 a.g0 b.g0, add3 a.g1 b.g1, add3 a.g2 b.g2, add3 a.g3 b.g3⟩
+
+/-- The value of a bicubic at `(s, t)`.  Each row is read by `eval3 · 1 1 t`, so a row's exponent
+triple only uses its third slot. -/
+def eval (R : Rows4) (s t : ℝ) : ℝ :=
+  eval3 R.g0 1 1 t + eval3 R.g1 1 1 t * s + eval3 R.g2 1 1 t * s ^ 2 + eval3 R.g3 1 1 t * s ^ 3
+
+@[simp] theorem eval_zero (s t : ℝ) : Rows4.zero.eval s t = 0 := by simp [Rows4.eval, zero, eval3]
+
+theorem eval_add (a b : Rows4) (s t : ℝ) : (a.add b).eval s t = a.eval s t + b.eval s t := by
+  simp only [Rows4.eval, add, eval3_add3]
   ring
 
-/-- The `16` monomials `sⁱ tʲ` of one cell's contribution, with coefficient `c` and the two local
-offsets `d` and `e`. -/
-def cellTerm (c : ℚ) (d e : ℤ) : Poly3 :=
-  [((0, 0, 0), c * betaCoef d 0 * betaCoef e 0), ((0, 0, 1), c * betaCoef d 0 * betaCoef e 1),
-   ((0, 0, 2), c * betaCoef d 0 * betaCoef e 2), ((0, 0, 3), c * betaCoef d 0 * betaCoef e 3),
-   ((0, 1, 0), c * betaCoef d 1 * betaCoef e 0), ((0, 1, 1), c * betaCoef d 1 * betaCoef e 1),
-   ((0, 1, 2), c * betaCoef d 1 * betaCoef e 2), ((0, 1, 3), c * betaCoef d 1 * betaCoef e 3),
-   ((0, 2, 0), c * betaCoef d 2 * betaCoef e 0), ((0, 2, 1), c * betaCoef d 2 * betaCoef e 1),
-   ((0, 2, 2), c * betaCoef d 2 * betaCoef e 2), ((0, 2, 3), c * betaCoef d 2 * betaCoef e 3),
-   ((0, 3, 0), c * betaCoef d 3 * betaCoef e 0), ((0, 3, 1), c * betaCoef d 3 * betaCoef e 1),
-   ((0, 3, 2), c * betaCoef d 3 * betaCoef e 2), ((0, 3, 3), c * betaCoef d 3 * betaCoef e 3)]
+end Rows4
 
-theorem eval3_cellTerm (c : ℚ) (d e : ℤ) (s t : ℝ) :
-    eval3 (cellTerm c d e) 1 s t = (c : ℝ) * (pieceVal d s * pieceVal e t) := by
-  simp only [cellTerm, eval3, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, mono3,
+/-- One row of a cell's contribution: the cubic `∑ⱼ c · 6 β(e)ⱼ tʲ`, with the `6` of the B-spline
+already cleared so that an integer `c` gives integer coefficients. -/
+def tRow (c : ℚ) (e : ℤ) : Poly3 :=
+  [((0, 0, 0), c * (6 * betaCoef e 0)), ((0, 0, 1), c * (6 * betaCoef e 1)),
+   ((0, 0, 2), c * (6 * betaCoef e 2)), ((0, 0, 3), c * (6 * betaCoef e 3))]
+
+theorem eval3_tRow (c : ℚ) (e : ℤ) (t : ℝ) :
+    eval3 (tRow c e) 1 1 t = 6 * (c : ℝ) * pieceVal e t := by
+  simp only [tRow, eval3, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, mono3,
     pieceVal, pow_zero, one_pow, one_mul, mul_one, pow_one]
   push_cast
   ring
 
 /-- One cell's contribution to the bicubic, guarded by the four-integer support test. -/
-def cellTermG (k l : ℤ) (c : MajCell) : Poly3 :=
+def cellRowsTerm (k l : ℤ) (c : MajCell) : Rows4 :=
   if decide (-2 ≤ k - c.i) && decide (k - c.i ≤ 1) && decide (-2 ≤ l - c.j)
       && decide (l - c.j ≤ 1) then
-    cellTerm (fracCoeffQ c.n) (k - c.i) (l - c.j)
-  else []
+    ⟨tRow (((majScaleM * c.n : ℤ) : ℚ) * (6 * betaCoef (k - c.i) 0)) (l - c.j),
+     tRow (((majScaleM * c.n : ℤ) : ℚ) * (6 * betaCoef (k - c.i) 1)) (l - c.j),
+     tRow (((majScaleM * c.n : ℤ) : ℚ) * (6 * betaCoef (k - c.i) 2)) (l - c.j),
+     tRow (((majScaleM * c.n : ℤ) : ℚ) * (6 * betaCoef (k - c.i) 3)) (l - c.j)⟩
+  else Rows4.zero
 
-theorem eval3_cellTermG (k l : ℤ) (c : MajCell) (s t : ℝ) :
-    eval3 (cellTermG k l c) 1 s t
-      = fracCoeff c.n * (pieceVal (k - c.i) s * pieceVal (l - c.j) t) := by
-  rw [cellTermG]
+theorem eval_cellRowsTerm (k l : ℤ) (c : MajCell) (s t : ℝ) :
+    (cellRowsTerm k l c).eval s t
+      = (majScaleQ : ℝ) * (fracCoeff c.n * (pieceVal (k - c.i) s * pieceVal (l - c.j) t)) := by
+  rw [cellRowsTerm]
   split
-  · rw [eval3_cellTerm, fracCoeffQ_cast]
+  · simp only [Rows4.eval, eval3_tRow, fracCoeff_eq, majScaleQ_real, majScaleM, pieceVal]
+    push_cast
+    ring
   · rename_i hg
     have hg' : ¬((-2 ≤ k - c.i ∧ k - c.i ≤ 1) ∧ (-2 ≤ l - c.j ∧ l - c.j ≤ 1)) := by
       simpa [Bool.and_eq_true, and_assoc] using hg
-    rw [eval3_nil]
+    rw [Rows4.eval_zero]
     rcases not_and_or.1 hg' with h | h
     · rcases not_and_or.1 h with h | h
-      · rw [pieceVal_of_lt (by omega) s, zero_mul, mul_zero]
-      · rw [pieceVal_of_gt (by omega) s, zero_mul, mul_zero]
+      · rw [pieceVal_of_lt (by omega) s, zero_mul, mul_zero, mul_zero]
+      · rw [pieceVal_of_gt (by omega) s, zero_mul, mul_zero, mul_zero]
     · rcases not_and_or.1 h with h | h
-      · rw [pieceVal_of_lt (by omega) t, mul_zero, mul_zero]
-      · rw [pieceVal_of_gt (by omega) t, mul_zero, mul_zero]
+      · rw [pieceVal_of_lt (by omega) t, mul_zero, mul_zero, mul_zero]
+      · rw [pieceVal_of_gt (by omega) t, mul_zero, mul_zero, mul_zero]
 
 /-- **The bicubic of the spline part on the cell `(k, l)`**, in the local coordinates
-`s = 16 z₀ - k` and `t = 16 z₁ - l`. -/
-def cellMono (k l : ℤ) : Poly3 := majCellData.foldr (fun c acc => add3 (cellTermG k l c) acc) []
+`s = 16 z₀ - k` and `t = 16 z₁ - l`, scaled by `majScaleQ`. -/
+def cellRows (k l : ℤ) : Rows4 :=
+  majCellData.foldr (fun c acc => Rows4.add (cellRowsTerm k l c) acc) Rows4.zero
 
 /-- The fold computes the sum of the cell contributions. -/
-theorem eval3_cellFold (k l : ℤ) (s t : ℝ) :
+theorem eval_cellFold (k l : ℤ) (s t : ℝ) :
     ∀ L : List MajCell,
-      eval3 (L.foldr (fun c acc => add3 (cellTermG k l c) acc) []) 1 s t
-        = (L.map fun c => fracCoeff c.n
+      (L.foldr (fun c acc => Rows4.add (cellRowsTerm k l c) acc) Rows4.zero).eval s t
+        = (majScaleQ : ℝ) * (L.map fun c => fracCoeff c.n
             * (pieceVal (k - c.i) s * pieceVal (l - c.j) t)).sum := by
   intro L
   induction L with
-  | nil => simp [eval3]
+  | nil => simp
   | cons c L ih =>
-      rw [List.foldr_cons, eval3_add3, ih, eval3_cellTermG, List.map_cons, List.sum_cons]
+      rw [List.foldr_cons, Rows4.eval_add, ih, eval_cellRowsTerm, List.map_cons, List.sum_cons,
+        mul_add]
 
 /-- Each B-spline factor on a cell is the corresponding local cubic piece. -/
 theorem bspline_cell (k i : ℤ) {s : ℝ} (hs : 0 ≤ s) (hs1 : s ≤ 1) :
@@ -292,7 +345,7 @@ quadrant, the spline part of the kernel is the bicubic `cellMono k l` of the two
 coordinates. -/
 theorem splineSum_eq_eval3 {k l : ℤ} (hk : 0 ≤ k) (hl : 0 ≤ l) {s t : ℝ}
     (hs : 0 ≤ s) (hs1 : s ≤ 1) (ht : 0 ≤ t) (ht1 : t ≤ 1) :
-    splineSum ((k : ℝ) + s) ((l : ℝ) + t) = eval3 (cellMono k l) 1 s t := by
+    (cellRows k l).eval s t = (majScaleQ : ℝ) * splineSum ((k : ℝ) + s) ((l : ℝ) + t) := by
   have hkR : (0 : ℝ) ≤ (k : ℝ) := by exact_mod_cast hk
   have hlR : (0 : ℝ) ≤ (l : ℝ) := by exact_mod_cast hl
   have hzero : ∀ p ∈ fracCells, (decide (-1 ≤ p.1.1) && decide (-1 ≤ p.1.2)) = false →
@@ -306,9 +359,10 @@ theorem splineSum_eq_eval3 {k l : ℤ} (hk : 0 ≤ k) (hl : 0 ≤ l) {s t : ℝ}
     · have h2 : ((p.1.2 : ℤ) : ℝ) ≤ -2 := by exact_mod_cast (by omega : p.1.2 ≤ -2)
       rw [bspline_of_two_le (show (2 : ℝ) ≤ (l : ℝ) + t - p.1.2 from by linarith), mul_zero,
         mul_zero]
-  rw [splineSum, sum_map_eq_sum_map_filter hzero, majCells_eq, cellMono,
-    eval3_cellFold k l s t, List.map_map]
-  refine congrArg List.sum (List.map_congr_left fun c _ => ?_)
+  rw [splineSum, sum_map_eq_sum_map_filter hzero, majCells_eq, cellRows,
+    eval_cellFold k l s t, List.map_map]
+  refine congrArg (fun x => (majScaleQ : ℝ) * x) (congrArg List.sum
+    (List.map_congr_left fun c _ => ?_)).symm
   simp only [Function.comp_apply, MajCell.toPair]
   rw [bspline_cell k c.i hs hs1, bspline_cell l c.j ht ht1]
 
