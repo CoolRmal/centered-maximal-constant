@@ -6,6 +6,7 @@ Authors: Yongxi Lin
 module
 
 public import CenteredMaximal.Fractional.BetaIntegral
+public import CenteredMaximal.Fractional.DiamondConstancy
 
 /-!
 # The Gamma-quotient form of the diamond constant
@@ -52,7 +53,9 @@ formula rather than proved separately.
 
 noncomputable section
 
-open scoped Real
+open MeasureTheory Set
+
+open scoped Real Topology
 
 namespace CenteredMaximal.Fractional
 
@@ -138,6 +141,121 @@ theorem betaFun_one_sub_left_rec {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
     show (2:ℝ) - α + 2*α = 2 + α from by ring, hGa1, hG2m, hG2p]
   field_simp
   ring
+
+/-! ### The Beta recurrence on the symmetric interval `[p, 1 - p]` -/
+
+/-- The Beta kernel `t ↦ t ^ x * (1 - t) ^ y` is continuous at every point of `(0, 1)`. -/
+theorem continuousAt_betaKernel {x y t : ℝ} (ht : 0 < t) (ht' : t < 1) :
+    ContinuousAt (fun s : ℝ => s ^ x * (1 - s) ^ y) t :=
+  (Real.continuousAt_rpow_const t x (.inl ht.ne')).mul
+    (ContinuousAt.rpow_const (f := fun s : ℝ => 1 - s) (by fun_prop)
+      (.inl (by linarith : (0:ℝ) < 1 - t).ne'))
+
+/-- On `[p, 1 - p]` with `0 < p < 1/2` the Beta kernel is continuous, hence interval integrable,
+for *every* pair of exponents: the interval avoids both singular endpoints. -/
+theorem intervalIntegrable_betaKernel {x y p : ℝ} (hp : 0 < p) (hp' : p < 1/2) :
+    IntervalIntegrable (fun t : ℝ => t ^ x * (1 - t) ^ y) volume p (1 - p) := by
+  refine ContinuousOn.intervalIntegrable fun t ht => ?_
+  rw [uIcc_of_le (by linarith : p ≤ 1 - p)] at ht
+  exact (continuousAt_betaKernel (by linarith [ht.1]) (by linarith [ht.2])).continuousWithinAt
+
+/-- The derivative of `t ↦ t ^ a * (1 - t) ^ b` at a point of `(0, 1)`. -/
+theorem hasDerivAt_betaKernel {a b t : ℝ} (ht : 0 < t) (ht' : t < 1) :
+    HasDerivAt (fun s : ℝ => s ^ a * (1 - s) ^ b)
+      (a * (t ^ (a - 1) * (1 - t) ^ b) - b * (t ^ a * (1 - t) ^ (b - 1))) t := by
+  have h₁ : HasDerivAt (fun s : ℝ => s ^ a) (a * t ^ (a - 1)) t :=
+    Real.hasDerivAt_rpow_const (.inl ht.ne')
+  have h₂ : HasDerivAt (fun s : ℝ => (1 - s) ^ b) (-1 * b * (1 - t) ^ (b - 1)) t :=
+    HasDerivAt.rpow_const (f := fun s : ℝ => 1 - s) ((hasDerivAt_id' t).const_sub 1)
+      (.inl (by linarith : (0:ℝ) < 1 - t).ne')
+  have heq : a * t ^ (a - 1) * (1 - t) ^ b + t ^ a * (-1 * b * (1 - t) ^ (b - 1))
+      = a * (t ^ (a - 1) * (1 - t) ^ b) - b * (t ^ a * (1 - t) ^ (b - 1)) := by ring
+  have h := h₁.mul h₂
+  rwa [heq] at h
+
+/-- The fundamental theorem of calculus for `t ↦ t ^ a * (1 - t) ^ b` on `[p, 1 - p]`.  Both
+endpoints are interior to `(0, 1)`, so this is an honest integral of a continuous function and no
+convergence hypothesis on `a` or `b` is needed. -/
+theorem integral_betaKernel_deriv {a b p : ℝ} (hp : 0 < p) (hp' : p < 1/2) :
+    a * (∫ t in p..(1 - p), t ^ (a - 1) * (1 - t) ^ b)
+        - b * (∫ t in p..(1 - p), t ^ a * (1 - t) ^ (b - 1))
+      = (1 - p) ^ a * p ^ b - p ^ a * (1 - p) ^ b := by
+  have hle : p ≤ 1 - p := by linarith
+  have hA : IntervalIntegrable (fun t : ℝ => a * (t ^ (a - 1) * (1 - t) ^ b)) volume p (1 - p) :=
+    (intervalIntegrable_betaKernel hp hp').const_mul a
+  have hB : IntervalIntegrable (fun t : ℝ => b * (t ^ a * (1 - t) ^ (b - 1))) volume p (1 - p) :=
+    (intervalIntegrable_betaKernel hp hp').const_mul b
+  have h := intervalIntegral.integral_eq_sub_of_hasDerivAt
+    (f := fun s : ℝ => s ^ a * (1 - s) ^ b)
+    (f' := fun t : ℝ => a * (t ^ (a - 1) * (1 - t) ^ b) - b * (t ^ a * (1 - t) ^ (b - 1)))
+    (fun t ht => by
+      rw [uIcc_of_le hle] at ht
+      exact hasDerivAt_betaKernel (by linarith [ht.1]) (by linarith [ht.2])) (hA.sub hB)
+  rw [intervalIntegral.integral_sub hA hB, intervalIntegral.integral_const_mul,
+    intervalIntegral.integral_const_mul] at h
+  rw [h, sub_sub_cancel]
+
+/-- The trivial splitting `t ^ (a-1) (1-t) ^ (b-1) = t ^ (a-1) (1-t) ^ b + t ^ a (1-t) ^ (b-1)`,
+which is `1 = (1 - t) + t` after factoring. -/
+theorem integral_betaKernel_split {a b p : ℝ} (hp : 0 < p) (hp' : p < 1/2) :
+    (∫ t in p..(1 - p), t ^ (a - 1) * (1 - t) ^ (b - 1))
+      = (∫ t in p..(1 - p), t ^ (a - 1) * (1 - t) ^ b)
+        + ∫ t in p..(1 - p), t ^ a * (1 - t) ^ (b - 1) := by
+  rw [← intervalIntegral.integral_add (intervalIntegrable_betaKernel hp hp')
+    (intervalIntegrable_betaKernel hp hp')]
+  refine intervalIntegral.integral_congr fun t ht => ?_
+  rw [uIcc_of_le (by linarith : p ≤ 1 - p)] at ht
+  have ht0 : (0:ℝ) < t := by linarith [ht.1]
+  have ht1 : (0:ℝ) < 1 - t := by linarith [ht.2]
+  have e₁ : (1 - t) ^ b = (1 - t) ^ (b - 1) * (1 - t) := by
+    conv_lhs => rw [show b = b - 1 + 1 from by ring]
+    rw [Real.rpow_add ht1, Real.rpow_one]
+  have e₂ : t ^ a = t ^ (a - 1) * t := by
+    conv_lhs => rw [show a = a - 1 + 1 from by ring]
+    rw [Real.rpow_add ht0, Real.rpow_one]
+  simp only [e₁, e₂]
+  ring
+
+/-- One step of the Beta recurrence raising the **first** exponent:
+`a Β(a, b) - (a + b) Β(a + 1, b) = [t ^ a (1 - t) ^ b]` evaluated at the endpoints. -/
+theorem betaStep_left {a b p : ℝ} (hp : 0 < p) (hp' : p < 1/2) :
+    a * (∫ t in p..(1 - p), t ^ (a - 1) * (1 - t) ^ (b - 1))
+        - (a + b) * (∫ t in p..(1 - p), t ^ a * (1 - t) ^ (b - 1))
+      = (1 - p) ^ a * p ^ b - p ^ a * (1 - p) ^ b := by
+  linear_combination integral_betaKernel_deriv (a := a) (b := b) hp hp'
+    + a * integral_betaKernel_split (a := a) (b := b) hp hp'
+
+/-- One step of the Beta recurrence raising the **second** exponent:
+`(a + b) Β(a, b + 1) - b Β(a, b) = [t ^ a (1 - t) ^ b]` evaluated at the endpoints. -/
+theorem betaStep_right {a b p : ℝ} (hp : 0 < p) (hp' : p < 1/2) :
+    (a + b) * (∫ t in p..(1 - p), t ^ (a - 1) * (1 - t) ^ b)
+        - b * (∫ t in p..(1 - p), t ^ (a - 1) * (1 - t) ^ (b - 1))
+      = (1 - p) ^ a * p ^ b - p ^ a * (1 - p) ^ b := by
+  linear_combination integral_betaKernel_deriv (a := a) (b := b) hp hp'
+    - b * integral_betaKernel_split (a := a) (b := b) hp hp'
+
+/-- **Three Beta steps regularise the middle integral.**  For `1 < α < 2` the exponents of
+`diamondMid α`, namely `(1 - α, -α)`, are both too small for convergence; raising the first once
+and the second twice reaches `(2 - α, 2 - α)`, which is convergent on all of `(0, 1)`.  The
+identity below is exact for every `p ∈ (0, 1/2)` and is stated in cleared form, with no division
+by `α (1 - α) ^ 2`. -/
+theorem integral_diamondMid_chain {α p : ℝ} (hp : 0 < p) (hp' : p < 1/2) :
+    α * (1 - α) ^ 2 * (∫ t in p..(1 - p), diamondMid α t)
+      = α * (1 - α) * ((1 - p) ^ (1 - α) * p ^ (-α) - p ^ (1 - α) * (1 - p) ^ (-α))
+        + (1 - 2*α) * (1 - α) * ((1 - p) ^ (2 - α) * p ^ (-α) - p ^ (2 - α) * (1 - p) ^ (-α))
+        + (1 - 2*α) * (2 - 2*α) * ((1 - p) ^ (2 - α) * p ^ (1 - α)
+            - p ^ (2 - α) * (1 - p) ^ (1 - α))
+        - (1 - 2*α) * (2 - 2*α) * (3 - 2*α)
+            * (∫ t in p..(1 - p), t ^ (1 - α) * (1 - t) ^ (1 - α)) := by
+  have e₁ := betaStep_left (a := 1 - α) (b := -α) hp hp'
+  have e₂ := betaStep_right (a := 2 - α) (b := -α) hp hp'
+  have e₃ := betaStep_right (a := 2 - α) (b := 1 - α) hp hp'
+  simp only [show (1:ℝ) - α - 1 = -α from by ring, show (2:ℝ) - α - 1 = 1 - α from by ring,
+    show (1:ℝ) - α + -α = 1 - 2*α from by ring, show (2:ℝ) - α + -α = 2 - 2*α from by ring,
+    show (2:ℝ) - α + (1 - α) = 3 - 2*α from by ring] at e₁ e₂ e₃
+  simp only [diamondMid]
+  linear_combination (α * (1 - α)) * e₁ + ((1 - 2*α) * (1 - α)) * e₂
+    + ((1 - 2*α) * (2 - 2*α)) * e₃
 
 end CenteredMaximal.Fractional
 
