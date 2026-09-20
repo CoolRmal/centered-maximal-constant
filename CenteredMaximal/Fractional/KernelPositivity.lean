@@ -174,6 +174,138 @@ theorem fracKernel_eq_finsetSum (z : Fin 2 → ℝ) :
     List.sum_toFinset _ nodup_fracCells]
   exact congrArg List.sum (List.map_congr_left fun p hp => by rw [fracCellCoeff_eq hp])
 
+/-! ### The Lévy moment condition for the model singularity
+
+The transfer lemma `CenteredMaximal.convolution_le_of_eq_zero_fp` needs
+`Integrable fun z => g z * min 1 ‖z‖` of the generator density `g`. For a density comparable to a
+power of the diamond radius the condition is an exact pair of inequalities on the exponent, derived
+below: `∫₀¹ 4 t^{2−p} dt` converges iff `2 − p > −1`, i.e. `p < 3`, and `∫₁^∞ 4 t^{1−p} dt`
+converges iff `1 − p < −1`, i.e. `p > 2`. -/
+
+/-- The radial majorant of the moment integrand: `t^{1−p}` on the unit diamond, where
+`min(1, ‖z‖) ≤ ‖z‖ ≤ diamondNorm z`, and `t^{−p}` outside it, where `min(1, ‖z‖) ≤ 1`. -/
+private def momProfile (p t : ℝ) : ℝ := if t ≤ 1 then t ^ (1 - p) else t ^ (-p)
+
+private theorem measurable_momProfile (p : ℝ) : Measurable (momProfile p) :=
+  Measurable.ite (measurableSet_Iic (a := (1 : ℝ))) (measurable_id.pow_const _)
+    (measurable_id.pow_const _)
+
+private theorem momProfile_nonneg (p t : ℝ) (ht : 0 ≤ t) : 0 ≤ momProfile p t := by
+  unfold momProfile; split <;> exact Real.rpow_nonneg ht _
+
+/-- The moment integrand is dominated by its radial majorant. -/
+private theorem momIntegrand_le (p : ℝ) (z : Fin 2 → ℝ) :
+    diamondNorm z ^ (-p) * min 1 ‖z‖ ≤ momProfile p (diamondNorm z) := by
+  have hz0 : 0 ≤ diamondNorm z := diamondNorm_nonneg z
+  have hpow : 0 ≤ diamondNorm z ^ (-p) := Real.rpow_nonneg hz0 _
+  unfold momProfile
+  split
+  · rcases eq_or_lt_of_le hz0 with h0 | h0
+    · have hz : z = 0 := diamondNorm_eq_zero_iff.1 h0.symm
+      rw [hz, norm_zero, min_eq_right zero_le_one, mul_zero]
+      exact Real.rpow_nonneg (diamondNorm_nonneg 0) _
+    · have hle : min 1 ‖z‖ ≤ diamondNorm z := (min_le_right _ _).trans (norm_le_diamondNorm z)
+      refine (mul_le_mul_of_nonneg_left hle hpow).trans_eq ?_
+      rw [show (1 : ℝ) - p = -p + 1 from by ring, Real.rpow_add h0, Real.rpow_one]
+  · refine (mul_le_mul_of_nonneg_left (min_le_left 1 ‖z‖) hpow).trans_eq ?_
+    rw [mul_one]
+
+/-- **The radial majorant has finite mass exactly when `2 < p < 3`.** Splitting the radial integral
+`∫_{(0,∞)} 4 t · h(t) dt` of `lintegral_comp_diamondNorm` at `t = 1` leaves
+`∫_{(0,1]} 4 t^{2−p} dt`, which needs `2 − p > −1`, and `∫_{(1,∞)} 4 t^{1−p} dt`, which needs
+`1 − p < −1`. -/
+private theorem lintegral_momProfile_lt_top {p : ℝ} (hp : 2 < p) (hp' : p < 3) :
+    ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (momProfile p (diamondNorm z)) < ⊤ := by
+  have hhead : ∫⁻ t in Ioc (0 : ℝ) 1,
+      4 * ENNReal.ofReal t * ENNReal.ofReal (momProfile p t) < ⊤ := by
+    have hint : IntegrableOn (fun t : ℝ => 4 * t ^ (2 - p)) (Ioc 0 1) :=
+      (intervalIntegrable_iff_integrableOn_Ioc_of_le zero_le_one).1
+        ((intervalIntegral.intervalIntegrable_rpow' (by linarith)).const_mul 4)
+    have hnn : 0 ≤ᵐ[volume.restrict (Ioc (0 : ℝ) 1)] fun t : ℝ => 4 * t ^ (2 - p) :=
+      ae_restrict_of_forall_mem measurableSet_Ioc fun t ht => by
+        have : (0 : ℝ) ≤ t := ht.1.le
+        positivity
+    have hcong : ∫⁻ t in Ioc (0 : ℝ) 1, 4 * ENNReal.ofReal t * ENNReal.ofReal (momProfile p t)
+        = ∫⁻ t in Ioc (0 : ℝ) 1, ENNReal.ofReal (4 * t ^ (2 - p)) := by
+      refine setLIntegral_congr_fun measurableSet_Ioc fun t ht => ?_
+      have ht0 : (0 : ℝ) < t := ht.1
+      have hmul : t ^ (1 - p) * t = t ^ (2 - p) := by
+        rw [show (2 : ℝ) - p = (1 - p) + 1 from by ring, Real.rpow_add ht0, Real.rpow_one]
+      have hprof : momProfile p t = t ^ (1 - p) := if_pos ht.2
+      rw [hprof, ← hmul, ENNReal.ofReal_mul (by norm_num : (0 : ℝ) ≤ 4),
+        ENNReal.ofReal_mul (Real.rpow_nonneg ht0.le _), ENNReal.ofReal_ofNat]
+      ring
+    rw [hcong, ← ofReal_integral_eq_lintegral_ofReal hint hnn]
+    exact ENNReal.ofReal_lt_top
+  have htail : ∫⁻ t in Ioi (1 : ℝ),
+      4 * ENNReal.ofReal t * ENNReal.ofReal (momProfile p t) < ⊤ := by
+    have hint : IntegrableOn (fun t : ℝ => 4 * t ^ (1 - p)) (Ioi 1) :=
+      (integrableOn_Ioi_rpow_of_lt (by linarith) one_pos).const_mul 4
+    have hnn : 0 ≤ᵐ[volume.restrict (Ioi (1 : ℝ))] fun t : ℝ => 4 * t ^ (1 - p) :=
+      ae_restrict_of_forall_mem measurableSet_Ioi fun t ht => by
+        have : (0 : ℝ) ≤ t := (zero_lt_one.trans ht).le
+        positivity
+    have hcong : ∫⁻ t in Ioi (1 : ℝ), 4 * ENNReal.ofReal t * ENNReal.ofReal (momProfile p t)
+        = ∫⁻ t in Ioi (1 : ℝ), ENNReal.ofReal (4 * t ^ (1 - p)) := by
+      refine setLIntegral_congr_fun measurableSet_Ioi fun t ht => ?_
+      have ht0 : (0 : ℝ) < t := zero_lt_one.trans ht
+      have hmul : t ^ (-p) * t = t ^ (1 - p) := by
+        rw [show (1 : ℝ) - p = -p + 1 from by ring, Real.rpow_add ht0, Real.rpow_one]
+      have hprof : momProfile p t = t ^ (-p) := if_neg (not_le.2 (mem_Ioi.1 ht))
+      rw [hprof, ← hmul, ENNReal.ofReal_mul (by norm_num : (0 : ℝ) ≤ 4),
+        ENNReal.ofReal_mul (Real.rpow_nonneg ht0.le _), ENNReal.ofReal_ofNat]
+      ring
+    rw [hcong, ← ofReal_integral_eq_lintegral_ofReal hint hnn]
+    exact ENNReal.ofReal_lt_top
+  rw [lintegral_comp_diamondNorm (g := fun t : ℝ => ENNReal.ofReal (momProfile p t))
+      (ENNReal.measurable_ofReal.comp (measurable_momProfile p)),
+    ← Ioc_union_Ioi_eq_Ioi (zero_le_one : (0 : ℝ) ≤ 1),
+    lintegral_union measurableSet_Ioi Ioc_disjoint_Ioi_same]
+  exact ENNReal.add_lt_top.2 ⟨hhead, htail⟩
+
+/-- **The Lévy moment condition for the model singularity.** For `2 < p < 3` the function
+`z ↦ diamondNorm z ^ (−p) · min(1, ‖z‖)` is integrable on the plane. Both bounds are sharp for
+this integrand: `p < 3` is what makes the singularity at the origin integrable after the gain of
+one power from `min(1, ‖z‖) ≤ ‖z‖`, and `p > 2` is what makes the tail integrable. The generator
+density of `fracKernel` has `p = 12/5` at the origin and `p = 11/5` at infinity. -/
+theorem integrable_diamondRpow_mul_min_one {p : ℝ} (hp : 2 < p) (hp' : p < 3) :
+    Integrable fun z : Fin 2 → ℝ => diamondNorm z ^ (-p) * min 1 ‖z‖ := by
+  refine ⟨((measurable_diamondNorm.pow_const _).mul
+    (measurable_const.min measurable_norm)).aestronglyMeasurable, ?_⟩
+  rw [hasFiniteIntegral_iff_ofReal (.of_forall fun z =>
+    mul_nonneg (Real.rpow_nonneg (diamondNorm_nonneg z) _)
+      (le_min zero_le_one (norm_nonneg z)))]
+  refine lt_of_le_of_lt (lintegral_mono fun z => ?_) (lintegral_momProfile_lt_top hp hp')
+  exact ENNReal.ofReal_le_ofReal (momIntegrand_le p z)
+
+/-- **The moment condition for any density caught between two model singularities.** A density
+behaving like `r^{−p}` at the origin and like `r^{−q}` at infinity, with both exponents in
+`(2, 3)`, is dominated by `A (r^{−p} + r^{−q})`, and that is enough. Our generator density has
+`p = 12/5` and `q = 11/5`. -/
+theorem integrable_mul_min_one_of_le {g : (Fin 2 → ℝ) → ℝ} {A p q : ℝ} (hgm : Measurable g)
+    (hg₀ : ∀ z, 0 ≤ g z) (hp : 2 < p) (hp' : p < 3) (hq : 2 < q) (hq' : q < 3)
+    (hg : ∀ z, g z ≤ A * (diamondNorm z ^ (-p) + diamondNorm z ^ (-q))) :
+    Integrable fun z : Fin 2 → ℝ => g z * min 1 ‖z‖ := by
+  have hmaj : Integrable fun z : Fin 2 → ℝ =>
+      A * (diamondNorm z ^ (-p) * min 1 ‖z‖) + A * (diamondNorm z ^ (-q) * min 1 ‖z‖) :=
+    ((integrable_diamondRpow_mul_min_one hp hp').const_mul A).add
+      ((integrable_diamondRpow_mul_min_one hq hq').const_mul A)
+  refine hmaj.mono' ((hgm.mul (measurable_const.min measurable_norm)).aestronglyMeasurable)
+    (.of_forall fun z => ?_)
+  have hmin0 : 0 ≤ min 1 ‖z‖ := le_min zero_le_one (norm_nonneg z)
+  rw [Real.norm_eq_abs, abs_of_nonneg (mul_nonneg (hg₀ z) hmin0)]
+  nlinarith [mul_le_mul_of_nonneg_right (hg z) hmin0]
+
+/-- The moment condition at the exponent `12/5` of the origin. -/
+theorem integrable_diamondRpow_mul_min_one_twelve_fifths :
+    Integrable fun z : Fin 2 → ℝ => diamondNorm z ^ (-(12 / 5 : ℝ)) * min 1 ‖z‖ :=
+  integrable_diamondRpow_mul_min_one (by norm_num) (by norm_num)
+
+/-- The moment condition at the exponent `11/5` of infinity. -/
+theorem integrable_diamondRpow_mul_min_one_eleven_fifths :
+    Integrable fun z : Fin 2 → ℝ => diamondNorm z ^ (-(11 / 5 : ℝ)) * min 1 ‖z‖ :=
+  integrable_diamondRpow_mul_min_one (by norm_num) (by norm_num)
+
 end
 
 end CenteredMaximal.Fractional
