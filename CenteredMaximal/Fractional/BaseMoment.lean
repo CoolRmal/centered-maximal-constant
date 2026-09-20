@@ -863,6 +863,170 @@ private theorem enorm_secondDiff_truncBase_le {α R : ℝ} (hα : 0 < α) (hR : 
       rw [hsd]
       simp
 
+/-! ### The volume of the shell and of a coordinate line -/
+
+private theorem lintegral_Icc_id {a b : ℝ} (ha : 0 ≤ a) (hab : a ≤ b) :
+    ∫⁻ t in Icc a b, ENNReal.ofReal t = ENNReal.ofReal ((b ^ 2 - a ^ 2) / 2) := by
+  rw [← setLIntegral_congr (Ioc_ae_eq_Icc (a := a) (b := b))]
+  have hint : IntegrableOn (fun t : ℝ => t) (Ioc a b) :=
+    (intervalIntegrable_iff_integrableOn_Ioc_of_le hab).1 (continuous_id.intervalIntegrable a b)
+  have hnn : 0 ≤ᵐ[volume.restrict (Ioc a b)] fun t : ℝ => t :=
+    ae_restrict_of_forall_mem measurableSet_Ioc fun t ht => by
+      show (0 : ℝ) ≤ t
+      linarith [ht.1]
+  rw [← ofReal_integral_eq_lintegral_ofReal hint hnn, ← intervalIntegral.integral_of_le hab,
+    integral_id]
+
+/-- **The shell `{ |r − R| ≤ s }` has area at most `8 R s`.** -/
+private theorem volume_shell_le {R s : ℝ} (hs : 0 ≤ s) (hsR : s < R) :
+    volume {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s} ≤ ENNReal.ofReal (8 * R * s) := by
+  have hmI : MeasurableSet (Icc (R - s) (R + s)) := measurableSet_Icc
+  have hSI : {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s}
+      = diamondNorm ⁻¹' Icc (R - s) (R + s) := by
+    ext z
+    simp only [mem_setOf_eq, mem_preimage, mem_Icc, abs_le]
+    constructor
+    · intro h; exact ⟨by linarith [h.1], by linarith [h.2]⟩
+    · intro h; exact ⟨by linarith [h.1], by linarith [h.2]⟩
+  have hmS : MeasurableSet {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s} := by
+    rw [hSI]; exact measurable_diamondNorm hmI
+  have hsub : Icc (R - s) (R + s) ⊆ Ioi (0 : ℝ) := fun x hx =>
+    mem_Ioi.2 (lt_of_lt_of_le (by linarith) hx.1)
+  calc volume {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s}
+      = ∫⁻ _z in {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s}, (1 : ℝ≥0∞) :=
+        (setLIntegral_one _).symm
+    _ = ∫⁻ z, {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s}.indicator (fun _ => (1 : ℝ≥0∞)) z :=
+        (lintegral_indicator hmS _).symm
+    _ = ∫⁻ z : Fin 2 → ℝ,
+          (Icc (R - s) (R + s)).indicator (fun _ => (1 : ℝ≥0∞)) (diamondNorm z) := by
+        refine lintegral_congr fun z => ?_
+        by_cases h : z ∈ {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s}
+        · rw [indicator_of_mem h, indicator_of_mem (by rwa [hSI] at h)]
+        · rw [indicator_of_notMem h, indicator_of_notMem (by rwa [hSI] at h)]
+    _ = ∫⁻ t in Ioi 0,
+          4 * ENNReal.ofReal t * (Icc (R - s) (R + s)).indicator (fun _ => (1 : ℝ≥0∞)) t :=
+        lintegral_comp_diamondNorm (measurable_const.indicator hmI)
+    _ = ∫⁻ t in Ioi 0, (Icc (R - s) (R + s)).indicator (fun t => 4 * ENNReal.ofReal t) t := by
+        refine setLIntegral_congr_fun measurableSet_Ioi fun t _ => ?_
+        by_cases h : t ∈ Icc (R - s) (R + s)
+        · rw [indicator_of_mem h, indicator_of_mem h, mul_one]
+        · rw [indicator_of_notMem h, indicator_of_notMem h, mul_zero]
+    _ = ∫⁻ t in Icc (R - s) (R + s), 4 * ENNReal.ofReal t := by
+        rw [lintegral_indicator hmI, Measure.restrict_restrict hmI, inter_eq_left.2 hsub]
+    _ = 4 * ∫⁻ t in Icc (R - s) (R + s), ENNReal.ofReal t :=
+        lintegral_const_mul' 4 _ (by simp)
+    _ = 4 * ENNReal.ofReal (((R + s) ^ 2 - (R - s) ^ 2) / 2) := by
+        rw [lintegral_Icc_id (by linarith) (by linarith)]
+    _ = ENNReal.ofReal (8 * R * s) := by
+        rw [show (4 : ℝ≥0∞) = ENNReal.ofReal 4 from by norm_num,
+          ← ENNReal.ofReal_mul (by norm_num : (0 : ℝ) ≤ 4)]
+        congr 1
+        ring
+    _ ≤ ENNReal.ofReal (8 * R * s) := le_rfl
+
+/-- A coordinate line is null: it is a proper linear subspace of the plane. -/
+private theorem volume_coord_eq_zero (i : Fin 2) : volume {z : Fin 2 → ℝ | z i = 0} = 0 := by
+  have hker : {z : Fin 2 → ℝ | z i = 0}
+      = (LinearMap.ker (LinearMap.proj i : (Fin 2 → ℝ) →ₗ[ℝ] ℝ) : Set (Fin 2 → ℝ)) := by
+    ext z
+    simp [LinearMap.mem_ker]
+  rw [hker]
+  refine Measure.addHaar_submodule volume _ fun h => ?_
+  have hmem : Pi.single i (1 : ℝ) ∈ LinearMap.ker (LinearMap.proj i : (Fin 2 → ℝ) →ₗ[ℝ] ℝ) := by
+    rw [h]; exact Submodule.mem_top
+  simp [LinearMap.mem_ker] at hmem
+
+/-! ### The dominating profile in the step -/
+
+private def momProfile (α R M : ℝ) (u : ℝ) : ℝ≥0∞ :=
+  if R / 4 ≤ u then ENNReal.ofReal (4 * M * u ^ (-(1 + α)))
+  else ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α) + brkC α * u ^ (2 - 2 * α))
+
+private def momBound (α R M : ℝ) (t : ℝ) : ℝ≥0∞ := momProfile α R M |t|
+
+private theorem brkC_nonneg {α : ℝ} (hα : 1 < α) (hα' : α < 2) : 0 ≤ brkC α := by
+  have h1 : (0 : ℝ) < α - 1 := by linarith
+  have h2 : (0 : ℝ) < 2 - α := by linarith
+  rw [brkC]
+  positivity
+
+private theorem lintegral_momBound_lt_top {α R M : ℝ} (hα : 1 < α) (hα' : α < 3 / 2) (hR : 0 < R)
+    (hM : 0 ≤ M) : ∫⁻ t : ℝ, momBound α R M t < ⊤ := by
+  have hα0 : (0 : ℝ) < α := by linarith
+  have hR4 : (0 : ℝ) < R / 4 := by linarith
+  have hA : (0 : ℝ) ≤ 16 * R * lipC α R := by
+    have hL := (lipC_pos hα0 hR).le
+    positivity
+  have hB : (0 : ℝ) ≤ brkC α := brkC_nonneg hα (by linarith)
+  have hmA : Measurable fun u : ℝ => ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α)) :=
+    ENNReal.measurable_ofReal.comp (measurable_const.mul (measurable_id.pow_const _))
+  have hcore : ∫⁻ u in Ioc 0 (R / 4), momProfile α R M u
+      ≤ ENNReal.ofReal (16 * R * lipC α R) * ENNReal.ofReal ((R / 4) ^ (2 - α) / (2 - α))
+        + ENNReal.ofReal (brkC α) * ENNReal.ofReal ((R / 4) ^ (3 - 2 * α) / (3 - 2 * α)) := by
+    have hcongr : ∫⁻ u in Ioc 0 (R / 4), momProfile α R M u
+        = ∫⁻ u in Ioo 0 (R / 4), ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α)
+            + brkC α * u ^ (2 - 2 * α)) := by
+      rw [← setLIntegral_congr (Ioo_ae_eq_Ioc (a := (0 : ℝ)) (b := R / 4))]
+      refine setLIntegral_congr_fun measurableSet_Ioo fun u hu => ?_
+      rw [momProfile, if_neg (by simpa using hu.2)]
+    rw [hcongr]
+    calc ∫⁻ u in Ioo 0 (R / 4), ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α)
+            + brkC α * u ^ (2 - 2 * α))
+        ≤ ∫⁻ u in Ioc 0 (R / 4), ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α)
+            + brkC α * u ^ (2 - 2 * α)) := lintegral_mono_set Ioo_subset_Ioc_self
+      _ = ∫⁻ u in Ioc 0 (R / 4), (ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α))
+            + ENNReal.ofReal (brkC α * u ^ (2 - 2 * α))) := by
+          refine setLIntegral_congr_fun measurableSet_Ioc fun u hu => ?_
+          have hu0 : (0 : ℝ) < u := hu.1
+          exact ENNReal.ofReal_add (by positivity) (by positivity)
+      _ = (∫⁻ u in Ioc 0 (R / 4), ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α)))
+            + ∫⁻ u in Ioc 0 (R / 4), ENNReal.ofReal (brkC α * u ^ (2 - 2 * α)) :=
+          lintegral_add_left hmA _
+      _ = ENNReal.ofReal (16 * R * lipC α R) * ENNReal.ofReal ((R / 4) ^ (2 - α) / (2 - α))
+            + ENNReal.ofReal (brkC α) * ENNReal.ofReal ((R / 4) ^ (3 - 2 * α) / (3 - 2 * α)) := by
+          rw [show (∫⁻ u in Ioc 0 (R / 4), ENNReal.ofReal (16 * R * lipC α R * u ^ (1 - α)))
+              = ENNReal.ofReal (16 * R * lipC α R)
+                * ∫⁻ u in Ioc 0 (R / 4), ENNReal.ofReal (u ^ (1 - α)) from by
+            rw [← lintegral_const_mul' _ _ ENNReal.ofReal_ne_top]
+            exact setLIntegral_congr_fun measurableSet_Ioc
+              fun u _ => ENNReal.ofReal_mul hA,
+            show (∫⁻ u in Ioc 0 (R / 4), ENNReal.ofReal (brkC α * u ^ (2 - 2 * α)))
+              = ENNReal.ofReal (brkC α)
+                * ∫⁻ u in Ioc 0 (R / 4), ENNReal.ofReal (u ^ (2 - 2 * α)) from by
+            rw [← lintegral_const_mul' _ _ ENNReal.ofReal_ne_top]
+            exact setLIntegral_congr_fun measurableSet_Ioc
+              fun u _ => ENNReal.ofReal_mul hB,
+            lintegral_Ioc_rpow (p := 1 - α) (c := R / 4) (by linarith) hR4.le,
+            lintegral_Ioc_rpow (p := 2 - 2 * α) (c := R / 4) (by linarith) hR4.le,
+            show (1 - α + 1 : ℝ) = 2 - α from by ring,
+            show (2 - 2 * α + 1 : ℝ) = 3 - 2 * α from by ring]
+  have htail : ∫⁻ u in Ioi (R / 4), momProfile α R M u
+      = ENNReal.ofReal (4 * M) * ENNReal.ofReal (-(R / 4) ^ (-α) / (-α)) := by
+    have hcongr : ∫⁻ u in Ioi (R / 4), momProfile α R M u
+        = ∫⁻ u in Ioi (R / 4), ENNReal.ofReal (4 * M * u ^ (-(1 + α))) := by
+      refine setLIntegral_congr_fun measurableSet_Ioi fun u hu => ?_
+      rw [momProfile, if_pos (le_of_lt hu)]
+    rw [hcongr, show (∫⁻ u in Ioi (R / 4), ENNReal.ofReal (4 * M * u ^ (-(1 + α))))
+        = ENNReal.ofReal (4 * M) * ∫⁻ u in Ioi (R / 4), ENNReal.ofReal (u ^ (-(1 + α))) from by
+      rw [← lintegral_const_mul' _ _ ENNReal.ofReal_ne_top]
+      exact setLIntegral_congr_fun measurableSet_Ioi
+        fun u _ => ENNReal.ofReal_mul (by positivity : (0 : ℝ) ≤ 4 * M),
+      lintegral_Ioi_rpow (p := -(1 + α)) (c := R / 4) (by linarith) hR4,
+      show (-(1 + α) + 1 : ℝ) = -α from by ring]
+  have hsplit : ∫⁻ u in Ioi 0, momProfile α R M u
+      = (∫⁻ u in Ioc 0 (R / 4), momProfile α R M u) + ∫⁻ u in Ioi (R / 4), momProfile α R M u := by
+    rw [← Ioc_union_Ioi_eq_Ioi hR4.le, lintegral_union measurableSet_Ioi Ioc_disjoint_Ioi_same]
+  have hfin : ∫⁻ u in Ioi 0, momProfile α R M u < ⊤ := by
+    rw [hsplit, htail]
+    refine lt_of_le_of_lt (add_le_add hcore le_rfl) ?_
+    refine ENNReal.add_lt_top.2 ⟨ENNReal.add_lt_top.2 ⟨?_, ?_⟩, ?_⟩ <;>
+      exact ENNReal.mul_lt_top ENNReal.ofReal_lt_top ENNReal.ofReal_lt_top
+  have hcomp : ∫⁻ t : ℝ, momBound α R M t = 2 * ∫⁻ u in Ioi 0, momProfile α R M u := by
+    simp only [momBound]
+    exact lintegral_comp_abs (momProfile α R M)
+  rw [hcomp]
+  exact ENNReal.mul_lt_top (by simp) hfin
+
 end CenteredMaximal.Fractional
 
 end
