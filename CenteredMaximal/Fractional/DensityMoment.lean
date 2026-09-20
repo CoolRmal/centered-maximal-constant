@@ -352,6 +352,118 @@ private theorem integrable_shellProfile_sq :
             positivity)]
         exact ENNReal.ofReal_lt_top
 
+/-! ### The majorant and its weighted square -/
+
+/-- **The pointwise majorant of the comparison density.** The four terms are the interior
+singularity `r^{-12/5}` of the diamond power, the far-field decay `r^{-11/5}` of a compactly
+supported kernel, the axis term `r^{-11/5} m^{-1/5}` produced by the line integral across the
+kernel's own singularity, and the corner term of the support boundary. -/
+private def densityMajorant (z : Fin 2 → ℝ) : ℝ :=
+  diamondNorm z ^ (-(12 / 5) : ℝ) + diamondNorm z ^ (-(11 / 5) : ℝ)
+    + diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ)
+    + shellProfile (diamondNorm z)
+
+private theorem measurable_densityMajorant : Measurable densityMajorant := by
+  have ha0 : Measurable fun z : Fin 2 → ℝ => |z 0| :=
+    continuous_abs.measurable.comp (measurable_pi_apply (0 : Fin 2))
+  have ha1 : Measurable fun z : Fin 2 → ℝ => |z 1| :=
+    continuous_abs.measurable.comp (measurable_pi_apply (1 : Fin 2))
+  have hmin : Measurable fun z : Fin 2 → ℝ => (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) :=
+    (ha0.min ha1).pow_const _
+  unfold densityMajorant
+  exact (((measurable_diamondNorm.pow_const _).add (measurable_diamondNorm.pow_const _)).add
+    ((measurable_diamondNorm.pow_const _).mul hmin)).add
+    (measurable_shellProfile.comp measurable_diamondNorm)
+
+private theorem densityMajorant_nonneg (z : Fin 2 → ℝ) : 0 ≤ densityMajorant z := by
+  have h1 : (0 : ℝ) ≤ diamondNorm z ^ (-(12 / 5) : ℝ) :=
+    Real.rpow_nonneg (diamondNorm_nonneg z) _
+  have h2 : (0 : ℝ) ≤ diamondNorm z ^ (-(11 / 5) : ℝ) :=
+    Real.rpow_nonneg (diamondNorm_nonneg z) _
+  have h3 : (0 : ℝ) ≤ (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) :=
+    Real.rpow_nonneg (le_min (abs_nonneg _) (abs_nonneg _)) _
+  have h4 : 0 ≤ shellProfile (diamondNorm z) := shellProfile_nonneg _
+  have h5 : (0 : ℝ) ≤ diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) :=
+    mul_nonneg h2 h3
+  rw [densityMajorant]
+  linarith
+
+/-- **The weighted square of the majorant is integrable.** The four terms contribute
+`r^{-24/5}` and `r^{-22/5}` against the weight — both inside the window `2 < p < 2 + 16/5` of
+`integrable_diamondRpow_mul_min_one_rpow` — the axis term, and the corner term. -/
+private theorem integrable_densityMajorant_sq :
+    Integrable fun z : Fin 2 → ℝ => densityMajorant z ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ)) := by
+  have hT1 : Integrable fun z : Fin 2 → ℝ =>
+      diamondNorm z ^ (-(24 / 5) : ℝ) * min 1 (‖z‖ ^ (16 / 5 : ℝ)) :=
+    integrable_diamondRpow_mul_min_one_rpow (θ := 16 / 5) (p := 24 / 5) (by norm_num)
+      (by norm_num) (by norm_num)
+  have hT2 : Integrable fun z : Fin 2 → ℝ =>
+      diamondNorm z ^ (-(22 / 5) : ℝ) * min 1 (‖z‖ ^ (16 / 5 : ℝ)) :=
+    integrable_diamondRpow_mul_min_one_rpow (θ := 16 / 5) (p := 22 / 5) (by norm_num)
+      (by norm_num) (by norm_num)
+  have hmaj : Integrable fun z : Fin 2 → ℝ =>
+      4 * (diamondNorm z ^ (-(24 / 5) : ℝ) * min 1 (‖z‖ ^ (16 / 5 : ℝ))
+        + diamondNorm z ^ (-(22 / 5) : ℝ) * min 1 (‖z‖ ^ (16 / 5 : ℝ))
+        + radialProfile (diamondNorm z) * (min |z 0| |z 1|) ^ (-(2 / 5) : ℝ)
+        + shellProfile (diamondNorm z) ^ 2) :=
+    (((hT1.add hT2).add integrable_radialProfile_mul_min_rpow).add
+      integrable_shellProfile_sq).const_mul 4
+  have hmeas : Measurable fun z : Fin 2 → ℝ =>
+      densityMajorant z ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ)) :=
+    (measurable_densityMajorant.pow_const 2).mul
+      (measurable_const.min (measurable_norm.pow_const _))
+  refine hmaj.mono' hmeas.aestronglyMeasurable (.of_forall fun z => ?_)
+  have hr : 0 ≤ diamondNorm z := diamondNorm_nonneg z
+  have hmin0 : 0 ≤ min |z 0| |z 1| := le_min (abs_nonneg _) (abs_nonneg _)
+  have hw0 : (0 : ℝ) ≤ min 1 (‖z‖ ^ (16 / 5 : ℝ)) :=
+    le_min zero_le_one (Real.rpow_nonneg (norm_nonneg z) _)
+  have hw1 : min 1 (‖z‖ ^ (16 / 5 : ℝ)) ≤ 1 := min_le_left _ _
+  set w : ℝ := min 1 (‖z‖ ^ (16 / 5 : ℝ)) with hwdef
+  set a : ℝ := diamondNorm z ^ (-(12 / 5) : ℝ) with hadef
+  set b : ℝ := diamondNorm z ^ (-(11 / 5) : ℝ) with hbdef
+  set m : ℝ := (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) with hmdef
+  set d : ℝ := shellProfile (diamondNorm z) with hddef
+  have ha0 : 0 ≤ a := Real.rpow_nonneg hr _
+  have hb0 : 0 ≤ b := Real.rpow_nonneg hr _
+  have hm0 : 0 ≤ m := Real.rpow_nonneg hmin0 _
+  have hd0 : 0 ≤ d := shellProfile_nonneg _
+  have hasq : a ^ 2 = diamondNorm z ^ (-(24 / 5) : ℝ) := by
+    rw [hadef, rpow_sq hr]
+    norm_num
+  have hbsq : b ^ 2 = diamondNorm z ^ (-(22 / 5) : ℝ) := by
+    rw [hbdef, rpow_sq hr]
+    norm_num
+  have hmsq : m ^ 2 = (min |z 0| |z 1|) ^ (-(2 / 5) : ℝ) := by
+    rw [hmdef, rpow_sq hmin0]
+    norm_num
+  have hcsq : (b * m) ^ 2 * w
+      ≤ radialProfile (diamondNorm z) * (min |z 0| |z 1|) ^ (-(2 / 5) : ℝ) := by
+    have hstep : diamondNorm z ^ (-(22 / 5) : ℝ) * w ≤ radialProfile (diamondNorm z) :=
+      rpow_mul_min_le_radialProfile z
+    calc (b * m) ^ 2 * w = (diamondNorm z ^ (-(22 / 5) : ℝ) * w) * m ^ 2 := by
+          rw [← hbsq]; ring
+      _ ≤ radialProfile (diamondNorm z) * m ^ 2 :=
+          mul_le_mul_of_nonneg_right hstep (sq_nonneg m)
+      _ = _ := by rw [hmsq]
+  have hdsq : d ^ 2 * w ≤ d ^ 2 := by
+    have := mul_le_mul_of_nonneg_left hw1 (sq_nonneg d)
+    simpa using this
+  have hsum : (a + b + b * m + d) ^ 2 ≤ 4 * (a ^ 2 + b ^ 2 + (b * m) ^ 2 + d ^ 2) := by
+    nlinarith [sq_nonneg (a - b), sq_nonneg (a - b * m), sq_nonneg (a - d),
+      sq_nonneg (b - b * m), sq_nonneg (b - d), sq_nonneg (b * m - d)]
+  have hnn : 0 ≤ (a + b + b * m + d) ^ 2 * w := mul_nonneg (sq_nonneg _) hw0
+  rw [densityMajorant, Real.norm_eq_abs, abs_of_nonneg hnn]
+  calc (a + b + b * m + d) ^ 2 * w
+      ≤ (4 * (a ^ 2 + b ^ 2 + (b * m) ^ 2 + d ^ 2)) * w :=
+        mul_le_mul_of_nonneg_right hsum hw0
+    _ = 4 * (a ^ 2 * w + b ^ 2 * w + (b * m) ^ 2 * w + d ^ 2 * w) := by ring
+    _ ≤ 4 * (diamondNorm z ^ (-(24 / 5) : ℝ) * w + diamondNorm z ^ (-(22 / 5) : ℝ) * w
+          + radialProfile (diamondNorm z) * (min |z 0| |z 1|) ^ (-(2 / 5) : ℝ) + d ^ 2) := by
+        rw [hasq, hbsq]
+        have := hcsq
+        have := hdsq
+        linarith
+
 end CenteredMaximal.Fractional
 
 end
