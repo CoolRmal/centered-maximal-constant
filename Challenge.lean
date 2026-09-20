@@ -23,6 +23,8 @@ This file states:
   with centred cubes);
 * `ofReal_phi_le_weakTypeConstant_two`: `Φ ≤ c₂`, where `Φ = 1.68550999…` is the explicit
   algebraic number `phi`; the previously published lower bound is `c₂ ≥ 1.62119…` (Aldaz, 2000);
+* `weakTypeConstant_two_le_upper`: `c₂ ≤ 3.879`, below the classical `4`, by comparison with an
+  explicit kernel for the Cauchy generator;
 * `lt_phi` and `phi_lt`: `1.685 < Φ < 1.686`, so that the size of the explicit constant `Φ` is
   part of the statement.
 
@@ -81,6 +83,12 @@ theorem phi_lt : phi < 1686 / 1000 := by
 /-- **Upper bound.** In every dimension `d`, `c_d ≤ 2ᵈ`: the Vitali covering argument, which for
 centred cubes only needs to cover the centres, gives the factor `2ᵈ` instead of `3ᵈ`. -/
 theorem weakTypeConstant_le_two_pow (d : ℕ) : weakTypeConstant d ≤ 2 ^ d := by
+  sorry
+
+/-- **Upper bound from kernel comparison.** `c₂ ≤ 3.879`, which is below the classical `2ᵈ = 4`.
+The bound comes from an explicit comparison kernel for the Cauchy generator `-|D_u| - |D_v|`
+in the diamond coordinates `r = |u| + |v|`. -/
+theorem weakTypeConstant_two_le_upper : weakTypeConstant 2 ≤ ENNReal.ofReal (3879 / 1000) := by
   sorry
 
 /-- **Lower bound.** `Φ ≤ c₂`. The previously published lower bound was

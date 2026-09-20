@@ -1,10 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
 version: v0.4
 project:
-  name: A lower bound 1.6855 for the planar centred Hardy-Littlewood maximal constant over squares
+  name: Bounds 1.6855 and 3.879 for the planar centred Hardy-Littlewood maximal constant over squares
   description: |-
     Let c_d be the weak type (1,1) constant of the centred Hardy-Littlewood maximal operator over axis-parallel cubes in R^d: the least C such that alpha |{Mf > alpha}| <= C ||f||_1 for every integrable f and every level alpha. Its value is unknown for every d >= 2; in the plane the previously published lower bound is c_2 >= 3/4 - sqrt(2)/4 + sqrt(6)/2 = 1.62119... (Aldaz 2000) and the best known upper bound is 4.
-    This development proves c_2 >= Phi = 1.68550999335552518..., an explicit algebraic number of degree 16, from a lattice with unequal masses: columns at spacing h = (5 + sqrt 22)/6 carrying masses alternating 1 and w = (17 + 4 sqrt 22)/9, rows at spacing h + 1. It also proves the classical covering bound c_d <= 2^d in every dimension and 1.685 < Phi < 1.686.
+    This development proves c_2 >= Phi = 1.68550999335552518..., an explicit algebraic number of degree 16, from a lattice with unequal masses: columns at spacing h = (5 + sqrt 22)/6 carrying masses alternating 1 and w = (17 + 4 sqrt 22)/9, rows at spacing h + 1. It also proves 1.685 < Phi < 1.686, the classical covering bound c_d <= 2^d in every dimension, and an upper bound below the classical one in the plane, c_2 <= 3.879, by comparing the maximal operator with an explicit kernel for the Cauchy generator -|D_u| - |D_v|.
   authors:
   - Yongxi Lin
   license: Apache-2.0
@@ -17,6 +17,7 @@ classification:
   msc2020:
   - 42B25
   - 26D15
+  - 35R11
 sources:
 - title: |-
     The lower bound c_2 >= 1.68550999... for the weak type (1,1) constant of the centred Hardy-Littlewood maximal operator over squares, from a lattice with alternating masses 1 and (17 + 4 sqrt 22)/9
@@ -24,6 +25,13 @@ sources:
   relationship: other
   note: |-
     The principal result is first presented in this repository (docs/PROOF.md, docs/HISTORY.md). Novelty: a literature search on 2026-09-18 covered arXiv (about 15 API queries), the works citing Aldaz (2000) and Melas (2003) in Semantic Scholar, the full history of the compilation page for constant 47a with its issues, pull requests and forks, a GitHub-wide code search, Zenodo, Hugging Face, Figshare, the Palomar registry, Epoch's FrontierMath open problems, erdosproblems.com, MathOverflow and google-deepmind/formal-conjectures, with exact-number searches for 1.6211914, 1.668558, 1.6855 and 3(2+sqrt6)/8. No lower bound above 1.6212 for centred squares in the plane was found; the most recent AI-driven work on the centred constant (arXiv:2511.02864, arXiv:2608.23691) treats dimension one only. Not reached: OpenAlex (rate-limited), zbMATH's cited-by pages (HTTP 403) and paywalled full texts. Novelty is asserted on this basis alone.
+- title: 'Kernel comparison for the centred maximal operator: an unpublished manuscript proving c_2 < 3.615749'
+  type: other
+  relationship: other
+  note: |-
+    Relationship other: an unpublished manuscript supplied by the maintainer, which proves c_2 < 3.615749 by comparing the maximal operator with an explicit kernel whose fractional generator of order 6/5 is nonnegative off the origin, using a cubic-spline kernel with 1201 coefficients and finite certificates (799 Bernstein triangles, 6739 rectangles). The manuscript is not in this repository and its constant is NOT formalized here. What is formalized is the same comparison method carried out in the elementary case alpha = 1 (the Cauchy generator), with a two-parameter kernel in place of the spline, which yields the weaker constant 3.879. The manuscript's Theorem 2.1 (kernel comparison) is unpublished; its analytic content is reproved here from scratch for alpha = 1, with the fractional Sobolev inequality of the manuscript replaced by Gagliardo averaging inequalities.
+  license: unknown
+  author_endorsement: not-contacted
 - title: A remark on the centered n-dimensional Hardy-Littlewood maximal function
   authors:
   - J. M. Aldaz
@@ -96,8 +104,8 @@ related_formalizations:
   note: Contains a centred maximal function over balls with the weak type bound 4^n. Not used here; the challenge imports only Mathlib.
 status:
   scope: |-
-    Formalized in full, using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), and 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt). The definitions live in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and level sets are measured with Lebesgue outer measure.
-    Not formalized: the exact area 2hV - 4ab of the level-one set (only the lower bound is needed); any optimality of Phi (none is claimed); the restricted optimality of the seed lattice certified during the exploration; sharpness of 2^d.
+    Formalized in full, using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt), and c_2 <= 3.879 (CenteredMaximal.weakTypeConstant_two_le_upper), which is below the classical 4. The definitions live in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and level sets are measured with Lebesgue outer measure.
+    Not formalized: the exact area 2hV - 4ab of the level-one set (only the lower bound is needed); any optimality of Phi (none is claimed); the restricted optimality of the seed lattice certified during the exploration; sharpness of 2^d; the constant 3.615749 of the source manuscript, whose fractional order 6/5 needs special-function theory absent from Mathlib, and any optimality of the kernel used for 3.879.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: []
@@ -125,6 +133,18 @@ automation:
       spend_usd: subscription-based
       hardware: local machine for Lean builds, API-only for inference
     prompting_notes: Goal-directed with human instructions on scope, statements and the comparator and Palomar standards.
+  - method: agent
+    models:
+    - claude-opus-5
+    framework: Claude Code
+    tool_setup: |-
+      The upper bound c_2 <= 3.879 was formalized in a second session (2026-09-19/20) from the maintainer's unpublished manuscript, by one background agent per Lean file working from briefs that carried the exact target statements. Roughly 11000 lines across CenteredMaximal/{Analysis,Obstacle,Transfer,Comparison,Cauchy}: the jump-form energy space and its Gagliardo inequalities, the obstacle problem and its complementarity, the transfer to all scales and the diamond-to-square change of variables, and the Cauchy layer (potential, delta identity, generator computations, the one-variable certificate and the representing measure). The comparison kernel's two constants and the certificate's sample point were taken from the manuscript's research notes; no exploratory program is in this repository.
+    cost:
+      wall_time: about one working day (2026-09-19 to 2026-09-20)
+      spend_usd: subscription-based
+      hardware: local machine for Lean builds, API-only for inference
+    prompting_notes: |-
+      Human-directed. The maintainer asked for the manuscript's constant 3.615749; the assessment that its fractional order 6/5 needs special-function theory absent from Mathlib led the maintainer to direct a weaker but elementary bound first. Several agents corrected errors in the briefs they were given, including a false Lipschitz claim and an unprovable pointwise bound.
   - method: manual
     models: []
     framework: n/a
@@ -139,7 +159,7 @@ automation:
     The mathematics and the Lean formalization were produced by AI agents under the maintainer's direction, in two stages with an explicit handover summarised in docs/HISTORY.md. No AI system is listed as an author.
 fidelity:
   divergences: |-
-    No cited source result is formalized for the principal theorem, which is stated here for the first time. The upper bound follows Tao's Exercise 42 except that Mathlib's Vitali lemma needs an enlargement tau > 1, so the proof gives (1 + tau)^d for each tau > 1 and passes to the limit. The smearing of point masses follows Aldaz's Lemma 1.1, adapted to atoms of unequal mass.
+    No cited source result is formalized for the principal theorem, which is stated here for the first time. The upper bound 3.879 DIVERGES from its source manuscript: the manuscript proves 3.615749 with a fractional generator of order 6/5 and a 1201-coefficient spline kernel, whereas the formalization carries the same comparison method through the elementary case alpha = 1 with a two-parameter kernel, giving a weaker constant; the manuscript's existence proof for the obstacle problem, which uses a fractional Sobolev inequality, is replaced by Gagliardo averaging inequalities. The upper bound follows Tao's Exercise 42 except that Mathlib's Vitali lemma needs an enlargement tau > 1, so the proof gives (1 + tau)^d for each tau > 1 and passes to the limit. The smearing of point masses follows Aldaz's Lemma 1.1, adapted to atoms of unequal mass.
 review:
   status: agent-reviewed
   reviewers:
@@ -159,6 +179,11 @@ alignment:
     module: Solution
     status: proved
     note: Compared declaration; shows the constant is finite.
+  - source: 'Upper bound by kernel comparison, in the elementary case alpha = 1 of the source manuscript: c_2 <= 3.879'
+    lean: CenteredMaximal.weakTypeConstant_two_le_upper
+    module: Solution
+    status: proved
+    note: Compared declaration; improves the classical 4 in the plane. The manuscript's own constant 3.615749 is not formalized.
   - source: 'Numerical value: 1.685 < Phi'
     lean: CenteredMaximal.lt_phi
     module: Solution

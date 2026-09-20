@@ -7,10 +7,12 @@ module
 
 public import CenteredMaximal.Numerics
 public import CenteredMaximal.UpperBound
+public import CenteredMaximal.Cauchy.Representation
 public import CenteredMaximal.Lattice.LowerBound
 
 /-!
 # The weak type constant of the centred maximal operator over cubes
 
-The root module exports the upper bound `c_d ≤ 2ᵈ` and the lower bound `Φ ≤ c₂`.
+The root module exports the upper bounds `c_d ≤ 2ᵈ` and `c₂ ≤ 3.879`, and the lower bound
+`Φ ≤ c₂`.
 -/

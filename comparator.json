@@ -3,6 +3,7 @@
   "solution_module": "Solution",
   "theorem_names": [
     "CenteredMaximal.weakTypeConstant_le_two_pow",
+    "CenteredMaximal.weakTypeConstant_two_le_upper",
     "CenteredMaximal.ofReal_phi_le_weakTypeConstant_two",
     "CenteredMaximal.lt_phi",
     "CenteredMaximal.phi_lt"

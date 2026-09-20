@@ -1,12 +1,14 @@
-# A lower bound 1.6855 for the planar centred maximal constant over squares
+# Bounds 1.6855 and 3.879 for the planar centred maximal constant over squares
 
 A complete Lean 4 proof, checked against Mathlib, of a new lower bound for the weak type `(1, 1)`
 constant of the centred Hardy–Littlewood maximal operator over axis-parallel squares in the plane:
 
 $$c_2 \;\ge\; \Phi = \frac{\tfrac{77 + 16\sqrt{22}}{2} - \bigl(8 + \sqrt{22} - \sqrt{70 + 8\sqrt{22}}\bigr)\bigl(11 + \sqrt{22} - 2\sqrt2 - 2\sqrt{11} - \sqrt{17 + 4\sqrt{22}}\bigr)}{26 + 4\sqrt{22}} = 1.6855099933\ldots$$
 
-The previously published lower bound is `3/4 - √2/4 + √6/2 = 1.62119…` (Aldaz, 2000). The
-repository also proves the classical upper bound `c_d ≤ 2ᵈ` in every dimension.
+The previously published lower bound is `3/4 - √2/4 + √6/2 = 1.62119…` (Aldaz, 2000).
+
+It also proves an upper bound below the classical one, `c₂ ≤ 3.879 < 4`, by comparing the maximal
+operator with an explicit kernel, and the classical covering bound `c_d ≤ 2ᵈ` in every dimension.
 
 ## The statement
 
@@ -21,6 +23,7 @@ and `phi` (= `Φ`) using only Mathlib, and states:
 | Lean declaration | statement |
 |---|---|
 | `CenteredMaximal.weakTypeConstant_le_two_pow` | `c_d ≤ 2ᵈ` for every `d` |
+| `CenteredMaximal.weakTypeConstant_two_le_upper` | `c₂ ≤ 3.879` |
 | `CenteredMaximal.ofReal_phi_le_weakTypeConstant_two` | `Φ ≤ c₂` |
 | `CenteredMaximal.lt_phi` | `1.685 < Φ` |
 | `CenteredMaximal.phi_lt` | `Φ < 1.686` |
@@ -52,6 +55,31 @@ integrable test functions with `C ≥ ((2N + 1)/(2N + 3))³ Φ` for every weak t
 `N → ∞` finishes. `docs/PROOF.md` is the informal proof with the name of each Lean declaration;
 `docs/HISTORY.md` records how the configuration was found.
 
+## The upper bound
+
+Write `A = -|D_u| - |D_v|` for the Cauchy generator, acting on functions of the plane through its
+jump (second-difference) representation, and use the diamond radius `r = |u| + |v|`. The kernel
+
+$$K(u,v) = \frac{(R/r - 1)_+}{R - 1} - \varepsilon\,(1 - r)_+^2, \qquad R = \frac{3797}{2000},
+\qquad \varepsilon = \frac{159411}{200000}$$
+
+satisfies `K ≥ 1` on the unit diamond and `A K ≥ 0` away from the origin. The second fact is the
+whole content: it reduces, after the singular part is split off as a multiple of the Cauchy
+potential `1/(2π r)` (which is `A`-harmonic off the axes), to the one-variable inequality
+`γ·T(r) ≤ J(2r/R)` on `(0, 1)` with `γ = εR(R-1) = 1.3596…`, proved from strong convexity and one
+rational sample point (`Cauchy/Certificate.lean`). The margin comes only from `γ > 4/3`.
+
+Given `A K ≥ 0`, the generator of `K` is a positive finite measure minus a point mass at the
+origin, and an obstacle problem for `A` (`Obstacle/`) produces, for each level, an exceptional set
+of controlled measure off which every dilate `K_s ∗ f` stays below the level. Since `K ≥ 1` on the
+unit diamond, this dominates the maximal function, and the resulting constant is half the mass of
+`K`, namely `R²/(R-1) - ε/6 = 3.8786…`. The change of variables `(u,v) ↦ (u+v, u-v)` carries
+diamonds to squares.
+
+This is a weaker constant than the `3.615749` of the manuscript this method is taken from, which
+uses the fractional generator of order `6/5` and a cubic-spline kernel; only the elementary
+`α = 1` case is formalized here.
+
 ## Relation to the literature
 
 | bound on `c₂` (centred squares) | source |
@@ -62,6 +90,7 @@ integrable test functions with `C ≥ ((2N + 1)/(2N + 3))³ Φ` for every weak t
 | `≥ 3/4 - √2/4 + √6/2 ≈ 1.6212` | Aldaz (2000), Proposition 1.4 with `n = 2`: a unit rectangular lattice |
 | **`≥ Φ ≈ 1.6855`** | **this repository**: a lattice with unequal masses |
 | `≤ 4` | the `2ᵈ` covering bound (Tao, *245A Notes 5*, Exercise 42), formalized here |
+| **`≤ 3.879`** | **this repository**: comparison with an explicit Cauchy kernel |
 
 The compilation *Centered Hardy–Littlewood maximal constant in dimension 2*
 (teorth.github.io/optimizationproblems, constant 47a, consulted 18 September 2026) lists `1.6211915`
@@ -91,6 +120,9 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `Solution.lean` | the compared theorems, from the development |
 | `CenteredMaximal/Statement.lean`, `Basic.lean` | the challenge definitions and their basic API |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
+| `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
+| `CenteredMaximal/Obstacle/` | the obstacle problem for the generator |
+| `CenteredMaximal/Analysis/`, `Transfer/`, `Comparison/` | jump forms, energy space, and the transfer to all scales |
 | `CenteredMaximal/Numerics.lean` | `1.685 < Φ < 1.686` |
 | `CenteredMaximal/Lattice/` | constants, the six witnesses, smearing, and `Φ ≤ C` |
 | `docs/` | informal proof, history, figures |
