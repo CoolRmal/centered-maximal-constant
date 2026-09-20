@@ -41,6 +41,7 @@ translated sum may be padded out to the common index range before the two sums a
   in `[−24, 24] × [−24, 24]`, so that it serves both coordinate orders.
 * `fracArr`, `fracArrSwap`, `fracCellCoeff_eq_zero_of_notMem`, `fracCellFinset_subset_box`: the
   certificate's coefficient array in the two index orders, and its support.
+* `colProfile_eq_cubic`: a column profile is an explicit cubic on each unit cell.
 * `splineGen_eq_rowSum`: **the collapse of the certificate's own spline sum**, both directions.
 -/
 
@@ -146,6 +147,27 @@ theorem sum_Icc_jumpGen1_collapse {c : ℤ → ℤ → ℝ} (hc : ∀ i j : ℤ,
   simp only [hg]
   have hk : k - d = k + 2 - (q : ℤ) := by omega
   rw [hk]
+
+/-! ### The column profile on a cell -/
+
+/-- **A column profile is an explicit cubic on each unit cell of the second coordinate.**  This is
+the `beta_poly` reduction of the search program: on `[m, m + 1]` every B-spline factor is the local
+cubic piece `pieceVal`, and only the four offsets `m − j ∈ {−2, −1, 0, 1}` contribute, the others
+having vanishing `betaCoef`. -/
+theorem colProfile_eq_cubic (c : ℤ → ℤ → ℝ) (i m : ℤ) {t : ℝ} (ht : 0 ≤ t) (ht1 : t ≤ 1) :
+    colProfile c i ((m : ℝ) + t)
+      = ∑ dg ∈ Finset.range 4,
+          (∑ j ∈ Finset.Icc (-24 : ℤ) 24, c i j * (betaCoef (m - j) dg : ℝ)) * t ^ dg := by
+  have hcell : ∀ j ∈ Finset.Icc (-24 : ℤ) 24,
+      c i j * bspline ((m : ℝ) + t - j)
+        = ∑ dg ∈ Finset.range 4, c i j * (betaCoef (m - j) dg : ℝ) * t ^ dg := by
+    intro j _
+    rw [show (m : ℝ) + t - (j : ℝ) = ((m - j : ℤ) : ℝ) + t from by push_cast; ring,
+      bspline_intAdd (m - j) ht ht1, pieceVal, Finset.sum_range_succ, Finset.sum_range_succ,
+      Finset.sum_range_succ, Finset.sum_range_one]
+    ring
+  rw [colProfile, Finset.sum_congr rfl hcell, Finset.sum_comm]
+  exact Finset.sum_congr rfl fun dg _ => (Finset.sum_mul _ _ _).symm
 
 /-! ### The certificate's own sum, written over the box -/
 
