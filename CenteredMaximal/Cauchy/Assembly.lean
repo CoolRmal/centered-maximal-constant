@@ -216,7 +216,7 @@ theorem exists_exceptional_set (β : Measure (Fin 2 → ℝ)) [IsFiniteMeasure �
     · rw [indicator_of_mem hx]
       exact hfM x
     · rw [indicator_of_notMem hx, hfsupp x (by simpa [mem_closedBall, dist_eq_norm] using hx)]
-  obtain ⟨u, σ, hum, hu₀ae, huint, hσm, hσ₀, hσκ, hσint, hweak, -, -, hvolu⟩ :=
+  obtain ⟨u, σ, hum, hu₀ae, huint, hσm, hσ₀, hσκ, hσint, hweak, -, -, hvolu, -⟩ :=
     exists_obstacle_solution (α := 1) zero_lt_one (by norm_num) hκ hfm hf₀ hfM hb hfsupp
   -- the positive part of the minimiser, nonnegative pointwise rather than almost everywhere
   obtain ⟨uPos, hupdef⟩ : ∃ v : (Fin 2 → ℝ) → ℝ, v = fun x => max (u x) 0 := ⟨_, rfl⟩

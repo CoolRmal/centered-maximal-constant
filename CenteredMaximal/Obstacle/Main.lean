@@ -51,7 +51,8 @@ theorem exists_obstacle_solution (hα : 0 < α) (hα' : α < 2) {κ : ℝ} (hκ 
       (∀ φ, IsTestFunction φ → ∫ x, u x * jumpGen α φ x = ∫ x, (σ x - f x) * φ x) ∧
       (∀ᵐ x ∂volume, 0 < u x → σ x = κ) ∧
       (∫ x, σ x = ∫ x, f x) ∧
-      volume {x | 0 < u x} ≤ ENNReal.ofReal ((∫ x, f x) / κ) := by
+      volume {x | 0 < u x} ≤ ENNReal.ofReal ((∫ x, f x) / κ) ∧
+      jumpEnergy α u ≠ ⊤ := by
   have hf2 : MemLp f 2 volume := memLp_two_of_bounded hfm hf0 hfb hfsupp
   -- a bounded measurable function supported in a cube is integrable
   have hf₁ : Integrable f volume := by
@@ -71,7 +72,8 @@ theorem exists_obstacle_solution (hα : 0 < α) (hα' : α < 2) {κ : ℝ} (hκ 
   refine ⟨⇑u₀, σ, measurable_coeFn u₀, mem_nonnegCone_iff_ae.1 hu₀,
     integrable_of_l1Norm_ne_top hu₀fin, hσm, hσ0, hσκ, hσint, fun φ hφ => ?_,
     ae_eq_of_pos hα hα' hf2 hf0 hfb hu₀ hu₀fin hu₀min hσm hσ0 hσκ hσT, hmass,
-    volume_pos_lt_le hα hα' hκ hf₁ hf2 hf0 hfb hu₀ hu₀fin hu₀min hσm hσ0 hσκ hσT⟩
+    volume_pos_lt_le hα hα' hκ hf₁ hf2 hf0 hfb hu₀ hu₀fin hu₀min hσm hσ0 hσκ hσT,
+    u₀.jumpEnergy_ne_top⟩
   -- the weak equation: the test-function identity of the density, read through the generator
   have hfφ : Integrable (fun x => f x * φ x) volume :=
     hf2.integrable_mul (memLp_two_of_isTestFunction hφ)
