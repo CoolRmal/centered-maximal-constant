@@ -275,15 +275,14 @@ private theorem integral_secondDiff_diamondPow (α : ℝ) (z : Fin 2 → ℝ) (j
     exact diamondDiff_abs_left α (z j) |z (j + 1)| t
   rw [integral_congr_ae (Filter.Eventually.of_forall key), diamondProfile_eq_integral]
 
-set_option linter.unusedVariables false in
 /-- **The reduction.** Off the coordinate axes the jump generator of the diamond power is the sum
 of the two one-dimensional profiles, one for each coordinate direction.
 
-The identity is a pointwise identity of integrands, so it holds for every `α` and every `z`; the
-standing hypotheses are kept in the signature because they are what makes the two profiles finite
+The identity is a pointwise identity of integrands, so it needs no hypothesis at all; the standing
+hypotheses are kept in the signature, unused, because they are what makes the two profiles finite
 (`integrable_diamondDiff`), which is what every consumer of this lemma needs. -/
-theorem jumpGen_diamondPow {α : ℝ} (hα : 0 < α) (hα' : α < 2) {z : Fin 2 → ℝ}
-    (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0) :
+theorem jumpGen_diamondPow {α : ℝ} (_hα : 0 < α) (_hα' : α < 2) {z : Fin 2 → ℝ}
+    (_h0 : z 0 ≠ 0) (_h1 : z 1 ≠ 0) :
     jumpGen α (diamondPow α) z
       = diamondProfile α |z 0| |z 1| + diamondProfile α |z 1| |z 0| := by
   have e0 := integral_secondDiff_diamondPow α z 0
@@ -295,11 +294,10 @@ theorem jumpGen_diamondPow {α : ℝ} (hα : 0 < α) (hα' : α < 2) {z : Fin 2 
 
 /-! ### Homogeneity of the profile -/
 
-set_option linter.unusedVariables false in
 /-- **The homogeneity of the profile.** The substitution `t = c s` produces one factor `c^{-α}`
 from the bracket and one factor `c^{-(1+α)}` from the weight, against one factor `c` from the
 measure. Only `0 < c` enters the change of variables; `0 < α` is kept for interface uniformity. -/
-theorem diamondProfile_smul {α : ℝ} (hα : 0 < α) {c a b : ℝ} (hc : 0 < c) (ha : 0 < a)
+theorem diamondProfile_smul {α : ℝ} (_hα : 0 < α) {c a b : ℝ} (hc : 0 < c) (ha : 0 < a)
     (hb : 0 < b) : diamondProfile α (c * a) (c * b) = c ^ (-2 * α) * diamondProfile α a b := by
   have hkey : ∀ s : ℝ,
       diamondDiff α (c * a) (c * b) (c * s) = c ^ (-(1 + 2 * α)) * diamondDiff α a b s := by
