@@ -334,7 +334,8 @@ private theorem abs_cell_term_le (i j : ℤ) {u v : ℝ} (huv : 0 < |u| + |v|) :
         refine Real.rpow_le_rpow_of_nonpos huv ?_ (by norm_num)
         linarith
       calc |jumpGen1 (6 / 5) bspline (16 * u - (i : ℝ)) * bspline (16 * v - (j : ℝ))|
-          = |jumpGen1 (6 / 5) bspline (16 * u - (i : ℝ))| * |bspline (16 * v - (j : ℝ))| := abs_mul _ _
+          = |jumpGen1 (6 / 5) bspline (16 * u - (i : ℝ))| * |bspline (16 * v - (j : ℝ))| :=
+            abs_mul _ _
         _ ≤ (20000 * |16 * u - (i : ℝ)| ^ (-(11 / 5) : ℝ)) * 320 :=
             mul_le_mul hJ (abs_bspline_le _) (abs_nonneg _) (by positivity)
         _ ≤ (20000 * r ^ (-(11 / 5) : ℝ)) * 320 := by
@@ -380,7 +381,8 @@ private theorem abs_jumpGen_spline_le {z : Fin 2 → ℝ} (hz : z ≠ 0) :
           + bspline (16 * z 0 - (ij.1 : ℝ)) * jumpGen1 (6 / 5) bspline (16 * z 1 - (ij.2 : ℝ))))|
       = |fracCoeff (fracCellCoeff ij)| * (16 : ℝ) ^ (6 / 5 : ℝ) *
         |jumpGen1 (6 / 5) bspline (16 * z 0 - (ij.1 : ℝ)) * bspline (16 * z 1 - (ij.2 : ℝ))
-          + bspline (16 * z 0 - (ij.1 : ℝ)) * jumpGen1 (6 / 5) bspline (16 * z 1 - (ij.2 : ℝ))| := by
+          + bspline (16 * z 0 - (ij.1 : ℝ))
+            * jumpGen1 (6 / 5) bspline (16 * z 1 - (ij.2 : ℝ))| := by
     rw [abs_mul, abs_mul, abs_of_pos h16, mul_assoc]
   rw [habs]
   have hsplit := abs_add_le
@@ -1204,7 +1206,8 @@ private theorem integrable_dir_splinePart (z : Fin 2 → ℝ) (j : Fin 2) :
 private theorem jumpGen_fracKernel_split {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
     (hne : diamondNorm z ≠ 7 / 4) :
     fracDensity z = fracBaseCoeff * jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z
-      + jumpGen (6 / 5) (fun w => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w) z := by
+      + jumpGen (6 / 5)
+        (fun w => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w) z := by
   have hfun : fracKernel = (fun w => fracBaseCoeff * truncBase (6 / 5) (7 / 4) w)
       + fun w => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w := by
     funext w

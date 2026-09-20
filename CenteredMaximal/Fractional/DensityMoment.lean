@@ -5,10 +5,7 @@ Authors: Yongxi Lin
 -/
 module
 
-public import CenteredMaximal.Fractional.BaseMoment
-public import CenteredMaximal.Fractional.KernelPositivity
-public import CenteredMaximal.Fractional.MajorBase
-public import CenteredMaximal.Fractional.SplineTaylor
+public import CenteredMaximal.Fractional.DensityBound
 
 /-!
 # The weighted `L²` moment of the comparison density
@@ -33,9 +30,23 @@ Both are harmless after squaring against the weight, and the majorant used here 
 
 away from the two coordinate axes and the support boundary — a null set.
 
+The majorant itself is `CenteredMaximal.Fractional.exists_abs_fracDensity_le`; this file squares it
+against the weight.
+
 ## Main results
 
-* `integrable_fracDensity_sq_moment`: the moment itself.
+* `integrable_fracDensity_sq_moment`: the moment itself, the last hypothesis of
+  `CenteredMaximal.Fractional.weakTypeConstant_two_le_frac`.
+
+## Method
+
+Squaring the four-term majorant leaves four integrands. Two are the model singularities
+`r^{-24/5}` and `r^{-22/5}` against the weight `min(1, ‖z‖^{16/5})`, both inside the window
+`2 < p < 2 + 16/5` of `integrable_diamondRpow_mul_min_one_rpow` — the left end because the density
+decays like `r^{-11/5}` at infinity and the right end because it blows up like `r^{-12/5}` at the
+origin, and `2 < 22/5 ≤ 24/5 < 26/5`. The third is the axis term, which is *not* radial: it is
+dominated by a sum of products of one-dimensional profiles, so the plane integral factors. The
+fourth is the corner term of the support boundary, which is radial and compactly supported.
 -/
 
 @[expose] public section
@@ -463,6 +474,96 @@ private theorem integrable_densityMajorant_sq :
         have := hcsq
         have := hdsq
         linarith
+
+/-! ### The exceptional set
+
+The majorant holds off the two coordinate axes and off the support boundary `r = 7/4`. All three
+sets are null: the axes are coordinate hyperplanes and the boundary is one fibre of the radial
+formula `lintegral_comp_diamondNorm`. -/
+
+private theorem volume_coord_zero (i : Fin 2) : volume {z : Fin 2 → ℝ | z i = 0} = 0 := by
+  have hset : {z : Fin 2 → ℝ | z i = 0}
+      = (LinearMap.ker (LinearMap.proj i : (Fin 2 → ℝ) →ₗ[ℝ] ℝ) : Set (Fin 2 → ℝ)) := by
+    ext z
+    simp [LinearMap.mem_ker]
+  rw [hset]
+  refine Measure.addHaar_submodule volume _ fun htop => ?_
+  have hmem : Pi.single i (1 : ℝ) ∈ LinearMap.ker (LinearMap.proj i : (Fin 2 → ℝ) →ₗ[ℝ] ℝ) := by
+    rw [htop]
+    exact Submodule.mem_top
+  simp [LinearMap.mem_ker] at hmem
+
+private theorem volume_diamondNorm_eq : volume {z : Fin 2 → ℝ | diamondNorm z = 7 / 4} = 0 := by
+  have hs : MeasurableSet {z : Fin 2 → ℝ | diamondNorm z = 7 / 4} :=
+    measurable_diamondNorm (measurableSet_singleton (7 / 4))
+  have hsing : ∀ᵐ t : ℝ, t ≠ 7 / 4 := by
+    rw [ae_iff]
+    convert measure_singleton (μ := (volume : Measure ℝ)) (7 / 4) using 2
+    ext t
+    simp
+  calc volume {z : Fin 2 → ℝ | diamondNorm z = 7 / 4}
+      = ∫⁻ z : Fin 2 → ℝ, {z : Fin 2 → ℝ | diamondNorm z = 7 / 4}.indicator 1 z :=
+        (lintegral_indicator_one hs).symm
+    _ = ∫⁻ z : Fin 2 → ℝ, ({7 / 4} : Set ℝ).indicator 1 (diamondNorm z) := by
+        refine lintegral_congr fun z => ?_
+        by_cases hz : diamondNorm z = 7 / 4 <;> simp [hz]
+    _ = ∫⁻ t in Ioi 0, 4 * ENNReal.ofReal t * ({7 / 4} : Set ℝ).indicator 1 t :=
+        lintegral_comp_diamondNorm (measurable_one.indicator (measurableSet_singleton _))
+    _ = 0 := by
+        refine (lintegral_eq_zero_iff' ?_).2 ?_
+        · exact ((measurable_const.mul ENNReal.measurable_ofReal).mul
+            (measurable_one.indicator (measurableSet_singleton _))).aemeasurable
+        · refine ae_restrict_of_ae ?_
+          filter_upwards [hsing] with t ht
+          simp [ht]
+
+/-- **The majorant holds almost everywhere.** -/
+private theorem ae_off_exceptional :
+    ∀ᵐ z : Fin 2 → ℝ, z 0 ≠ 0 ∧ z 1 ≠ 0 ∧ diamondNorm z ≠ 7 / 4 := by
+  have h0 : ∀ᵐ z : Fin 2 → ℝ, z 0 ≠ 0 := by
+    rw [ae_iff]
+    exact measure_mono_null (fun _ hz => not_not.1 hz) (volume_coord_zero 0)
+  have h1 : ∀ᵐ z : Fin 2 → ℝ, z 1 ≠ 0 := by
+    rw [ae_iff]
+    exact measure_mono_null (fun _ hz => not_not.1 hz) (volume_coord_zero 1)
+  have h2 : ∀ᵐ z : Fin 2 → ℝ, diamondNorm z ≠ 7 / 4 := by
+    rw [ae_iff]
+    exact measure_mono_null (fun z hz => not_not.1 hz) volume_diamondNorm_eq
+  filter_upwards [h0, h1, h2] with z hz0 hz1 hz2
+  exact ⟨hz0, hz1, hz2⟩
+
+/-! ### The moment -/
+
+/-- **The weighted `L²` moment of the comparison density**, the last hypothesis of
+`CenteredMaximal.Fractional.weakTypeConstant_two_le_frac`. -/
+theorem integrable_fracDensity_sq_moment :
+    Integrable (fun z => fracDensity z ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ))) volume := by
+  obtain ⟨A, hA0, hA⟩ := exists_abs_fracDensity_le
+  have hmaj : Integrable fun z : Fin 2 → ℝ =>
+      A ^ 2 * (densityMajorant z ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ))) :=
+    integrable_densityMajorant_sq.const_mul (A ^ 2)
+  have hmeas : Measurable fun z : Fin 2 → ℝ =>
+      fracDensity z ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ)) :=
+    (measurable_fracDensity.pow_const 2).mul
+      (measurable_const.min (measurable_norm.pow_const _))
+  refine hmaj.mono' hmeas.aestronglyMeasurable ?_
+  filter_upwards [ae_off_exceptional] with z hz
+  obtain ⟨hz0, hz1, hzne⟩ := hz
+  have hbnd : |fracDensity z| ≤ A * densityMajorant z := hA z hz0 hz1 hzne
+  have hmaj0 : 0 ≤ densityMajorant z := densityMajorant_nonneg z
+  have hw0 : (0 : ℝ) ≤ min 1 (‖z‖ ^ (16 / 5 : ℝ)) :=
+    le_min zero_le_one (Real.rpow_nonneg (norm_nonneg z) _)
+  have hsq : fracDensity z ^ 2 ≤ (A * densityMajorant z) ^ 2 := by
+    have habs : |fracDensity z| ^ 2 = fracDensity z ^ 2 := sq_abs _
+    calc fracDensity z ^ 2 = |fracDensity z| ^ 2 := habs.symm
+      _ ≤ (A * densityMajorant z) ^ 2 := by
+          have h := mul_self_le_mul_self (abs_nonneg (fracDensity z)) hbnd
+          nlinarith [h]
+  rw [Real.norm_eq_abs, abs_of_nonneg (mul_nonneg (sq_nonneg _) hw0)]
+  calc fracDensity z ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ))
+      ≤ (A * densityMajorant z) ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ)) :=
+        mul_le_mul_of_nonneg_right hsq hw0
+    _ = A ^ 2 * (densityMajorant z ^ 2 * min 1 (‖z‖ ^ (16 / 5 : ℝ))) := by ring
 
 end CenteredMaximal.Fractional
 
