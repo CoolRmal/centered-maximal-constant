@@ -12,7 +12,7 @@ public import CenteredMaximal.Fractional.FracRepresentation
 
 `CenteredMaximal.Fractional.jumpMoment_fracKernel` reduces the moment hypothesis
 `JumpMoment (6/5) fracKernel` to the same hypothesis for the truncated diamond base
-`truncBase (6/5) (7/4)`. This file discharges it.
+`T = truncBase (6/5) (7/4)`. This file discharges it, for every order `1 < α < 3/2`.
 
 ## Main results
 
@@ -20,6 +20,33 @@ public import CenteredMaximal.Fractional.FracRepresentation
 * `jumpMoment_truncBase`: the `α = 6/5`, `R = 7/4` instance;
 * `jumpMoment_fracKernel'`, `hKgen_fracKernel'`, `integrable_fracDensity_mul_min_one'`: the
   hypothesis-free forms of the three consequences isolated by `FracRepresentation`.
+
+## Method
+
+The base is *compactly supported* — it vanishes off the closed diamond of radius `R` — and that,
+not any decay at infinity, is what makes the double integral
+`∫∫ |Δ_j^t T (z)| min(1, ‖z‖) |t|^{-(1+α)} dz dt` finite. The step is split at `|t| = R/4`.
+
+* **Large steps, `R/4 ≤ |t|`.** Only `T ∈ L¹` is used: the three displaced values integrate to
+  `4 ∫ T` by translation invariance, and `∫_{|t| ≥ R/4} |t|^{-(1+α)} dt < ∞` because `α > 0`.
+* **Small steps, `|t| < R/4`.** The three points `z`, `z ± t e_j` then lie on the same side of the
+  boundary `{r = R}` unless `z` lies in the shell `{ |r − R| ≤ |t| }`. Off that shell and inside
+  the diamond the base is the diamond power up to the additive constant `R^{-α}`, so its second
+  difference is that of `r^{-α}`; off it and outside the diamond the second difference vanishes.
+  On the shell the radial profile is Lipschitz — all three radii are at least `R/2` — so the
+  second difference is `O(|t|)`, and `volume_shell_le` bounds the shell by `8 R |t|`; against the
+  weight this contributes `|t|^{1-α}`, integrable because `α < 2`.
+* **The homogeneous piece.** `lintegral_abs_brk_mul_le` bounds the plane integral of
+  `|Δ_j^1 (r^{-α})|` weighted by the diamond radius by `O(|t|^{3-α})`; against the weight this
+  contributes `|t|^{2-2α}`, integrable at the origin exactly for `α < 3/2`. The plane integral is
+  taken in the coordinates `a = |z j|`, `b = |z (j+1)|`, and splits into three regions: `a > 2s`,
+  where two derivatives of `r^{-α}` survive and the second difference is `O(s² (a+b)^{-α-2})`;
+  `a ≤ 2s < b/2`, where only one does and it is `O(s b^{-α-1})`; and the core `a ≤ 2s`, `b ≤ 4s`,
+  where the three displaced values are merely summed, the corner term `(|a − s| + b)^{-α}`
+  included.
+
+The exceptional set `{z (j+1) = 0}` — where the origin can be one of the three points, and the
+identification of the base with the diamond power fails — is a coordinate line, hence null.
 -/
 
 @[expose] public section
@@ -1026,6 +1053,241 @@ private theorem lintegral_momBound_lt_top {α R M : ℝ} (hα : 1 < α) (hα' : 
     exact lintegral_comp_abs (momProfile α R M)
   rw [hcomp]
   exact ENNReal.mul_lt_top (by simp) hfin
+
+/-! ### The moment hypothesis -/
+
+private theorem measurableSet_shell (R s : ℝ) :
+    MeasurableSet {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s} := by
+  have hpre : {z : Fin 2 → ℝ | |diamondNorm z - R| ≤ s}
+      = (fun z => |diamondNorm z - R|) ⁻¹' Iic s := by
+    ext z; simp
+  rw [hpre]
+  exact (continuous_abs.comp (continuous_diamondNorm.sub continuous_const)).measurable
+    measurableSet_Iic
+
+private theorem enorm_secondDiff_mul (α : ℝ) (K : (Fin 2 → ℝ) → ℝ) (j : Fin 2)
+    (z : Fin 2 → ℝ) (t : ℝ) :
+    ‖secondDiff K j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))‖ₑ
+      = ENNReal.ofReal (|secondDiff K j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α))) := by
+  rw [Real.enorm_eq_ofReal_abs, abs_mul, abs_mul,
+    abs_of_nonneg (le_min zero_le_one (norm_nonneg z)),
+    abs_of_nonneg (Real.rpow_nonneg (abs_nonneg t) _)]
+
+/-- **The inner integral at a fixed step.** -/
+private theorem lintegral_z_le {α R : ℝ} (hα : 1 < α) (hα' : α < 2) (hR : 0 < R) (j : Fin 2)
+    (t : ℝ) :
+    ∫⁻ z : Fin 2 → ℝ,
+        ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α)))
+      ≤ momBound α R (∫ z, truncBase α R z) t := by
+  have hα0 : (0 : ℝ) < α := by linarith
+  have hTint : Integrable (truncBase α R) := integrable_truncBase hα0 hα' hR
+  have hMnn : 0 ≤ ∫ z, truncBase α R z := integral_nonneg (truncBase_nonneg α R)
+  have hMl : ∫⁻ z, ENNReal.ofReal (truncBase α R z)
+      = ENNReal.ofReal (∫ z, truncBase α R z) :=
+    (ofReal_integral_eq_lintegral_ofReal hTint (ae_of_all _ (truncBase_nonneg α R))).symm
+  have hw : (0 : ℝ) ≤ |t| ^ (-(1 + α)) := Real.rpow_nonneg (abs_nonneg t) _
+  rw [momBound, momProfile]
+  by_cases hcase : R / 4 ≤ |t|
+  · rw [if_pos hcase]
+    obtain ⟨a, ha⟩ : ∃ a : Fin 2 → ℝ, a = t • Pi.single j (1 : ℝ) := ⟨_, rfl⟩
+    have hsd : ∀ z, secondDiff (truncBase α R) j z t
+        = truncBase α R (z + a) + truncBase α R (z - a) - 2 * truncBase α R z := fun z => by
+      rw [ha]; rfl
+    have hm1 : Measurable fun z : Fin 2 → ℝ => ENNReal.ofReal (truncBase α R (z + a)) :=
+      ENNReal.measurable_ofReal.comp ((measurable_truncBase α R).comp (measurable_id.add_const a))
+    have hm2 : Measurable fun z : Fin 2 → ℝ => ENNReal.ofReal (truncBase α R (z - a)) :=
+      ENNReal.measurable_ofReal.comp ((measurable_truncBase α R).comp (measurable_id.sub_const a))
+    have hm12 : Measurable fun z : Fin 2 → ℝ =>
+        ENNReal.ofReal (truncBase α R (z + a)) + ENNReal.ofReal (truncBase α R (z - a)) :=
+      hm1.add hm2
+    have hI1 : ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (truncBase α R (z + a))
+        = ENNReal.ofReal (∫ z, truncBase α R z) := by
+      rw [lintegral_add_right_eq_self (fun z => ENNReal.ofReal (truncBase α R z)) a, hMl]
+    have hI2 : ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (truncBase α R (z - a))
+        = ENNReal.ofReal (∫ z, truncBase α R z) := by
+      rw [lintegral_sub_right_eq_self (fun z => ENNReal.ofReal (truncBase α R z)) a, hMl]
+    have hI3 : ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (2 * truncBase α R z)
+        = ENNReal.ofReal (2 * ∫ z, truncBase α R z) := by
+      rw [show (fun z : Fin 2 → ℝ => ENNReal.ofReal (2 * truncBase α R z))
+          = fun z : Fin 2 → ℝ => ENNReal.ofReal 2 * ENNReal.ofReal (truncBase α R z) from
+        funext fun z => ENNReal.ofReal_mul (by norm_num),
+        lintegral_const_mul' _ _ ENNReal.ofReal_ne_top, hMl,
+        ← ENNReal.ofReal_mul (by norm_num : (0 : ℝ) ≤ 2)]
+    have hpt : ∀ z : Fin 2 → ℝ,
+        ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α)))
+          ≤ ENNReal.ofReal (|t| ^ (-(1 + α)))
+            * (ENNReal.ofReal (truncBase α R (z + a)) + ENNReal.ofReal (truncBase α R (z - a))
+              + ENNReal.ofReal (2 * truncBase α R z)) := by
+      intro z
+      have h1 := truncBase_nonneg α R (z + a)
+      have h2 := truncBase_nonneg α R (z - a)
+      have h3 := truncBase_nonneg α R z
+      rw [← ENNReal.ofReal_add (by positivity) (by positivity),
+        ← ENNReal.ofReal_add (by positivity) (by positivity), ← ENNReal.ofReal_mul hw]
+      refine ENNReal.ofReal_le_ofReal ?_
+      have habs : |secondDiff (truncBase α R) j z t|
+          ≤ truncBase α R (z + a) + truncBase α R (z - a) + 2 * truncBase α R z := by
+        rw [hsd z, abs_le]
+        constructor <;> linarith
+      calc |secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α))
+          ≤ (truncBase α R (z + a) + truncBase α R (z - a) + 2 * truncBase α R z) * 1
+              * |t| ^ (-(1 + α)) := by
+            refine mul_le_mul_of_nonneg_right ?_ hw
+            exact mul_le_mul habs (min_le_left _ _) (le_min zero_le_one (norm_nonneg _))
+              (by linarith)
+        _ = |t| ^ (-(1 + α))
+              * (truncBase α R (z + a) + truncBase α R (z - a) + 2 * truncBase α R z) := by ring
+    calc ∫⁻ z : Fin 2 → ℝ,
+          ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α)))
+        ≤ ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (|t| ^ (-(1 + α)))
+            * (ENNReal.ofReal (truncBase α R (z + a)) + ENNReal.ofReal (truncBase α R (z - a))
+              + ENNReal.ofReal (2 * truncBase α R z)) := lintegral_mono hpt
+      _ = ENNReal.ofReal (|t| ^ (-(1 + α)))
+            * ∫⁻ z : Fin 2 → ℝ, (ENNReal.ofReal (truncBase α R (z + a))
+              + ENNReal.ofReal (truncBase α R (z - a)) + ENNReal.ofReal (2 * truncBase α R z)) :=
+          lintegral_const_mul' _ _ ENNReal.ofReal_ne_top
+      _ = ENNReal.ofReal (|t| ^ (-(1 + α))) * ENNReal.ofReal (4 * ∫ z, truncBase α R z) := by
+          rw [lintegral_add_left hm12 _, lintegral_add_left hm1 _, hI1, hI2, hI3,
+            ← ENNReal.ofReal_add hMnn hMnn,
+            ← ENNReal.ofReal_add (by linarith) (by linarith),
+            show (∫ z, truncBase α R z) + (∫ z, truncBase α R z)
+                + 2 * ∫ z, truncBase α R z = 4 * ∫ z, truncBase α R z from by ring]
+      _ = ENNReal.ofReal (4 * (∫ z, truncBase α R z) * |t| ^ (-(1 + α))) := by
+          rw [← ENNReal.ofReal_mul hw]
+          congr 1
+          ring
+  · rw [if_neg hcase]
+    rw [not_le] at hcase
+    by_cases ht0 : t = 0
+    · have h0 : ∀ z : Fin 2 → ℝ,
+          ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α)))
+            = 0 := by
+        intro z
+        rw [ht0]
+        simp
+      rw [lintegral_congr h0, lintegral_zero]
+      simp
+    · have htpos : (0 : ℝ) < |t| := abs_pos.2 ht0
+      have htR : |t| < R := by linarith
+      have hL : (0 : ℝ) ≤ lipC α R := (lipC_pos hα0 hR).le
+      have hBc : (0 : ℝ) ≤ brkC α := brkC_nonneg hα hα'
+      have hmind : Measurable
+          ({w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|}.indicator
+            fun _ => ENNReal.ofReal (2 * lipC α R * |t|)) :=
+        measurable_const.indicator (measurableSet_shell R |t|)
+      have haemem : ∀ᵐ z : Fin 2 → ℝ, z (j + 1) ≠ 0 := by
+        rw [MeasureTheory.ae_iff]
+        simpa using volume_coord_eq_zero (j + 1)
+      have hae : ∀ᵐ z : Fin 2 → ℝ,
+          ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α)))
+            ≤ ENNReal.ofReal (|t| ^ (-(1 + α)))
+              * ({w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|}.indicator
+                  (fun _ => ENNReal.ofReal (2 * lipC α R * |t|)) z
+                + ENNReal.ofReal (|(brk α |z j| |z (j + 1)| |t|)|
+                    * (|z j| + |z (j + 1)|))) := by
+        filter_upwards [haemem] with z hzn
+        have hkey := enorm_secondDiff_truncBase_le hα0 hR j hzn hcase
+        rw [show |secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α))
+            = |t| ^ (-(1 + α)) * (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖) from by ring,
+          ENNReal.ofReal_mul hw]
+        gcongr
+      have hshellI : ∫⁻ z : Fin 2 → ℝ,
+          {w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|}.indicator
+            (fun _ => ENNReal.ofReal (2 * lipC α R * |t|)) z
+          ≤ ENNReal.ofReal (2 * lipC α R * |t|) * ENNReal.ofReal (8 * R * |t|) := by
+        rw [lintegral_indicator (measurableSet_shell R |t|), setLIntegral_const]
+        exact mul_le_mul' le_rfl (volume_shell_le (abs_nonneg t) htR)
+      have e1 : |t| ^ (-(1 + α)) * (2 * lipC α R * |t| * (8 * R * |t|))
+          = 16 * R * lipC α R * |t| ^ (1 - α) := by
+        have h : |t| ^ 2 * |t| ^ (-(1 + α)) = |t| ^ (1 - α) := by
+          rw [← Real.rpow_two |t|, ← Real.rpow_add htpos,
+            show (2 : ℝ) + -(1 + α) = 1 - α from by ring]
+        calc |t| ^ (-(1 + α)) * (2 * lipC α R * |t| * (8 * R * |t|))
+            = 16 * R * lipC α R * (|t| ^ 2 * |t| ^ (-(1 + α))) := by ring
+          _ = 16 * R * lipC α R * |t| ^ (1 - α) := by rw [h]
+      have e2 : |t| ^ (-(1 + α)) * (brkC α * |t| ^ (3 - α)) = brkC α * |t| ^ (2 - 2 * α) := by
+        have h : |t| ^ (3 - α) * |t| ^ (-(1 + α)) = |t| ^ (2 - 2 * α) := by
+          rw [← Real.rpow_add htpos, show (3 - α) + -(1 + α) = 2 - 2 * α from by ring]
+        calc |t| ^ (-(1 + α)) * (brkC α * |t| ^ (3 - α))
+            = brkC α * (|t| ^ (3 - α) * |t| ^ (-(1 + α))) := by ring
+          _ = brkC α * |t| ^ (2 - 2 * α) := by rw [h]
+      calc ∫⁻ z : Fin 2 → ℝ,
+            ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α)))
+          ≤ ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (|t| ^ (-(1 + α)))
+              * ({w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|}.indicator
+                  (fun _ => ENNReal.ofReal (2 * lipC α R * |t|)) z
+                + ENNReal.ofReal (|(brk α |z j| |z (j + 1)| |t|)|
+                    * (|z j| + |z (j + 1)|))) := lintegral_mono_ae hae
+        _ = ENNReal.ofReal (|t| ^ (-(1 + α)))
+              * ∫⁻ z : Fin 2 → ℝ,
+                ({w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|}.indicator
+                    (fun _ => ENNReal.ofReal (2 * lipC α R * |t|)) z
+                  + ENNReal.ofReal (|(brk α |z j| |z (j + 1)| |t|)|
+                      * (|z j| + |z (j + 1)|))) :=
+            lintegral_const_mul' _ _ ENNReal.ofReal_ne_top
+        _ = ENNReal.ofReal (|t| ^ (-(1 + α)))
+              * ((∫⁻ z : Fin 2 → ℝ, {w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|}.indicator
+                    (fun _ => ENNReal.ofReal (2 * lipC α R * |t|)) z)
+                + ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (|(brk α |z j| |z (j + 1)| |t|)|
+                    * (|z j| + |z (j + 1)|))) := by
+            rw [lintegral_add_left hmind _]
+        _ ≤ ENNReal.ofReal (|t| ^ (-(1 + α)))
+              * (ENNReal.ofReal (2 * lipC α R * |t|) * ENNReal.ofReal (8 * R * |t|)
+                + ENNReal.ofReal (brkC α * |t| ^ (3 - α))) := by
+            gcongr
+            exact lintegral_abs_brk_mul_le hα hα' htpos j
+        _ = ENNReal.ofReal (16 * R * lipC α R * |t| ^ (1 - α)
+              + brkC α * |t| ^ (2 - 2 * α)) := by
+            rw [← ENNReal.ofReal_mul (by positivity : (0 : ℝ) ≤ 2 * lipC α R * |t|), mul_add,
+              ← ENNReal.ofReal_mul hw, ← ENNReal.ofReal_mul hw,
+              ← ENNReal.ofReal_add (by rw [e1]; positivity) (by rw [e2]; positivity), e1, e2]
+
+/-- **The moment hypothesis for the truncated diamond base.** The two-sided restriction
+`1 < α < 3/2` is sharp: the `t`-integral of the homogeneous piece converges at infinity only for
+`α > 1` and at the origin only for `α < 3/2`. -/
+theorem jumpMoment_truncBase_of_lt {α R : ℝ} (hα : 1 < α) (hα' : α < 3 / 2) (hR : 0 < R) :
+    JumpMoment α (truncBase α R) := by
+  intro j
+  have hm : Measurable fun p : ℝ × (Fin 2 → ℝ) =>
+      secondDiff (truncBase α R) j p.2 p.1 * min 1 ‖p.2‖ * |p.1| ^ (-(1 + α)) :=
+    ((measurable_secondDiff_snd (measurable_truncBase α R) j).mul
+      (measurable_const.min (measurable_norm.comp measurable_snd))).mul
+      ((continuous_abs.measurable.pow_const _).comp measurable_fst)
+  refine ⟨hm.aestronglyMeasurable, ?_⟩
+  rw [hasFiniteIntegral_iff_enorm]
+  calc (∫⁻ p, ‖Function.uncurry (fun (t : ℝ) (z : Fin 2 → ℝ) =>
+          secondDiff (truncBase α R) j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))) p‖ₑ
+        ∂((volume : Measure ℝ).prod (volume : Measure (Fin 2 → ℝ))))
+      = ∫⁻ t : ℝ, ∫⁻ z, ‖secondDiff (truncBase α R) j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))‖ₑ :=
+        lintegral_prod _ hm.enorm.aemeasurable
+    _ = ∫⁻ t : ℝ, ∫⁻ z : Fin 2 → ℝ,
+          ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖
+            * |t| ^ (-(1 + α))) :=
+        lintegral_congr fun t =>
+          lintegral_congr fun z => enorm_secondDiff_mul α (truncBase α R) j z t
+    _ ≤ ∫⁻ t : ℝ, momBound α R (∫ z, truncBase α R z) t :=
+        lintegral_mono fun t => lintegral_z_le hα (by linarith) hR j t
+    _ < ⊤ :=
+        lintegral_momBound_lt_top hα hα' hR (integral_nonneg (truncBase_nonneg α R))
+
+/-- **The moment hypothesis for the `α = 6/5`, `R = 7/4` truncated diamond base**, the one
+hypothesis `CenteredMaximal.Fractional.jumpMoment_fracKernel` leaves open. -/
+theorem jumpMoment_truncBase : JumpMoment (6 / 5) (truncBase (6 / 5) (7 / 4)) :=
+  jumpMoment_truncBase_of_lt (by norm_num) (by norm_num) (by norm_num)
+
+/-- **The moment hypothesis for the comparison kernel**, unconditionally. -/
+theorem jumpMoment_fracKernel' : JumpMoment (6 / 5) fracKernel :=
+  jumpMoment_fracKernel jumpMoment_truncBase
+
+/-- **The merged generator representation of the comparison kernel**, unconditionally. -/
+theorem hKgen_fracKernel' {ψ : (Fin 2 → ℝ) → ℝ} (hψ : IsTestFunction ψ) :
+    (∫ x, fracKernel x * jumpGen (6 / 5) ψ x) = ∫ y, fracDensity y * (ψ y - ψ 0) :=
+  hKgen_fracKernel jumpMoment_fracKernel' hψ
+
+/-- **The Lévy moment of the comparison density**, unconditionally. -/
+theorem integrable_fracDensity_mul_min_one' :
+    Integrable fun z => fracDensity z * min 1 ‖z‖ :=
+  integrable_fracDensity_mul_min_one jumpMoment_fracKernel'
 
 end CenteredMaximal.Fractional
 
