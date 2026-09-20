@@ -27,7 +27,8 @@ margin is `8.6 * 10 ^ (-9)`: every ingredient has to be enclosed to a relative a
 ## Main results
 
 * `lt_sixFifths_const`: `125337337 / 50000000 < sixFifthsConst`, the bound the certificate uses.
-* `betaFun_sixFifths_lt`: `Β (6/5, 6/5) < 678678670710 / 1000000000000`, accurate to `3 * 10 ^ -13`.
+* `betaFun_sixFifths_lt`: `Β (6/5, 6/5) < 678678670710 / 1000000000000`, an overestimate by
+  `4 * 10 ^ (-12)`.
 * `tan_pi_div_ten_sq`, `lt_tan_pi_div_ten`: `tan (π / 10) ^ 2 = 1 - 2 * √5 / 5` and the resulting
   rational lower bound.
 * `sixFifthsConst_eq_cot`: the cotangent form of the constant, which is the form the generator
@@ -332,8 +333,8 @@ theorem half_rpow_fifth_le : (1 / 2 : ℝ) ^ (1 / 5 : ℝ) ≤ 8705505633 / 1000
   rw [h5]
   norm_num
 
-/-- **A rational upper bound for `Β (6/5, 6/5) = 0.678678670706026…`**, accurate to
-`3.7 * 10 ^ (-12)`. -/
+/-- **A rational upper bound for `Β (6/5, 6/5) = 0.678678670706026…`**, an overestimate by
+`4 * 10 ^ (-12)`, of which `3.7 * 10 ^ (-12)` is the series truncation. -/
 theorem betaFun_sixFifths_lt :
     betaFun (6 / 5) (6 / 5) < 678678670710 / 1000000000000 := by
   have hmono : (∫ x in (0:ℝ)..(1 / 2), x ^ (1 / 5 : ℝ) * (1 - x) ^ (1 / 5 : ℝ))
