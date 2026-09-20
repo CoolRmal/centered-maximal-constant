@@ -30,14 +30,27 @@ almost everywhere nonnegative, and the `L²` moment
 All four enter every theorem of the last section as hypotheses.
 
 The `L²` moment takes the place of the pointwise majorant `g ≤ A (r^{−12/5} + r^{−11/5})` that
-`CenteredMaximal.Fractional.hgconv_of_jumpEnergy_six_fifths` asks for, because the comparison
-density satisfies **no** such majorant: on the line `z₁ = ε` the second difference of the kernel in
-the `z₀`-direction integrates the singularity `(|s| + ε)^{−6/5}` of the diamond base along a line
-passing at distance `ε` from the origin, so `g(z₀, ε)` grows like `ε^{−1/5}` as `ε → 0` at fixed
-`z₀ ≠ 0`, while any majorant `A (r^{−p} + r^{−q})` stays bounded there. The blow-up is integrable,
-in `L¹` and in `L²` against the weights used here, which is why the moment form of the hypothesis is
-the right one; `setLIntegral_conv_ne_top_of_moments` below redoes the two-regime bound of
-`CenteredMaximal.Fractional.setLIntegral_conv_ne_top` from the moments alone.
+`CenteredMaximal.Fractional.hgconv_of_jumpEnergy_six_fifths` asks for, because the density of a
+*compactly supported* kernel satisfies **no** such majorant. Inside the diamond the majorant is the
+right shape: there `jumpGen_truncBase` evaluates the base's generator as the closed-form multiple of
+`r^{−2α} = r^{−12/5}` plus the nonnegative tail. Outside it the kernel vanishes, so at
+`z = (D, ε)` with `D > 7/4` the generator is the bare pair of displaced values,
+
+`g(D, ε) = ∑_j ∫ (K(z + t e_j) + K(z − t e_j)) |t|^{−11/5} dt`,
+
+whose `j = 0` term is about `D^{−11/5} ∫ K(s, ε) ds`. That line integral diverges like `ε^{−1/5}` as
+`ε → 0`, because the line passes at distance `ε` from the base's non-integrable `r^{−6/5}`
+singularity, and nothing cancels it: for the *un*truncated diamond power the divergence is cancelled
+by the first-order term of the `j = 1` direction — that cancellation is the content of
+`CenteredMaximal.Fractional.DiamondConstancy` — but here `K` vanishes identically on the whole line
+`{(D, ε ± t)}`, so the `j = 1` term is `0`. Hence `g(D, ε) → ∞` at fixed `D > 7/4`, while every
+`A (r^{−p} + r^{−q})` stays bounded there.
+
+The blow-up `g ≲ r^{−11/5} min(|z₀|, |z₁|)^{−1/5}` is harmless for both moments, `‖z‖^{−2/5}` being
+integrable in one dimension: the first moment is in fact unconditional
+(`integrable_fracDensity_mul_min_one'`), and only the second one is asked for here.
+`setLIntegral_conv_ne_top_of_moments` below redoes the two-regime bound of
+`CenteredMaximal.Fractional.setLIntegral_conv_ne_top` from the two moments alone.
 
 As in the `α = 1` assembly, Lean evaluates `fracKernel 0` to a finite value, because `0 ^ (-α) = 0`
 makes the diamond base vanish at the origin instead of blowing up, while
@@ -338,8 +351,8 @@ private theorem weight_split_eq (g : (Fin 2 → ℝ) → ℝ) {P : (Fin 2 → �
 `g ≤ A (r^{−p} + r^{−q})` replaced by the two integral conditions the majorant is only ever used to
 produce: the first moment `∫ g min(1, ‖z‖^{2+α})` and the second moment
 `∫ g² min(1, ‖z‖^{2+α})` are finite. The generator density of the comparison kernel is **not**
-dominated by any `A (r^{−p} + r^{−q})` — it blows up like the inverse fifth root of the distance to
-the coordinate axes, along which the singular line integral of the kernel diverges — while both
+dominated by any `A (r^{−p} + r^{−q})` — outside the support of the kernel it blows up like the
+inverse fifth root of the distance to the coordinate axes, see the module docstring — while both its
 moments are finite, so this form is the one that applies to it.
 
 Near the origin, Cauchy–Schwarz in `z` against the weight `‖z‖^{±(2+α)/2}` splits the integral into
