@@ -371,6 +371,65 @@ theorem integral_Ioi_diamondFar_chain {α p : ℝ} (hα : 1 < α) (hα' : α < 2
   rw [h]
   ring
 
+/-! ### The regularised form of the diamond profile -/
+
+/-- The remainder `N α p = -α (1+p)^{-α-1} + (1-p)^{-α} (α + (1-2α) p (3-2p))` left behind by the
+two regularisations.  It vanishes at `p = 0`, and `diamondRem_zero` is precisely the statement
+that the `p^{-α}` and `p^{1-α}` divergences of the three singular terms of `Theta α` cancel. -/
+def diamondRem (α p : ℝ) : ℝ :=
+  -α * (1 + p) ^ (-α - 1) + (1 - p) ^ (-α) * (α + (1 - 2*α) * p * (3 - 2*p))
+
+@[simp]
+theorem diamondRem_zero (α : ℝ) : diamondRem α 0 = 0 := by
+  simp only [diamondRem, add_zero, sub_zero, Real.one_rpow, mul_zero, zero_mul]
+  ring
+
+/-- **The diamond profile, regularised.**  For `1 < α < 2` and `0 < p < 1/2` the four terms of
+`Theta α p`, three of which blow up as `p → 0⁺`, rearrange into a sum of three convergent integrals
+and one explicit remainder `2 p^{1-α} N α p / (α (1 - α))`.  The far integral has been integrated
+by parts once (`integral_Ioi_diamondFar_chain`) and the middle integral pushed through three Beta
+steps (`integral_diamondMid_chain`); what is left over of the boundary terms, together with the
+`(p(1-p))^{-α}` term, is the remainder. -/
+theorem Theta_eq_regularised {α p : ℝ} (hα : 1 < α) (hα' : α < 2) (hp : 0 < p) (hp' : p < 1/2) :
+    Theta α p = 2 * (∫ t in (0:ℝ)..p, diamondNear α t)
+      + 2 * (α + 1) / (1 - α) * (∫ t in Ioi p, t ^ (1 - α) * (1 + t) ^ (-α - 2))
+      + 2 * (1 - 2*α) * (3 - 2*α) / (α * (1 - α))
+          * (∫ t in p..(1 - p), t ^ (1 - α) * (1 - t) ^ (1 - α))
+      + 2 * p ^ (1 - α) * diamondRem α p / (α * (1 - α)) := by
+  have hα0 : (0:ℝ) < α := by linarith
+  have hq : (0:ℝ) < 1 - p := by linarith
+  have h1α : (1:ℝ) - α ≠ 0 := sub_ne_zero.mpr hα.ne
+  have hF : (∫ t in Ioi p, diamondFar α t)
+      = ((α + 1) * (∫ t in Ioi p, t ^ (1 - α) * (1 + t) ^ (-α - 2))
+          - p ^ (1 - α) * (1 + p) ^ (-α - 1)) / (1 - α) := by
+    rw [eq_div_iff h1α]
+    linear_combination integral_Ioi_diamondFar_chain hα hα' hp (by linarith)
+  have hM : (∫ t in p..(1 - p), diamondMid α t)
+      = (α * (1 - α) * ((1 - p) ^ (1 - α) * p ^ (-α) - p ^ (1 - α) * (1 - p) ^ (-α))
+          + (1 - 2*α) * (1 - α) * ((1 - p) ^ (2 - α) * p ^ (-α) - p ^ (2 - α) * (1 - p) ^ (-α))
+          + (1 - 2*α) * (2 - 2*α) * ((1 - p) ^ (2 - α) * p ^ (1 - α)
+              - p ^ (2 - α) * (1 - p) ^ (1 - α))
+          - (1 - 2*α) * (2 - 2*α) * (3 - 2*α)
+              * (∫ t in p..(1 - p), t ^ (1 - α) * (1 - t) ^ (1 - α)))
+        / (α * (1 - α) ^ 2) := by
+    rw [eq_div_iff (mul_ne_zero hα0.ne' (pow_ne_zero 2 h1α))]
+    linear_combination integral_diamondMid_chain (α := α) hp hp'
+  have e₁ : p ^ (1 - α) = p * p ^ (-α) := by
+    rw [show (1:ℝ) - α = 1 + -α from by ring, Real.rpow_add hp, Real.rpow_one]
+  have e₂ : p ^ (2 - α) = p * (p * p ^ (-α)) := by
+    rw [show (2:ℝ) - α = 1 + (1 + -α) from by ring, Real.rpow_add hp, Real.rpow_one,
+      Real.rpow_add hp, Real.rpow_one]
+  have f₁ : (1 - p) ^ (1 - α) = (1 - p) * (1 - p) ^ (-α) := by
+    rw [show (1:ℝ) - α = 1 + -α from by ring, Real.rpow_add hq, Real.rpow_one]
+  have f₂ : (1 - p) ^ (2 - α) = (1 - p) * ((1 - p) * (1 - p) ^ (-α)) := by
+    rw [show (2:ℝ) - α = 1 + (1 + -α) from by ring, Real.rpow_add hq, Real.rpow_one,
+      Real.rpow_add hq, Real.rpow_one]
+  have g₁ : (p * (1 - p)) ^ (-α) = p ^ (-α) * (1 - p) ^ (-α) := Real.mul_rpow hp.le hq.le
+  simp only [Theta, diamondRem]
+  rw [hF, hM, g₁, e₂, f₂, e₁, f₁]
+  field_simp
+  ring
+
 end CenteredMaximal.Fractional
 
 end
