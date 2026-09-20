@@ -67,6 +67,21 @@ function `ψ`:
   hypothesis for its truncated diamond base `truncBase (6/5) (7/4)`;
 * `hKgen_fracKernel`, `integrable_fracDensity_mul_min_one`: the two hypotheses of
   `CenteredMaximal.convolution_le_of_eq_zero_fp`, both reduced to `JumpMoment (6/5) fracKernel`.
+
+## What is left open
+
+Everything above is unconditional except for the single hypothesis
+`JumpMoment (6/5) (truncBase (6/5) (7/4))`, which `jumpMoment_fracKernel` isolates. It is a
+statement about one explicit function and is true exactly at the order `6/5`: writing
+`T = diamondPow α − min (diamondPow α) (R^{-α})`, the first summand is `(−α)`-homogeneous, so the
+substitution `z = |t| w` turns its contribution into
+`(∫ |Δ_j^1 (r^{-α})(w)| max(1, ‖w‖^θ) dw) · ∫ |t|^{1−2α} min(1, |t|)^θ dt`,
+the second factor converging for `1 < α < 3/2` and the first for `2α − 2 < θ < α` by the
+second-difference bound `O(r^{−α−2})` away from the two coordinate axes and the first-difference
+bound `O(r^{−α−1})` near them. The second summand is bounded and Lipschitz and agrees with the
+first outside the diamond `{r ≤ R}` and is constant inside it, so its second difference is either
+that of `diamondPow α`, or zero, or is supported in the shell `{|r − R| ≤ |t|}`, of measure
+`≤ 8 R |t|`, where it is at most `min (4 R^{-α}) (2 L |t|)`.
 -/
 
 @[expose] public section
