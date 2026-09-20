@@ -45,13 +45,14 @@ and the value: `integral_Ioi_tail_div_sq` gives `tailF R c = −(R/c²) log(1 �
 minimised at `d = 0`, because `2/q² ≤ (q − d)^{−2} + (q + d)^{−2}` for `|d| < q`; together with
 `tailF R r ≥ 0` this yields the lower bound
 
-`jumpGen_tail_ge : jumpGen 1 (tail R) z ≥ 2 ((−(R/r²) log(1 − r/R) − 1/r) + 1/(2R)) / (R − 1)`.
+`jumpGen_tail_ge_sharp : jumpGen 1 (tail R) z ≥ 4 ((−(R/r²) log(1 − r/R) − 1/r) + 1/(2R))/(R − 1)`
 
-(The bound keeps a factor `2` of slack against the exact identity; the displayed constant is the
-one the downstream certificate consumes.) In the scale-invariant variable `s = 2r/R` the bound
-reads `(2/(R (R − 1))) J(s)` with `J s = 1/2 − 2/s − (4/s²) log(1 − s/2)`, by
-`jumpGen_tail_ge_Jfun`. Since all terms of the power series of `−log(1 − s/2)` are nonnegative,
-its first two terms already give `one_le_Jfun : 1 ≤ J s` on `(0, 2)`; discarding those two terms
+Nothing but the inward pair is estimated there, so the bound is attained whenever `|z 0| = |z 1|`;
+`jumpGen_tail_ge`, half of it, is kept for the callers using that normalisation. In the
+scale-invariant variable `s = 2r/R` the sharp bound reads `(4/(R (R − 1))) J(s)` with
+`J s = 1/2 − 2/s − (4/s²) log(1 − s/2)`, by `jumpGen_tail_ge_Jfun_sharp` through the algebraic
+identity `jumpGen_tail_ge_Jfun`. Since all terms of the power series of `−log(1 − s/2)` are
+nonnegative, its first two already give `one_le_Jfun : 1 ≤ J s` on `(0, 2)`; discarding those two
 and dividing by `(s/2)²` expands `J` itself as a series with positive coefficients,
 `Jfun_eq_tsum : J s = 1 + ∑_k s^{k+1} / (2^{k+1} (k + 3))`, from which
 `Jfun_convexOn : ConvexOn ℝ (Ioo 0 2) J` follows term by term out of the convexity of
@@ -516,6 +517,33 @@ theorem jumpGen_tail_ge (hR : 1 < R) {z : Fin 2 → ℝ} (hz : 0 < diamondNorm z
     _ = 2 * (2 * tailF R (diamondNorm z) + tailF R (|z 0| - |z 1|)
           + tailF R (|z 1| - |z 0|)) / (R - 1) := by ring
 
+/-- **The sharp four-term lower bound.** The outward pair of half-line integrals is evaluated
+exactly and the inward pair is replaced by its minimum, at `d = 0`; nothing else is discarded, so
+the bound is attained whenever `|z 0| = |z 1|` and is exactly twice `jumpGen_tail_ge`. -/
+theorem jumpGen_tail_ge_sharp (hR : 1 < R) {z : Fin 2 → ℝ} (hz : 0 < diamondNorm z)
+    (hzR : diamondNorm z < R) :
+    jumpGen 1 (tail R) z ≥ 4 * ((-(R / diamondNorm z ^ 2) *
+      Real.log (1 - diamondNorm z / R) - 1 / diamondNorm z) + 1 / (2 * R)) / (R - 1) := by
+  have hzR' : |z 0| + |z 1| < R := hzR
+  have hr : tailF R (diamondNorm z) =
+      -(R / diamondNorm z ^ 2) * Real.log (1 - diamondNorm z / R) - 1 / diamondNorm z :=
+    tailF_eq hR (by rwa [abs_of_pos hz]) hz.ne'
+  have hd : |(|z 0| - |z 1|)| < R :=
+    abs_lt.2 ⟨by linarith [abs_nonneg (z 0)], by linarith [abs_nonneg (z 1)]⟩
+  have hdd := two_tailF_zero_le hR hd
+  rw [neg_sub, tailF_zero hR] at hdd
+  have hkey : 4 * (tailF R (diamondNorm z) + 1 / (2 * R))
+      ≤ 2 * (2 * tailF R (diamondNorm z) + tailF R (|z 0| - |z 1|)
+        + tailF R (|z 1| - |z 0|)) := by linarith
+  rw [jumpGen_tail_eq hR hz hzR, ge_iff_le, ← hr]
+  calc 4 * (tailF R (diamondNorm z) + 1 / (2 * R)) / (R - 1)
+      = (R - 1)⁻¹ * (4 * (tailF R (diamondNorm z) + 1 / (2 * R))) := by ring
+    _ ≤ (R - 1)⁻¹ * (2 * (2 * tailF R (diamondNorm z) + tailF R (|z 0| - |z 1|)
+          + tailF R (|z 1| - |z 0|))) :=
+        mul_le_mul_of_nonneg_left hkey (inv_nonneg.2 (by linarith))
+    _ = 2 * (2 * tailF R (diamondNorm z) + tailF R (|z 0| - |z 1|)
+          + tailF R (|z 1| - |z 0|)) / (R - 1) := by ring
+
 /-! ### The shape function `J` -/
 
 /-- The bound of `jumpGen_tail_ge` in the scale-invariant variable `s = 2r/R`. -/
@@ -529,6 +557,21 @@ theorem jumpGen_tail_ge_Jfun (hR : 1 < R) {r : ℝ} (hr : 0 < r) :
   rw [Jfun, hs]
   field_simp
   ring
+
+/-- **The sharp bound in the scale-invariant variable** `s = 2r/R`: the generator density of the
+tail inside the diamond is at least `(4/(R (R − 1))) J(2r/R)`, with equality on the diagonals. -/
+theorem jumpGen_tail_ge_Jfun_sharp (hR : 1 < R) {z : Fin 2 → ℝ} (hz : 0 < diamondNorm z)
+    (hzR : diamondNorm z < R) :
+    jumpGen 1 (tail R) z ≥ 4 / (R * (R - 1)) * Jfun (2 * diamondNorm z / R) := by
+  have key : 4 / (R * (R - 1)) * Jfun (2 * diamondNorm z / R)
+      = 4 * ((-(R / diamondNorm z ^ 2) * Real.log (1 - diamondNorm z / R)
+        - 1 / diamondNorm z) + 1 / (2 * R)) / (R - 1) := by
+    rw [show 4 / (R * (R - 1)) * Jfun (2 * diamondNorm z / R)
+      = 2 * (2 / (R * (R - 1)) * Jfun (2 * diamondNorm z / R)) from by ring,
+      ← jumpGen_tail_ge_Jfun hR hz]
+    ring
+  rw [key]
+  exact jumpGen_tail_ge_sharp hR hz hzR
 
 /-- `x + x²/2 ≤ −log(1 − x)` for `0 ≤ x < 1`: the first two terms of the power series of
 `−log(1 − x)`, all of whose terms are nonnegative. -/
