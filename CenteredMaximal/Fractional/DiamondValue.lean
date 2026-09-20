@@ -53,7 +53,7 @@ formula rather than proved separately.
 
 noncomputable section
 
-open MeasureTheory Set
+open Filter MeasureTheory Set
 
 open scoped Real Topology
 
@@ -256,6 +256,120 @@ theorem integral_diamondMid_chain {α p : ℝ} (hp : 0 < p) (hp' : p < 1/2) :
   simp only [diamondMid]
   linear_combination (α * (1 - α)) * e₁ + ((1 - 2*α) * (1 - α)) * e₂
     + ((1 - 2*α) * (2 - 2*α)) * e₃
+
+/-! ### Regularising the far integral -/
+
+/-- The far Beta kernel `t ↦ t ^ x * (1 + t) ^ y` is continuous at every point of `(0, ∞)`. -/
+theorem continuousAt_farKernel {x y t : ℝ} (ht : 0 < t) :
+    ContinuousAt (fun s : ℝ => s ^ x * (1 + s) ^ y) t :=
+  (Real.continuousAt_rpow_const t x (.inl ht.ne')).mul
+    (ContinuousAt.rpow_const (f := fun s : ℝ => 1 + s) (by fun_prop)
+      (.inl (by linarith : (0:ℝ) < 1 + t).ne'))
+
+theorem intervalIntegrable_farKernel {x y a b : ℝ} (ha : 0 < a) (hb : 0 < b) :
+    IntervalIntegrable (fun t : ℝ => t ^ x * (1 + t) ^ y) volume a b := by
+  refine ContinuousOn.intervalIntegrable fun t ht => ?_
+  rw [mem_uIcc] at ht
+  have h0 : 0 < t := by rcases ht with ⟨h, _⟩ | ⟨h, _⟩ <;> linarith
+  exact (continuousAt_farKernel h0).continuousWithinAt
+
+/-- The regularised far kernel `t ^ (1 - α) (1 + t) ^ (-α - 2)` is the type-2 Beta integrand with
+parameters `(2 - α, 2α)`, both positive for `1 < α < 2`, so it is integrable on all of `(0, ∞)`. -/
+theorem integrableOn_farKernelReg {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    IntegrableOn (fun t : ℝ => t ^ (1 - α) * (1 + t) ^ (-α - 2)) (Ioi 0) := by
+  have h := integrableOn_Ioi_rpow_mul_one_add_rpow (a := 2 - α) (b := 2*α)
+    (by linarith) (by linarith)
+  rwa [show (2:ℝ) - α - 1 = 1 - α from by ring,
+    show -(2 - α) - 2*α = -α - 2 from by ring] at h
+
+/-- The derivative of `t ↦ t ^ (1 - α) * (1 + t) ^ (-α - 1)`: exactly the combination of
+`diamondFar α` and the convergent kernel `t ^ (1 - α) (1 + t) ^ (-α - 2)` that the integration by
+parts produces. -/
+theorem hasDerivAt_farKernel {α t : ℝ} (ht : 0 < t) :
+    HasDerivAt (fun s : ℝ => s ^ (1 - α) * (1 + s) ^ (-α - 1))
+      ((1 - α) * diamondFar α t - (α + 1) * (t ^ (1 - α) * (1 + t) ^ (-α - 2))) t := by
+  have h₁ : HasDerivAt (fun s : ℝ => s ^ (1 - α)) ((1 - α) * t ^ (1 - α - 1)) t :=
+    Real.hasDerivAt_rpow_const (.inl ht.ne')
+  have h₂ : HasDerivAt (fun s : ℝ => (1 + s) ^ (-α - 1))
+      (1 * (-α - 1) * (1 + t) ^ (-α - 1 - 1)) t :=
+    HasDerivAt.rpow_const (f := fun s : ℝ => 1 + s) ((hasDerivAt_id' t).const_add 1)
+      (.inl (by linarith : (0:ℝ) < 1 + t).ne')
+  have heq : (1 - α) * t ^ (1 - α - 1) * (1 + t) ^ (-α - 1)
+        + t ^ (1 - α) * (1 * (-α - 1) * (1 + t) ^ (-α - 1 - 1))
+      = (1 - α) * diamondFar α t - (α + 1) * (t ^ (1 - α) * (1 + t) ^ (-α - 2)) := by
+    simp only [diamondFar, show (1:ℝ) - α - 1 = -α from by ring,
+      show -α - 1 - 1 = -α - 2 from by ring]
+    ring
+  have h := h₁.mul h₂
+  rwa [heq] at h
+
+/-- The by-parts identity on a bounded interval `[p, R]`. -/
+theorem integral_farKernel_deriv {α p R : ℝ} (hp : 0 < p) (hpR : p ≤ R) :
+    (1 - α) * (∫ t in p..R, diamondFar α t)
+        - (α + 1) * (∫ t in p..R, t ^ (1 - α) * (1 + t) ^ (-α - 2))
+      = R ^ (1 - α) * (1 + R) ^ (-α - 1) - p ^ (1 - α) * (1 + p) ^ (-α - 1) := by
+  have hR : (0:ℝ) < R := lt_of_lt_of_le hp hpR
+  have hA : IntervalIntegrable (fun t : ℝ => (1 - α) * diamondFar α t) volume p R :=
+    (intervalIntegrable_diamondFar hp hR).const_mul _
+  have hB : IntervalIntegrable (fun t : ℝ => (α + 1) * (t ^ (1 - α) * (1 + t) ^ (-α - 2)))
+      volume p R := (intervalIntegrable_farKernel hp hR).const_mul _
+  have h := intervalIntegral.integral_eq_sub_of_hasDerivAt
+    (f := fun s : ℝ => s ^ (1 - α) * (1 + s) ^ (-α - 1))
+    (f' := fun t : ℝ => (1 - α) * diamondFar α t
+      - (α + 1) * (t ^ (1 - α) * (1 + t) ^ (-α - 2)))
+    (fun t ht => by
+      rw [uIcc_of_le hpR] at ht
+      exact hasDerivAt_farKernel (by linarith [ht.1])) (hA.sub hB)
+  rwa [intervalIntegral.integral_sub hA hB, intervalIntegral.integral_const_mul,
+    intervalIntegral.integral_const_mul] at h
+
+/-- The by-parts boundary term dies at infinity: its exponent is `1 - α - α - 1 = -2α < 0`. -/
+theorem tendsto_farKernel_atTop {α : ℝ} (hα : 1 < α) :
+    Tendsto (fun R : ℝ => R ^ (1 - α) * (1 + R) ^ (-α - 1)) atTop (𝓝 0) := by
+  have hg : Tendsto (fun R : ℝ => (1 + R) ^ (-α - 1)) atTop (𝓝 0) := by
+    have h := (tendsto_rpow_neg_atTop (y := α + 1) (by linarith)).comp
+      (tendsto_atTop_add_const_left atTop (1:ℝ) tendsto_id)
+    simpa [Function.comp_def, show -(α + 1) = -α - 1 from by ring] using h
+  refine squeeze_zero' ?_ ?_ hg
+  · filter_upwards [eventually_ge_atTop (1:ℝ)] with R hR
+    exact (mul_pos (Real.rpow_pos_of_pos (by linarith) _)
+      (Real.rpow_pos_of_pos (by linarith) _)).le
+  · filter_upwards [eventually_ge_atTop (1:ℝ)] with R hR
+    calc R ^ (1 - α) * (1 + R) ^ (-α - 1)
+        ≤ 1 * (1 + R) ^ (-α - 1) :=
+          mul_le_mul_of_nonneg_right (Real.rpow_le_one_of_one_le_of_nonpos hR (by linarith))
+            (Real.rpow_pos_of_pos (by linarith) _).le
+      _ = (1 + R) ^ (-α - 1) := one_mul _
+
+/-- **Integration by parts on the half line.**  For `1 < α < 2` and `0 < p < 1`,
+`(1 - α) ∫_p^∞ t^{-α}(1+t)^{-α-1} - (α + 1) ∫_p^∞ t^{1-α}(1+t)^{-α-2} = -p^{1-α}(1+p)^{-α-1}`.
+The value at infinity contributes nothing, so the only boundary term is the one at `p`. -/
+theorem integral_Ioi_diamondFar_chain {α p : ℝ} (hα : 1 < α) (hα' : α < 2) (hp : 0 < p)
+    (hp' : p < 1) :
+    (1 - α) * (∫ t in Ioi p, diamondFar α t)
+        - (α + 1) * (∫ t in Ioi p, t ^ (1 - α) * (1 + t) ^ (-α - 2))
+      = -(p ^ (1 - α) * (1 + p) ^ (-α - 1)) := by
+  have hfar : IntegrableOn (fun t : ℝ => diamondFar α t) (Ioi p) :=
+    integrableOn_diamondFar (by linarith) hp hp'
+  have hreg : IntegrableOn (fun t : ℝ => t ^ (1 - α) * (1 + t) ^ (-α - 2)) (Ioi p) :=
+    (integrableOn_farKernelReg hα hα').mono_set (Ioi_subset_Ioi hp.le)
+  have t₁ : Tendsto (fun R : ℝ => ∫ t in p..R, diamondFar α t) atTop
+      (𝓝 (∫ t in Ioi p, diamondFar α t)) :=
+    MeasureTheory.intervalIntegral_tendsto_integral_Ioi p hfar tendsto_id
+  have t₂ : Tendsto (fun R : ℝ => ∫ t in p..R, t ^ (1 - α) * (1 + t) ^ (-α - 2)) atTop
+      (𝓝 (∫ t in Ioi p, t ^ (1 - α) * (1 + t) ^ (-α - 2))) :=
+    MeasureTheory.intervalIntegral_tendsto_integral_Ioi p hreg tendsto_id
+  have key := (t₁.const_mul (1 - α)).sub (t₂.const_mul (α + 1))
+  have key2 := (tendsto_farKernel_atTop hα).sub_const (p ^ (1 - α) * (1 + p) ^ (-α - 1))
+  have heq : ∀ᶠ R : ℝ in atTop,
+      R ^ (1 - α) * (1 + R) ^ (-α - 1) - p ^ (1 - α) * (1 + p) ^ (-α - 1)
+        = (1 - α) * (∫ t in p..R, diamondFar α t)
+          - (α + 1) * (∫ t in p..R, t ^ (1 - α) * (1 + t) ^ (-α - 2)) := by
+    filter_upwards [eventually_ge_atTop p] with R hR
+    exact (integral_farKernel_deriv hp hR).symm
+  have h := tendsto_nhds_unique key (key2.congr' heq)
+  rw [h]
+  ring
 
 end CenteredMaximal.Fractional
 
