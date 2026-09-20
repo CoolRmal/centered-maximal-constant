@@ -430,6 +430,111 @@ theorem Theta_eq_regularised {α p : ℝ} (hα : 1 < α) (hα' : α < 2) (hp : 0
   field_simp
   ring
 
+/-! ### From the regularised Beta values back to Gamma -/
+
+theorem Gamma_one_sub_ne_zero {α : ℝ} (hα : 1 < α) (hα' : α < 2) : Real.Gamma (1 - α) ≠ 0 := by
+  have hrefl := Real.Gamma_mul_Gamma_one_sub α
+  have hne : π / Real.sin (π * α) ≠ 0 :=
+    div_ne_zero Real.pi_ne_zero (sin_pi_mul_neg hα hα').ne
+  intro h
+  rw [h, mul_zero] at hrefl
+  exact hne hrefl.symm
+
+/-- On `1 < α < 2` the argument `2πα` lies in `(2π, 4π)`, whose only zero of the sine is `3π`; so
+`sin (2πα) = 0` forces `α = 3/2`. -/
+theorem sin_two_pi_mul_ne_zero {α : ℝ} (hα : 1 < α) (hα' : α < 2) (h32 : α ≠ 3/2) :
+    Real.sin (2*π*α) ≠ 0 := by
+  have hπ : (0:ℝ) < π := Real.pi_pos
+  have key : Real.sin (2*π*α) = -Real.sin (2*π*α - 3*π) := by
+    conv_lhs => rw [show 2*π*α = (2*π*α - 3*π) + π + 2*π from by ring]
+    rw [Real.sin_add_two_pi, Real.sin_add_pi]
+  intro h
+  rw [key, neg_eq_zero] at h
+  have hy₁ : -π < 2*π*α - 3*π := by
+    nlinarith [mul_pos hπ (by linarith : (0:ℝ) < α - 1)]
+  have hy₂ : 2*π*α - 3*π < π := by
+    nlinarith [mul_pos hπ (by linarith : (0:ℝ) < 2 - α)]
+  have hz := (Real.sin_eq_zero_iff_of_lt_of_lt hy₁ hy₂).mp h
+  have hz' : π * (2*α - 3) = 0 := by linear_combination hz
+  rcases mul_eq_zero.mp hz' with h' | h'
+  · exact absurd h' Real.pi_ne_zero
+  · exact h32 (by linarith)
+
+/-- The reflection formula in the pole-free form needed here:
+`Γ (2α) Γ (4 - 2α) sin (2πα) = 2π (1 - 2α)(3 - 2α)(1 - α)` for `1 < α < 2`.  At `α = 3/2` both
+sides vanish — the left because `sin (3π) = 0`, the right because of the factor `3 - 2α` — and that
+case has to be separated out, because there `Γ (1 - 2α) = Γ (-2)` sits on a pole and the Gamma
+recurrence `Γ (4 - 2α) = (3 - 2α) Γ (3 - 2α)` fails. -/
+theorem Gamma_mul_Gamma_four_sub_two_mul {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    Real.Gamma (2*α) * Real.Gamma (4 - 2*α) * Real.sin (2*π*α)
+      = 2 * π * ((1 - 2*α) * (3 - 2*α) * (1 - α)) := by
+  by_cases h32 : α = 3/2
+  · subst h32
+    have hs : Real.sin (2*π*(3/2 : ℝ)) = 0 := by
+      rw [show 2*π*(3/2 : ℝ) = π + 2*π from by ring, Real.sin_add_two_pi, Real.sin_pi]
+    rw [hs]
+    ring
+  · have h₁ : (1:ℝ) - 2*α ≠ 0 := by intro h; linarith
+    have h₂ : (2:ℝ) - 2*α ≠ 0 := by intro h; linarith
+    have h₃ : (3:ℝ) - 2*α ≠ 0 := fun h => h32 (by linarith)
+    have hsin := sin_two_pi_mul_ne_zero hα hα' h32
+    have a₁ := Real.Gamma_add_one (s := 1 - 2*α) h₁
+    have a₂ := Real.Gamma_add_one (s := 2 - 2*α) h₂
+    have a₃ := Real.Gamma_add_one (s := 3 - 2*α) h₃
+    rw [show (1:ℝ) - 2*α + 1 = 2 - 2*α from by ring] at a₁
+    rw [show (2:ℝ) - 2*α + 1 = 3 - 2*α from by ring] at a₂
+    rw [show (3:ℝ) - 2*α + 1 = 4 - 2*α from by ring] at a₃
+    have hrefl : Real.Gamma (2*α) * Real.Gamma (1 - 2*α) = π / Real.sin (2*π*α) := by
+      have h := Real.Gamma_mul_Gamma_one_sub (2*α)
+      rwa [show π * (2*α) = 2*π*α from by ring] at h
+    have hrefl' : Real.Gamma (2*α) * Real.Gamma (1 - 2*α) * Real.sin (2*π*α) = π := by
+      rw [hrefl]
+      exact div_mul_cancel₀ π hsin
+    rw [a₃, a₂, a₁]
+    linear_combination ((3 - 2*α) * (2 - 2*α) * (1 - 2*α)) * hrefl'
+
+/-- The regularised middle Beta value `Β (2 - α, 2 - α)`, with the coefficient produced by the
+three Beta steps, is exactly the second term of the diamond constant. -/
+theorem betaFun_two_sub_self_eq {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    2 * (1 - 2*α) * (3 - 2*α) / (α * (1 - α)) * betaFun (2 - α) (2 - α)
+      = -(Real.Gamma (-α) * Real.Gamma (1-α) * Real.Gamma (2*α) * Real.sin (2*π*α) / π) := by
+  have hα0 : (0:ℝ) < α := by linarith
+  have h1α : (1:ℝ) - α ≠ 0 := sub_ne_zero.mpr hα.ne
+  have hπ : π ≠ 0 := Real.pi_ne_zero
+  have hG1a : Real.Gamma (1 - α) ≠ 0 := Gamma_one_sub_ne_zero hα hα'
+  have hG4 : Real.Gamma (4 - 2*α) ≠ 0 := (Real.Gamma_pos_of_pos (by linarith)).ne'
+  have hG2m : Real.Gamma (2 - α) = (1 - α) * Real.Gamma (1 - α) := by
+    have h := Real.Gamma_add_one (s := 1 - α) h1α
+    rwa [show (1:ℝ) - α + 1 = 2 - α from by ring] at h
+  have hGneg : Real.Gamma (-α) = Real.Gamma (1 - α) / (-α) := by
+    have h := Real.Gamma_add_one (s := -α) (neg_ne_zero.mpr hα0.ne')
+    rw [show -α + 1 = 1 - α from by ring] at h
+    rw [h]
+    field_simp
+  have hL : 2 * (1 - 2*α) * (3 - 2*α) / (α * (1 - α)) * betaFun (2 - α) (2 - α)
+      = 2 * (1 - 2*α) * (3 - 2*α) * (1 - α) * Real.Gamma (1 - α) ^ 2
+        / (α * Real.Gamma (4 - 2*α)) := by
+    rw [betaFun, show (2:ℝ) - α + (2 - α) = 4 - 2*α from by ring, hG2m]
+    field_simp
+  have hR : -(Real.Gamma (-α) * Real.Gamma (1-α) * Real.Gamma (2*α) * Real.sin (2*π*α) / π)
+      = Real.Gamma (1 - α) ^ 2 * Real.Gamma (2*α) * Real.sin (2*π*α) / (α * π) := by
+    rw [hGneg]
+    field_simp
+  rw [hL, hR, div_eq_div_iff (mul_ne_zero hα0.ne' hG4) (mul_ne_zero hα0.ne' hπ)]
+  linear_combination (-(α * Real.Gamma (1 - α) ^ 2)) * Gamma_mul_Gamma_four_sub_two_mul hα hα'
+
+/-- The two regularised Beta values combine into the closed form of the diamond constant. -/
+theorem regularised_limit {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    2 * (α + 1) / (1 - α) * betaFun (2 - α) (2*α)
+        + 2 * (1 - 2*α) * (3 - 2*α) / (α * (1 - α)) * betaFun (2 - α) (2 - α)
+      = 2 * π * Real.Gamma (2*α) * Real.cos (π*α/2)
+          / (α * Real.Gamma α ^ 2 * Real.sin (π*α/2)) := by
+  have h₁ : 2 * (α + 1) / (1 - α) * betaFun (2 - α) (2*α) = 2 * betaFun (1 - α) (2*α) := by
+    rw [betaFun_one_sub_left_rec hα hα']
+    ring
+  rw [h₁, betaFun_two_sub_self_eq hα hα', ← two_betaFun_sub_betaFun hα hα']
+  ring
+
 end CenteredMaximal.Fractional
 
 end
