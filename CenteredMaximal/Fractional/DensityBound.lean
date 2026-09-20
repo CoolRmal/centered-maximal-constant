@@ -553,6 +553,516 @@ private theorem integrable_cutProfile_add {b : ℝ} (hb : 0 < b) (c : ℝ) :
     Integrable fun t : ℝ => cutProfile b (t + c) :=
   (integrable_cutProfile hb).comp_add_right c
 
+/-! ### Coordinates along a line
+
+The displacement in direction `j` moves the coordinate `z j` and leaves `z (j+1)` alone, so the
+diamond radius along the line is `|z j ± t| + |z (j+1)|`. These four facts are `private` in
+`CenteredMaximal.Fractional.TruncatedBase` and are reproved here. -/
+
+private theorem dnorm_eq_add (z : Fin 2 → ℝ) (j : Fin 2) :
+    diamondNorm z = |z j| + |z (j + 1)| := by
+  fin_cases j <;> simp [diamondNorm, add_comm]
+
+private theorem dnorm_add_single (z : Fin 2 → ℝ) (j : Fin 2) (s : ℝ) :
+    diamondNorm (z + s • Pi.single j 1) = |z j + s| + |z (j + 1)| := by
+  fin_cases j <;> simp [diamondNorm, add_comm]
+
+private theorem dnorm_sub_single (z : Fin 2 → ℝ) (j : Fin 2) (s : ℝ) :
+    diamondNorm (z - s • Pi.single j 1) = |z j - s| + |z (j + 1)| := by
+  rw [sub_eq_add_neg, ← neg_smul, dnorm_add_single, ← sub_eq_add_neg]
+
+private theorem coord_succ_pos {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0) (j : Fin 2) :
+    0 < |z (j + 1)| := by
+  fin_cases j
+  · simpa using abs_pos.2 h1
+  · simpa using abs_pos.2 h0
+
+/-- The radius of a displaced point is at least the untouched coordinate. -/
+private theorem coord_le_dnorm_add (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    |z (j + 1)| ≤ diamondNorm (z + t • Pi.single j 1) := by
+  rw [dnorm_add_single]
+  linarith [abs_nonneg (z j + t)]
+
+private theorem coord_le_dnorm_sub (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    |z (j + 1)| ≤ diamondNorm (z - t • Pi.single j 1) := by
+  rw [dnorm_sub_single]
+  linarith [abs_nonneg (z j - t)]
+
+/-- The radius of a displaced point grows by at most the step. -/
+private theorem dnorm_add_le (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    diamondNorm (z + t • Pi.single j 1) ≤ diamondNorm z + |t| := by
+  rw [dnorm_add_single, dnorm_eq_add z j]
+  linarith [abs_add_le (z j) t]
+
+private theorem dnorm_sub_le (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    diamondNorm (z - t • Pi.single j 1) ≤ diamondNorm z + |t| := by
+  have h : |z j - t| ≤ |z j| + |t| := by
+    rw [sub_eq_add_neg]
+    calc |z j + -t| ≤ |z j| + |-t| := abs_add_le _ _
+      _ = |z j| + |t| := by rw [abs_neg]
+  rw [dnorm_sub_single, dnorm_eq_add z j]
+  linarith
+
+/-- The radius of a displaced point shrinks by at most the step. -/
+private theorem le_dnorm_add (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    diamondNorm z - |t| ≤ diamondNorm (z + t • Pi.single j 1) := by
+  have h : |z j| ≤ |z j + t| + |t| := by
+    calc |z j| = |(z j + t) + -t| := by congr 1; ring
+      _ ≤ |z j + t| + |-t| := abs_add_le _ _
+      _ = |z j + t| + |t| := by rw [abs_neg]
+  rw [dnorm_add_single, dnorm_eq_add z j]
+  linarith
+
+private theorem le_dnorm_sub (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    diamondNorm z - |t| ≤ diamondNorm (z - t • Pi.single j 1) := by
+  rw [dnorm_sub_single, dnorm_eq_add z j]
+  linarith [abs_sub_abs_le_abs_sub (z j) t]
+
+/-! ### The two tangent-line bounds
+
+Both the truncated base and its exterior complement are controlled by the tangent line of
+`u ↦ u^{-6/5}`, which is `CenteredMaximal.Fractional.rpow_neg_tangent`. -/
+
+/-- **The exterior tail grows at most linearly past the truncation radius.** -/
+private theorem truncTail_le_lin {w : Fin 2 → ℝ} (hw : 0 < diamondNorm w) :
+    truncTail (6 / 5) (7 / 4) w
+      ≤ 6 / 5 * (7 / 4 : ℝ) ^ (-(11 / 5) : ℝ) * max (diamondNorm w - 7 / 4) 0 := by
+  have htan := rpow_neg_tangent (α := 6 / 5) (by norm_num) (q := (7 / 4 : ℝ)) (r := diamondNorm w)
+    (by norm_num) hw
+  have hexp : ((7 : ℝ) / 4) ^ (-(6 / 5 : ℝ) - 1) = ((7 : ℝ) / 4) ^ (-(11 / 5) : ℝ) := by
+    norm_num
+  rw [hexp] at htan
+  have hcoef : (0 : ℝ) ≤ 6 / 5 * (7 / 4 : ℝ) ^ (-(11 / 5) : ℝ) := by
+    have := Real.rpow_nonneg (by norm_num : (0 : ℝ) ≤ 7 / 4) (-(11 / 5) : ℝ)
+    positivity
+  have hmax : diamondNorm w - 7 / 4 ≤ max (diamondNorm w - 7 / 4) 0 := le_max_left _ _
+  refine max_le ?_ (by positivity)
+  nlinarith [htan, hmax, hcoef]
+
+/-- **The truncated base vanishes at the truncation radius at least linearly.** -/
+private theorem truncBase_le_lin {β : ℝ} (hβ : 0 < β) {w : Fin 2 → ℝ}
+    (hw : β ≤ diamondNorm w) :
+    truncBase (6 / 5) (7 / 4) w
+      ≤ 6 / 5 * β ^ (-(11 / 5) : ℝ) * max (7 / 4 - diamondNorm w) 0 := by
+  have hw0 : 0 < diamondNorm w := lt_of_lt_of_le hβ hw
+  have htan := rpow_neg_tangent (α := 6 / 5) (by norm_num) (q := diamondNorm w)
+    (r := (7 / 4 : ℝ)) hw0 (by norm_num)
+  have hexp : diamondNorm w ^ (-(6 / 5 : ℝ) - 1) = diamondNorm w ^ (-(11 / 5) : ℝ) := by
+    norm_num
+  rw [hexp] at htan
+  have hmono : diamondNorm w ^ (-(11 / 5) : ℝ) ≤ β ^ (-(11 / 5) : ℝ) :=
+    Real.rpow_le_rpow_of_nonpos hβ hw (by norm_num)
+  have hβpow : (0 : ℝ) < β ^ (-(11 / 5) : ℝ) := Real.rpow_pos_of_pos hβ _
+  have hwpow : (0 : ℝ) < diamondNorm w ^ (-(11 / 5) : ℝ) := Real.rpow_pos_of_pos hw0 _
+  refine max_le ?_ (by positivity)
+  rcases le_total (diamondNorm w) (7 / 4 : ℝ) with hcase | hcase
+  · have hmax : max (7 / 4 - diamondNorm w) 0 = 7 / 4 - diamondNorm w :=
+      max_eq_left (by linarith)
+    rw [hmax]
+    nlinarith [htan, hmono]
+  · have hle : diamondNorm w ^ (-(6 / 5) : ℝ) ≤ ((7 : ℝ) / 4) ^ (-(6 / 5) : ℝ) :=
+      Real.rpow_le_rpow_of_nonpos (by norm_num) hcase (by norm_num)
+    have hmax : (0 : ℝ) ≤ max (7 / 4 - diamondNorm w) 0 := le_max_right _ _
+    nlinarith [hle, hmax, hβpow]
+
+/-- The truncated base is below the bare radial power. -/
+private theorem truncBase_le_rpow (w : Fin 2 → ℝ) :
+    truncBase (6 / 5) (7 / 4) w ≤ diamondNorm w ^ (-(6 / 5) : ℝ) := by
+  refine max_le (by linarith [Real.rpow_nonneg (by norm_num : (0:ℝ) ≤ 7/4) (-(6/5) : ℝ)]) ?_
+  exact Real.rpow_nonneg (diamondNorm_nonneg w) _
+
+/-- **The weight lemma.** A second difference that vanishes below `δ` and grows linearly above it
+contributes at most the tail weight against `|t|^{-11/5}`. -/
+private theorem max_sub_mul_rpow_le_tailWeight {δ : ℝ} (hδ : 0 ≤ δ) (t : ℝ) :
+    max (|t| - δ) 0 * |t| ^ (-(1 + 6 / 5) : ℝ) ≤ tailWeight δ t := by
+  rcases le_or_gt |t| δ with hcase | hcase
+  · rw [max_eq_right (by linarith), zero_mul]
+    exact tailWeight_nonneg δ t
+  · have ht : 0 < |t| := lt_of_le_of_lt hδ hcase
+    have hpow : (0 : ℝ) ≤ |t| ^ (-(1 + 6 / 5) : ℝ) := Real.rpow_nonneg ht.le _
+    have hid : |t| * |t| ^ (-(1 + 6 / 5) : ℝ) = |t| ^ (-(6 / 5) : ℝ) := by
+      rw [show (-(6 / 5) : ℝ) = 1 + -(1 + 6 / 5) from by norm_num, Real.rpow_add ht,
+        Real.rpow_one]
+    rw [tailWeight, if_pos hcase, max_eq_left (by linarith), ← hid]
+    exact mul_le_mul_of_nonneg_right (by linarith) hpow
+
+/-! ### One direction of the generator -/
+
+/-- Bounding one direction of the generator by an integrable majorant of its integrand. -/
+private theorem abs_integral_dir_le {φ : (Fin 2 → ℝ) → ℝ} (j : Fin 2) (z : Fin 2 → ℝ) {G : ℝ → ℝ}
+    (hG : Integrable G)
+    (hb : ∀ t : ℝ, |secondDiff φ j z t| * |t| ^ (-(1 + 6 / 5) : ℝ) ≤ G t) :
+    |∫ t : ℝ, secondDiff φ j z t * |t| ^ (-(1 + 6 / 5) : ℝ)| ≤ ∫ t : ℝ, G t := by
+  have h : ∀ᵐ t : ℝ, ‖secondDiff φ j z t * |t| ^ (-(1 + 6 / 5) : ℝ)‖ ≤ G t := by
+    refine .of_forall fun t => ?_
+    rw [Real.norm_eq_abs, abs_mul, abs_of_nonneg (Real.rpow_nonneg (abs_nonneg t) _)]
+    exact hb t
+  have hle := norm_integral_le_of_norm_le hG h
+  rwa [Real.norm_eq_abs] at hle
+
+/-! ### The interior: the generator of the exterior tail
+
+Inside the diamond the truncated base is the diamond power up to a constant — that is
+`CenteredMaximal.Fractional.jumpGen_truncBase`, whose closed form is exactly `r^{-12/5}` — plus the
+generator of the exterior tail, which is what is estimated here. The tail vanishes at `z` and
+grows at most linearly past the truncation radius, so its second difference vanishes for
+`|t| ≤ 7/4 − r` and is `O(|t| − (7/4 − r))` beyond: the tail weight with `δ = 7/4 − r`. -/
+
+/-- **The generator of the exterior tail, inside the diamond.** -/
+private theorem abs_jumpGen_truncTail_le {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hz : diamondNorm z < 7 / 4) :
+    |jumpGen (6 / 5) (truncTail (6 / 5) (7 / 4)) z|
+      ≤ 48 * (7 / 4 - diamondNorm z) ^ (-(1 / 5) : ℝ) := by
+  set δ : ℝ := 7 / 4 - diamondNorm z with hδdef
+  have hδ : 0 < δ := by rw [hδdef]; linarith
+  have hz0 : z ≠ 0 := fun h => h0 (by simp [h])
+  have hTz : truncTail (6 / 5) (7 / 4) z = 0 := truncTail_eq_zero (by norm_num) hz0 hz.le
+  set K : ℝ := 6 / 5 * (7 / 4 : ℝ) ^ (-(11 / 5) : ℝ) with hK
+  have hKpow : (0 : ℝ) < (7 / 4 : ℝ) ^ (-(11 / 5) : ℝ) := Real.rpow_pos_of_pos (by norm_num) _
+  have hK0 : 0 < K := by rw [hK]; positivity
+  have hK1 : K ≤ 6 / 5 := by
+    have h : (7 / 4 : ℝ) ^ (-(11 / 5) : ℝ) ≤ 1 :=
+      Real.rpow_le_one_of_one_le_of_nonpos (by norm_num) (by norm_num)
+    rw [hK]
+    nlinarith
+  have hδpow : (0 : ℝ) < δ ^ (-(1 / 5) : ℝ) := Real.rpow_pos_of_pos hδ _
+  have hdir : ∀ j : Fin 2,
+      |∫ t : ℝ, secondDiff (truncTail (6 / 5) (7 / 4)) j z t * |t| ^ (-(1 + 6 / 5) : ℝ)|
+        ≤ 24 * δ ^ (-(1 / 5) : ℝ) := by
+    intro j
+    have hbpos : 0 < |z (j + 1)| := coord_succ_pos h0 h1 j
+    have hb : ∀ t : ℝ, |secondDiff (truncTail (6 / 5) (7 / 4)) j z t| * |t| ^ (-(1 + 6 / 5) : ℝ)
+        ≤ (2 * K) * tailWeight δ t := by
+      intro t
+      have hp0 : 0 < diamondNorm (z + t • Pi.single j 1) :=
+        lt_of_lt_of_le hbpos (coord_le_dnorm_add z j t)
+      have hm0 : 0 < diamondNorm (z - t • Pi.single j 1) :=
+        lt_of_lt_of_le hbpos (coord_le_dnorm_sub z j t)
+      have hp := truncTail_le_lin hp0
+      have hm := truncTail_le_lin hm0
+      rw [← hK] at hp hm
+      have hmaxp : max (diamondNorm (z + t • Pi.single j 1) - 7 / 4) 0 ≤ max (|t| - δ) 0 :=
+        max_le_max (by rw [hδdef]; linarith [dnorm_add_le z j t]) le_rfl
+      have hmaxm : max (diamondNorm (z - t • Pi.single j 1) - 7 / 4) 0 ≤ max (|t| - δ) 0 :=
+        max_le_max (by rw [hδdef]; linarith [dnorm_sub_le z j t]) le_rfl
+      have hnnp : 0 ≤ truncTail (6 / 5) (7 / 4) (z + t • Pi.single j 1) := truncTail_nonneg _ _ _
+      have hnnm : 0 ≤ truncTail (6 / 5) (7 / 4) (z - t • Pi.single j 1) := truncTail_nonneg _ _ _
+      have hsd : |secondDiff (truncTail (6 / 5) (7 / 4)) j z t| ≤ 2 * K * max (|t| - δ) 0 := by
+        rw [secondDiff, hTz, abs_of_nonneg (by linarith : (0 : ℝ) ≤
+          truncTail (6 / 5) (7 / 4) (z + t • Pi.single j 1)
+            + truncTail (6 / 5) (7 / 4) (z - t • Pi.single j 1) - 2 * 0)]
+        nlinarith [hp, hm, hmaxp, hmaxm, hK0]
+      have hwt := max_sub_mul_rpow_le_tailWeight hδ.le t
+      have hK2 : (0 : ℝ) ≤ 2 * K := by linarith
+      have hw0 : (0 : ℝ) ≤ |t| ^ (-(1 + 6 / 5) : ℝ) := Real.rpow_nonneg (abs_nonneg t) _
+      calc |secondDiff (truncTail (6 / 5) (7 / 4)) j z t| * |t| ^ (-(1 + 6 / 5) : ℝ)
+          ≤ (2 * K * max (|t| - δ) 0) * |t| ^ (-(1 + 6 / 5) : ℝ) :=
+            mul_le_mul_of_nonneg_right hsd hw0
+        _ = (2 * K) * (max (|t| - δ) 0 * |t| ^ (-(1 + 6 / 5) : ℝ)) := by ring
+        _ ≤ (2 * K) * tailWeight δ t := mul_le_mul_of_nonneg_left hwt hK2
+    have hint := abs_integral_dir_le j z ((integrable_tailWeight hδ).const_mul (2 * K)) hb
+    rw [integral_const_mul, integral_tailWeight hδ] at hint
+    calc |∫ t : ℝ, secondDiff (truncTail (6 / 5) (7 / 4)) j z t * |t| ^ (-(1 + 6 / 5) : ℝ)|
+        ≤ 2 * K * (10 * δ ^ (-(1 / 5) : ℝ)) := hint
+      _ ≤ 24 * δ ^ (-(1 / 5) : ℝ) := by nlinarith [hK1, hδpow]
+  rw [jumpGen, Fin.sum_univ_two]
+  calc |(∫ t : ℝ, secondDiff (truncTail (6 / 5) (7 / 4)) 0 z t * |t| ^ (-(1 + 6 / 5) : ℝ))
+        + ∫ t : ℝ, secondDiff (truncTail (6 / 5) (7 / 4)) 1 z t * |t| ^ (-(1 + 6 / 5) : ℝ)|
+      ≤ |∫ t : ℝ, secondDiff (truncTail (6 / 5) (7 / 4)) 0 z t * |t| ^ (-(1 + 6 / 5) : ℝ)|
+        + |∫ t : ℝ, secondDiff (truncTail (6 / 5) (7 / 4)) 1 z t * |t| ^ (-(1 + 6 / 5) : ℝ)| :=
+        abs_add_le _ _
+    _ ≤ 24 * δ ^ (-(1 / 5) : ℝ) + 24 * δ ^ (-(1 / 5) : ℝ) := add_le_add (hdir 0) (hdir 1)
+    _ = 48 * δ ^ (-(1 / 5) : ℝ) := by ring
+
+/-! ### The exterior: the generator of the truncated base past the support
+
+Outside the closed diamond the base vanishes at `z`, so the second difference is the sum of the two
+displaced values, both nonnegative. Two mechanisms bound them. If the *untouched* coordinate `b` is
+the larger one, the whole line stays at radius at least `b ≥ r/2`, and the tangent-line bound gives
+`O((|t| − δ)₊)` with `δ = r − 7/4` throughout. If instead the *moved* coordinate `a` is the larger
+one, that argument only survives for `|t| ≤ a/2`; past it the line sweeps across the kernel's own
+`r^{-6/5}` singularity at distance `b` from the origin, and only the `L¹` mass `12 b^{-1/5}` of the
+cut profile is available — which is exactly where the factor `m^{-1/5}` of the majorant comes from.
+-/
+
+/-- The truncated base vanishes outside the closed diamond of radius `7/4`. -/
+private theorem truncBase_eq_zero_ext {w : Fin 2 → ℝ} (hw : 7 / 4 ≤ diamondNorm w) :
+    truncBase (6 / 5) (7 / 4) w = 0 :=
+  max_eq_right (by
+    linarith [Real.rpow_le_rpow_of_nonpos (by norm_num : (0 : ℝ) < 7 / 4) hw
+      (by norm_num : (-(6 / 5) : ℝ) ≤ 0)])
+
+private theorem integral_cutProfile_sub {b : ℝ} (hb : 0 < b) (c : ℝ) :
+    ∫ t, cutProfile b (t - c) = 12 * b ^ (-(1 / 5) : ℝ) := by
+  rw [integral_sub_right_eq_self (fun u : ℝ => cutProfile b u) c, integral_cutProfile hb]
+
+private theorem integrable_cutProfile_sub {b : ℝ} (hb : 0 < b) (c : ℝ) :
+    Integrable fun t : ℝ => cutProfile b (t - c) :=
+  (integrable_cutProfile hb).comp_sub_right c
+
+/-- `k^{11/5} ≤ k³` for `k ≥ 1`. -/
+private theorem rpow_eleven_fifths_le {k K : ℝ} (hk : 1 ≤ k) (hK : k ^ 3 ≤ K) :
+    k ^ (11 / 5 : ℝ) ≤ K := by
+  calc k ^ (11 / 5 : ℝ) ≤ k ^ (3 : ℝ) :=
+        Real.rpow_le_rpow_of_exponent_le hk (by norm_num)
+    _ = k ^ 3 := by
+        rw [show (3 : ℝ) = ((3 : ℕ) : ℝ) from by norm_num, Real.rpow_natCast]
+    _ ≤ K := hK
+
+/-- Scaling the radius down by `k` costs a factor `k^{11/5}`. -/
+private theorem rpow_neg_div_le {r k K : ℝ} (hr : 0 < r) (hk : 0 < k)
+    (hK : k ^ (11 / 5 : ℝ) ≤ K) :
+    (r / k) ^ (-(11 / 5) : ℝ) ≤ K * r ^ (-(11 / 5) : ℝ) := by
+  have h1 : (r / k) ^ (-(11 / 5) : ℝ) = r ^ (-(11 / 5) : ℝ) * k ^ (11 / 5 : ℝ) := by
+    rw [Real.div_rpow hr.le hk.le, Real.rpow_neg hk.le, div_eq_mul_inv, inv_inv]
+  have h2 : (0 : ℝ) ≤ r ^ (-(11 / 5) : ℝ) := Real.rpow_nonneg hr.le _
+  rw [h1]
+  nlinarith
+
+/-- The arithmetic that closes both branches of the exterior estimate. -/
+private theorem final_arith {rp dp mp : ℝ} (h1 : 0 ≤ rp) (h2 : 0 ≤ dp) (hm : 0 ≤ mp) :
+    192 * (rp * dp) + 1536 * (rp * mp) ≤ 1536 * rp * (dp + mp) := by
+  have h3 : 0 ≤ rp * dp := mul_nonneg h1 h2
+  have h4 : 0 ≤ rp * mp := mul_nonneg h1 hm
+  nlinarith [h3, h4]
+
+/-- Outside the diamond the second difference of the base is the sum of its two displaced values. -/
+private theorem abs_secondDiff_ext_eq {z : Fin 2 → ℝ} (hz : 7 / 4 ≤ diamondNorm z) (j : Fin 2)
+    (t : ℝ) : |secondDiff (truncBase (6 / 5) (7 / 4)) j z t|
+      = truncBase (6 / 5) (7 / 4) (z + t • Pi.single j 1)
+        + truncBase (6 / 5) (7 / 4) (z - t • Pi.single j 1) := by
+  have hp := truncBase_nonneg (6 / 5) (7 / 4) (z + t • Pi.single j 1)
+  have hm := truncBase_nonneg (6 / 5) (7 / 4) (z - t • Pi.single j 1)
+  rw [secondDiff, truncBase_eq_zero_ext hz, abs_of_nonneg (by linarith)]
+  ring
+
+/-- The gap to the truncation radius at a displaced point is at most `|t| − δ`. -/
+private theorem max_gap_add_le (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    max (7 / 4 - diamondNorm (z + t • Pi.single j 1)) 0
+      ≤ max (|t| - (diamondNorm z - 7 / 4)) 0 :=
+  max_le_max (by linarith [le_dnorm_add z j t]) le_rfl
+
+private theorem max_gap_sub_le (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    max (7 / 4 - diamondNorm (z - t • Pi.single j 1)) 0
+      ≤ max (|t| - (diamondNorm z - 7 / 4)) 0 :=
+  max_le_max (by linarith [le_dnorm_sub z j t]) le_rfl
+
+/-- The tangent-line bound at both displaced points, integrated against the weight: if the whole
+segment stays at radius at least `β`, the weighted second difference is at most
+`(12/5) β^{-11/5}` times the tail weight. -/
+private theorem secondDiff_ext_le_tailWeight {z : Fin 2 → ℝ} (hz : 7 / 4 ≤ diamondNorm z)
+    (j : Fin 2) {β : ℝ} (hβ : 0 < β) {t : ℝ}
+    (hp : β ≤ diamondNorm (z + t • Pi.single j 1))
+    (hm : β ≤ diamondNorm (z - t • Pi.single j 1)) (hδ : 0 ≤ diamondNorm z - 7 / 4) :
+    |secondDiff (truncBase (6 / 5) (7 / 4)) j z t| * |t| ^ (-(1 + 6 / 5) : ℝ)
+      ≤ (2 * (6 / 5 * β ^ (-(11 / 5) : ℝ))) * tailWeight (diamondNorm z - 7 / 4) t := by
+  set K : ℝ := 6 / 5 * β ^ (-(11 / 5) : ℝ) with hK
+  have hK0 : 0 < K := by
+    have := Real.rpow_pos_of_pos hβ (-(11 / 5) : ℝ)
+    rw [hK]; positivity
+  have hbp := truncBase_le_lin hβ hp
+  have hbm := truncBase_le_lin hβ hm
+  rw [← hK] at hbp hbm
+  have h1 : K * max (7 / 4 - diamondNorm (z + t • Pi.single j 1)) 0
+      ≤ K * max (|t| - (diamondNorm z - 7 / 4)) 0 :=
+    mul_le_mul_of_nonneg_left (max_gap_add_le z j t) hK0.le
+  have h2 : K * max (7 / 4 - diamondNorm (z - t • Pi.single j 1)) 0
+      ≤ K * max (|t| - (diamondNorm z - 7 / 4)) 0 :=
+    mul_le_mul_of_nonneg_left (max_gap_sub_le z j t) hK0.le
+  have hstep : |secondDiff (truncBase (6 / 5) (7 / 4)) j z t|
+      ≤ 2 * K * max (|t| - (diamondNorm z - 7 / 4)) 0 := by
+    rw [abs_secondDiff_ext_eq hz j t]
+    linarith
+  have hw0 : (0 : ℝ) ≤ |t| ^ (-(1 + 6 / 5) : ℝ) := Real.rpow_nonneg (abs_nonneg t) _
+  calc |secondDiff (truncBase (6 / 5) (7 / 4)) j z t| * |t| ^ (-(1 + 6 / 5) : ℝ)
+      ≤ (2 * K * max (|t| - (diamondNorm z - 7 / 4)) 0) * |t| ^ (-(1 + 6 / 5) : ℝ) :=
+        mul_le_mul_of_nonneg_right hstep hw0
+    _ = (2 * K) * (max (|t| - (diamondNorm z - 7 / 4)) 0 * |t| ^ (-(1 + 6 / 5) : ℝ)) := by ring
+    _ ≤ (2 * K) * tailWeight (diamondNorm z - 7 / 4) t :=
+        mul_le_mul_of_nonneg_left (max_sub_mul_rpow_le_tailWeight hδ t) (by linarith)
+
+/-- **One direction of the base generator outside the diamond, when the untouched coordinate is the
+larger one.** The whole line then stays at radius at least `r/2`, so the tangent-line bound applies
+for every step. -/
+private theorem abs_integral_dir_ext_of_le {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hz : 7 / 4 < diamondNorm z) (j : Fin 2) (hcase : |z j| ≤ |z (j + 1)|) :
+    |∫ t : ℝ, secondDiff (truncBase (6 / 5) (7 / 4)) j z t * |t| ^ (-(1 + 6 / 5) : ℝ)|
+      ≤ 1536 * diamondNorm z ^ (-(11 / 5) : ℝ)
+        * ((diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ)
+          + (min |z j| |z (j + 1)|) ^ (-(1 / 5) : ℝ)) := by
+  have hb : 0 < |z (j + 1)| := coord_succ_pos h0 h1 j
+  have ha : 0 < |z j| := by
+    fin_cases j
+    · simpa using abs_pos.2 h0
+    · simpa using abs_pos.2 h1
+  have hr : diamondNorm z = |z j| + |z (j + 1)| := dnorm_eq_add z j
+  have hrpos : 0 < diamondNorm z := by rw [hr]; linarith
+  have hδ : 0 < diamondNorm z - 7 / 4 := by linarith
+  have hδpow : (0 : ℝ) < (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ) := Real.rpow_pos_of_pos hδ _
+  have hrpow : (0 : ℝ) < diamondNorm z ^ (-(11 / 5) : ℝ) := Real.rpow_pos_of_pos hrpos _
+  have hmpow : (0 : ℝ) < (min |z j| |z (j + 1)|) ^ (-(1 / 5) : ℝ) :=
+    Real.rpow_pos_of_pos (lt_min ha hb) _
+  have hbnd : ∀ t : ℝ, |secondDiff (truncBase (6 / 5) (7 / 4)) j z t|
+      * |t| ^ (-(1 + 6 / 5) : ℝ)
+      ≤ (2 * (6 / 5 * |z (j + 1)| ^ (-(11 / 5) : ℝ)))
+        * tailWeight (diamondNorm z - 7 / 4) t := fun t =>
+    secondDiff_ext_le_tailWeight hz.le j hb (coord_le_dnorm_add z j t)
+      (coord_le_dnorm_sub z j t) hδ.le
+  have hint := abs_integral_dir_le j z
+    ((integrable_tailWeight hδ).const_mul (2 * (6 / 5 * |z (j + 1)| ^ (-(11 / 5) : ℝ)))) hbnd
+  rw [integral_const_mul, integral_tailWeight hδ] at hint
+  have hbr : diamondNorm z / 2 ≤ |z (j + 1)| := by rw [hr]; linarith
+  have hbpow : |z (j + 1)| ^ (-(11 / 5) : ℝ) ≤ 8 * diamondNorm z ^ (-(11 / 5) : ℝ) := by
+    refine le_trans (Real.rpow_le_rpow_of_nonpos (by positivity) hbr (by norm_num)) ?_
+    exact rpow_neg_div_le hrpos (by norm_num)
+      (rpow_eleven_fifths_le (by norm_num) (by norm_num))
+  have hmul : |z (j + 1)| ^ (-(11 / 5) : ℝ) * (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ)
+      ≤ (8 * diamondNorm z ^ (-(11 / 5) : ℝ)) * (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ) :=
+    mul_le_mul_of_nonneg_right hbpow hδpow.le
+  refine hint.trans (le_trans ?_ (final_arith hrpow.le hδpow.le hmpow.le))
+  have hnn : (0 : ℝ) ≤ diamondNorm z ^ (-(11 / 5) : ℝ)
+      * (min |z j| |z (j + 1)|) ^ (-(1 / 5) : ℝ) := by positivity
+  linarith
+
+/-- **One direction of the base generator outside the diamond, when the moved coordinate is the
+larger one.** The tangent-line bound survives only for `|t| ≤ a/2`; past it the line sweeps across
+the kernel's own singularity, and the cut profile's mass `12 b^{-1/5}` takes over. -/
+private theorem abs_integral_dir_ext_of_ge {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hz : 7 / 4 < diamondNorm z) (j : Fin 2) (hcase : |z (j + 1)| ≤ |z j|) :
+    |∫ t : ℝ, secondDiff (truncBase (6 / 5) (7 / 4)) j z t * |t| ^ (-(1 + 6 / 5) : ℝ)|
+      ≤ 1536 * diamondNorm z ^ (-(11 / 5) : ℝ)
+        * ((diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ)
+          + (min |z j| |z (j + 1)|) ^ (-(1 / 5) : ℝ)) := by
+  have hb : 0 < |z (j + 1)| := coord_succ_pos h0 h1 j
+  have ha : 0 < |z j| := by
+    fin_cases j
+    · simpa using abs_pos.2 h0
+    · simpa using abs_pos.2 h1
+  have hr : diamondNorm z = |z j| + |z (j + 1)| := dnorm_eq_add z j
+  have hrpos : 0 < diamondNorm z := by rw [hr]; linarith
+  have hδ : 0 < diamondNorm z - 7 / 4 := by linarith
+  have hδpow : (0 : ℝ) < (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ) := Real.rpow_pos_of_pos hδ _
+  have hrpow : (0 : ℝ) < diamondNorm z ^ (-(11 / 5) : ℝ) := Real.rpow_pos_of_pos hrpos _
+  have har : diamondNorm z / 2 ≤ |z j| := by rw [hr]; linarith
+  have ha2 : (0 : ℝ) < |z j| / 2 := by linarith
+  have hhalf : (0 : ℝ) < diamondNorm z / 2 := by linarith
+  set K : ℝ := 2 * (6 / 5 * (diamondNorm z / 2) ^ (-(11 / 5) : ℝ)) with hK
+  have hKpow : (0 : ℝ) < (diamondNorm z / 2) ^ (-(11 / 5) : ℝ) :=
+    Real.rpow_pos_of_pos hhalf _
+  have hK0 : 0 < K := by rw [hK]; positivity
+  set C : ℝ := (|z j| / 2) ^ (-(11 / 5) : ℝ) with hC
+  have hC0 : 0 < C := Real.rpow_pos_of_pos ha2 _
+  set G : ℝ → ℝ := fun t => K * tailWeight (diamondNorm z - 7 / 4) t
+    + C * (cutProfile |z (j + 1)| (t + z j) + cutProfile |z (j + 1)| (t - z j)) with hG
+  have hGtail : Integrable fun t : ℝ => K * tailWeight (diamondNorm z - 7 / 4) t :=
+    (integrable_tailWeight hδ).const_mul K
+  have hGcut : Integrable fun t : ℝ =>
+      C * (cutProfile |z (j + 1)| (t + z j) + cutProfile |z (j + 1)| (t - z j)) :=
+    ((integrable_cutProfile_add hb (z j)).add (integrable_cutProfile_sub hb (z j))).const_mul C
+  have hbnd : ∀ t : ℝ, |secondDiff (truncBase (6 / 5) (7 / 4)) j z t|
+      * |t| ^ (-(1 + 6 / 5) : ℝ) ≤ G t := by
+    intro t
+    have hcut0 : (0 : ℝ)
+        ≤ cutProfile |z (j + 1)| (t + z j) + cutProfile |z (j + 1)| (t - z j) :=
+      add_nonneg (cutProfile_nonneg hb.le _) (cutProfile_nonneg hb.le _)
+    rcases le_or_gt |t| (|z j| / 2) with hsmall | hbig
+    · have h2p : |z j| - |t| ≤ |z j + t| := by
+        have hh : |z j| ≤ |z j + t| + |t| := by
+          calc |z j| = |(z j + t) + -t| := by congr 1; ring
+            _ ≤ |z j + t| + |-t| := abs_add_le _ _
+            _ = |z j + t| + |t| := by rw [abs_neg]
+        linarith
+      have h2m : |z j| - |t| ≤ |z j - t| := abs_sub_abs_le_abs_sub (z j) t
+      have hrp : diamondNorm z / 2 ≤ diamondNorm (z + t • Pi.single j 1) := by
+        rw [dnorm_add_single]
+        linarith
+      have hrm : diamondNorm z / 2 ≤ diamondNorm (z - t • Pi.single j 1) := by
+        rw [dnorm_sub_single]
+        linarith
+      have hstep := secondDiff_ext_le_tailWeight hz.le j hhalf hrp hrm hδ.le
+      rw [← hK] at hstep
+      have hcnn : (0 : ℝ)
+          ≤ C * (cutProfile |z (j + 1)| (t + z j) + cutProfile |z (j + 1)| (t - z j)) :=
+        mul_nonneg hC0.le hcut0
+      rw [hG]
+      linarith
+    · have hwbig : |t| ^ (-(1 + 6 / 5) : ℝ) ≤ C := by
+        rw [hC]
+        have h := Real.rpow_le_rpow_of_nonpos ha2 hbig.le (by norm_num : (-(11 / 5) : ℝ) ≤ 0)
+        calc |t| ^ (-(1 + 6 / 5) : ℝ) = |t| ^ (-(11 / 5) : ℝ) := by norm_num
+          _ ≤ (|z j| / 2) ^ (-(11 / 5) : ℝ) := h
+      have hpcut : truncBase (6 / 5) (7 / 4) (z + t • Pi.single j 1)
+          ≤ cutProfile |z (j + 1)| (t + z j) := by
+        refine le_trans (truncBase_le_rpow _) ?_
+        rw [dnorm_add_single]
+        refine le_trans (le_of_eq ?_) (rpow_add_le_cutProfile hb (t + z j))
+        rw [show |t + z j| = |z j + t| from by rw [add_comm]]
+      have hmcut : truncBase (6 / 5) (7 / 4) (z - t • Pi.single j 1)
+          ≤ cutProfile |z (j + 1)| (t - z j) := by
+        refine le_trans (truncBase_le_rpow _) ?_
+        rw [dnorm_sub_single]
+        refine le_trans (le_of_eq ?_) (rpow_add_le_cutProfile hb (t - z j))
+        rw [show |t - z j| = |z j - t| from by rw [abs_sub_comm]]
+      have hsum : |secondDiff (truncBase (6 / 5) (7 / 4)) j z t|
+          ≤ cutProfile |z (j + 1)| (t + z j) + cutProfile |z (j + 1)| (t - z j) := by
+        rw [abs_secondDiff_ext_eq hz.le j t]
+        linarith
+      have hmul : |secondDiff (truncBase (6 / 5) (7 / 4)) j z t| * |t| ^ (-(1 + 6 / 5) : ℝ)
+          ≤ (cutProfile |z (j + 1)| (t + z j) + cutProfile |z (j + 1)| (t - z j)) * C :=
+        mul_le_mul hsum hwbig (Real.rpow_nonneg (abs_nonneg t) _) hcut0
+      have htnn : (0 : ℝ) ≤ K * tailWeight (diamondNorm z - 7 / 4) t :=
+        mul_nonneg hK0.le (tailWeight_nonneg _ t)
+      rw [hG]
+      linarith
+  have hGint : Integrable G := by
+    rw [hG]
+    exact hGtail.add hGcut
+  have hGval : ∫ t : ℝ, G t
+      = K * (10 * (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ))
+        + C * (12 * |z (j + 1)| ^ (-(1 / 5) : ℝ) + 12 * |z (j + 1)| ^ (-(1 / 5) : ℝ)) := by
+    simp only [hG]
+    rw [integral_add hGtail hGcut, integral_const_mul, integral_tailWeight hδ, integral_const_mul,
+      integral_add (integrable_cutProfile_add hb (z j)) (integrable_cutProfile_sub hb (z j)),
+      integral_cutProfile_add hb, integral_cutProfile_sub hb]
+  have hint := (abs_integral_dir_le j z hGint hbnd).trans_eq hGval
+  have hmeq : min |z j| |z (j + 1)| = |z (j + 1)| := min_eq_right hcase
+  have hbp : (0 : ℝ) < |z (j + 1)| ^ (-(1 / 5) : ℝ) := Real.rpow_pos_of_pos hb _
+  rw [hmeq]
+  refine hint.trans (le_trans ?_ (final_arith hrpow.le hδpow.le hbp.le))
+  have hKr : K ≤ 96 / 5 * diamondNorm z ^ (-(11 / 5) : ℝ) := by
+    have h := rpow_neg_div_le hrpos (by norm_num : (0 : ℝ) < 2)
+      (rpow_eleven_fifths_le (by norm_num) (by norm_num) : (2 : ℝ) ^ (11 / 5 : ℝ) ≤ 8)
+    rw [hK]
+    linarith
+  have hCr : C ≤ 64 * diamondNorm z ^ (-(11 / 5) : ℝ) := by
+    rw [hC]
+    refine le_trans (Real.rpow_le_rpow_of_nonpos
+      (show (0 : ℝ) < diamondNorm z / 4 by linarith)
+      (show diamondNorm z / 4 ≤ |z j| / 2 by linarith) (by norm_num)) ?_
+    exact rpow_neg_div_le hrpos (by norm_num : (0 : ℝ) < 4)
+      (rpow_eleven_fifths_le (by norm_num) (by norm_num))
+  have hfirst : K * (10 * (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ))
+      ≤ 192 * (diamondNorm z ^ (-(11 / 5) : ℝ)
+        * (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ)) := by
+    have h := mul_le_mul_of_nonneg_right hKr hδpow.le
+    linarith
+  have hsecond : C * (12 * |z (j + 1)| ^ (-(1 / 5) : ℝ) + 12 * |z (j + 1)| ^ (-(1 / 5) : ℝ))
+      ≤ 1536 * (diamondNorm z ^ (-(11 / 5) : ℝ) * |z (j + 1)| ^ (-(1 / 5) : ℝ)) := by
+    have h := mul_le_mul_of_nonneg_right hCr hbp.le
+    linarith
+  linarith
+
+/-- **One direction of the base generator outside the diamond.** -/
+private theorem abs_integral_dir_truncBase_ext {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hz : 7 / 4 < diamondNorm z) (j : Fin 2) :
+    |∫ t : ℝ, secondDiff (truncBase (6 / 5) (7 / 4)) j z t * |t| ^ (-(1 + 6 / 5) : ℝ)|
+      ≤ 1536 * diamondNorm z ^ (-(11 / 5) : ℝ)
+        * ((diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ)
+          + (min |z j| |z (j + 1)|) ^ (-(1 / 5) : ℝ)) := by
+  rcases le_total |z j| |z (j + 1)| with hcase | hcase
+  · exact abs_integral_dir_ext_of_le h0 h1 hz j hcase
+  · exact abs_integral_dir_ext_of_ge h0 h1 hz j hcase
+
 end CenteredMaximal.Fractional
 
 end
