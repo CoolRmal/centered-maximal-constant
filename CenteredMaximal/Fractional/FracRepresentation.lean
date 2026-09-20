@@ -68,6 +68,8 @@ noncomputable section
 
 open MeasureTheory Set
 
+open scoped ENNReal
+
 namespace CenteredMaximal.Fractional
 
 variable {α : ℝ} {K ψ : (Fin 2 → ℝ) → ℝ}
@@ -291,6 +293,107 @@ theorem jumpMoment_finsetSum {ι : Type*} (s : Finset ι) {f : ι → (Fin 2 →
       refine ((h a (Finset.mem_insert_self a s)).add hrest).congr ?_
       funext z
       rw [Finset.sum_insert ha]
+
+/-! ### A sufficient criterion for the moment hypothesis -/
+
+/-- **The moment hypothesis for a bounded, compactly supported, quadratically flat kernel.** The
+weight `min(1, ‖z‖) ≤ 1` is simply discarded; what makes the `z`-integral finite at a fixed step is
+that the second difference vanishes off the union of the three translates `tsupport K ∓ t e_j` and
+`tsupport K`, whose measure is at most `3 |tsupport K|` for *every* step. The remaining `t`-integral
+is `∫ jumpBound α M₀ M₂ < ∞`.
+
+This covers the tensor B-spline cells of the comparison kernel, but not its truncated diamond base,
+which is neither bounded nor quadratically flat at the origin. -/
+theorem jumpMoment_of_hasCompactSupport (hα : 0 < α) (hα' : α < 2) (hKm : Measurable K)
+    (hKs : HasCompactSupport K) {M₀ M₂ : ℝ} (h₀ : ∀ z, |K z| ≤ M₀)
+    (h₂ : ∀ (j : Fin 2) (z : Fin 2 → ℝ) (t : ℝ), |secondDiff K j z t| ≤ M₂ * t ^ 2) :
+    JumpMoment α K := by
+  intro j
+  have hM₀ : 0 ≤ M₀ := (abs_nonneg _).trans (h₀ 0)
+  have hM₂ : 0 ≤ M₂ := by
+    have h := h₂ j 0 1
+    have := abs_nonneg (secondDiff K j 0 1)
+    simpa using this.trans h
+  have hTm : MeasurableSet (tsupport K) := (isClosed_tsupport K).measurableSet
+  have hT3 : (3 : ℝ≥0∞) * volume (tsupport K) ≠ ⊤ :=
+    (ENNReal.mul_lt_top (by simp) hKs.measure_lt_top).ne
+  have hm : Measurable fun p : ℝ × (Fin 2 → ℝ) =>
+      secondDiff K j p.2 p.1 * min 1 ‖p.2‖ * |p.1| ^ (-(1 + α)) :=
+    ((measurable_secondDiff_snd hKm j).mul
+      (measurable_const.min (measurable_norm.comp measurable_snd))).mul
+      ((continuous_abs.measurable.pow_const _).comp measurable_fst)
+  refine ⟨hm.aestronglyMeasurable, ?_⟩
+  rw [hasFiniteIntegral_iff_enorm]
+  have hinner : ∀ t : ℝ, (∫⁻ z, ‖secondDiff K j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))‖ₑ)
+      ≤ ENNReal.ofReal (jumpBound α M₀ M₂ t) * (3 * volume (tsupport K)) := by
+    intro t
+    obtain ⟨a, ha⟩ : ∃ a : Fin 2 → ℝ, a = t • Pi.single j (1 : ℝ) := ⟨_, rfl⟩
+    obtain ⟨S, hS⟩ : ∃ S : Set (Fin 2 → ℝ), S =
+        ((fun z => z + a) ⁻¹' tsupport K ∪ (fun z => z - a) ⁻¹' tsupport K) ∪ tsupport K :=
+      ⟨_, rfl⟩
+    have hSm : MeasurableSet S := by
+      rw [hS]
+      exact ((hTm.preimage (measurable_id.add_const a)).union
+        (hTm.preimage (measurable_id.sub_const a))).union hTm
+    have hSvol : volume S ≤ 3 * volume (tsupport K) := by
+      have h1 : volume ((fun z : Fin 2 → ℝ => z + a) ⁻¹' tsupport K) = volume (tsupport K) :=
+        measure_preimage_add_right volume a _
+      have h2 : volume ((fun z : Fin 2 → ℝ => z - a) ⁻¹' tsupport K) = volume (tsupport K) := by
+        simp [sub_eq_add_neg]
+      calc volume S
+          ≤ volume ((fun z : Fin 2 → ℝ => z + a) ⁻¹' tsupport K ∪
+              (fun z : Fin 2 → ℝ => z - a) ⁻¹' tsupport K) + volume (tsupport K) := by
+            rw [hS]; exact measure_union_le _ _
+        _ ≤ volume ((fun z : Fin 2 → ℝ => z + a) ⁻¹' tsupport K) +
+              volume ((fun z : Fin 2 → ℝ => z - a) ⁻¹' tsupport K) + volume (tsupport K) := by
+            gcongr
+            exact measure_union_le _ _
+        _ = 3 * volume (tsupport K) := by rw [h1, h2]; ring
+    have hpt : ∀ z, ‖secondDiff K j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))‖ₑ
+        ≤ S.indicator (fun _ => ENNReal.ofReal (jumpBound α M₀ M₂ t)) z := by
+      intro z
+      by_cases hz : z ∈ S
+      · rw [Set.indicator_of_mem hz, Real.enorm_eq_ofReal_abs]
+        refine ENNReal.ofReal_le_ofReal ?_
+        have hw : (0 : ℝ) ≤ |t| ^ (-(1 + α)) := Real.rpow_nonneg (abs_nonneg _) _
+        have hmin : min 1 ‖z‖ ≤ 1 := min_le_left _ _
+        have hmin0 : (0 : ℝ) ≤ min 1 ‖z‖ := le_min zero_le_one (norm_nonneg _)
+        calc |secondDiff K j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))|
+            = |secondDiff K j z t| * min 1 ‖z‖ * |t| ^ (-(1 + α)) := by
+              rw [abs_mul, abs_mul, abs_of_nonneg hmin0, abs_of_nonneg hw]
+          _ ≤ min (M₂ * t ^ 2) (4 * M₀) * 1 * |t| ^ (-(1 + α)) := by
+              gcongr
+              · exact le_min (h₂ j z t) (abs_secondDiff_le_const h₀ j z t)
+          _ = jumpBound α M₀ M₂ t := by rw [jumpBound, mul_one]
+      · have hz0 : secondDiff K j z t = 0 := by
+          rw [hS] at hz
+          simp only [Set.mem_union, Set.mem_preimage, not_or] at hz
+          obtain ⟨⟨hz1, hz2⟩, hz3⟩ := hz
+          rw [secondDiff, ← ha, image_eq_zero_of_notMem_tsupport hz1,
+            image_eq_zero_of_notMem_tsupport hz2, image_eq_zero_of_notMem_tsupport hz3]
+          ring
+        rw [Set.indicator_of_notMem hz]
+        simp [hz0]
+    calc (∫⁻ z, ‖secondDiff K j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))‖ₑ)
+        ≤ ∫⁻ z, S.indicator (fun _ => ENNReal.ofReal (jumpBound α M₀ M₂ t)) z :=
+          lintegral_mono hpt
+      _ = ENNReal.ofReal (jumpBound α M₀ M₂ t) * volume S := by
+          rw [lintegral_indicator hSm, setLIntegral_const]
+      _ ≤ ENNReal.ofReal (jumpBound α M₀ M₂ t) * (3 * volume (tsupport K)) :=
+          mul_le_mul_right hSvol _
+  calc (∫⁻ p, ‖Function.uncurry (fun (t : ℝ) (z : Fin 2 → ℝ) =>
+          secondDiff K j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))) p‖ₑ
+        ∂((volume : Measure ℝ).prod (volume : Measure (Fin 2 → ℝ))))
+      = ∫⁻ t : ℝ, ∫⁻ z, ‖secondDiff K j z t * min 1 ‖z‖ * |t| ^ (-(1 + α))‖ₑ :=
+        lintegral_prod _ hm.enorm.aemeasurable
+    _ ≤ ∫⁻ t : ℝ, ENNReal.ofReal (jumpBound α M₀ M₂ t) * (3 * volume (tsupport K)) :=
+        lintegral_mono hinner
+    _ = (∫⁻ t : ℝ, ENNReal.ofReal (jumpBound α M₀ M₂ t)) * (3 * volume (tsupport K)) :=
+        lintegral_mul_const' _ _ hT3
+    _ = ENNReal.ofReal (∫ t, jumpBound α M₀ M₂ t) * (3 * volume (tsupport K)) := by
+        rw [ofReal_integral_eq_lintegral_ofReal (integrable_jumpBound hα hα' hM₀ hM₂)
+          (ae_of_all _ fun t => jumpBound_nonneg hM₀ hM₂ α t)]
+    _ < ⊤ := ENNReal.mul_lt_top ENNReal.ofReal_lt_top (lt_top_iff_ne_top.2 hT3)
 
 /-! ### The representation -/
 
