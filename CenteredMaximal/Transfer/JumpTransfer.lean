@@ -42,7 +42,9 @@ where `u` vanishes the merged term is `∫ g(z) u(x − z) dz ≥ 0`, which is a
 * `IsTestFunction.exists_lipschitz_bound`, `IsTestFunction.exists_bound_min_one`: the uniform
   increment bounds for a test function, from the mean value inequality applied to its derivative
   (continuous with compact support, hence bounded);
-* `integrable_density_mul_sub`: the pairing `∫ g (ψ − ψ 0)` converges absolutely;
+* `integrable_density_mul_sub`, `integrable_mul_min_one_of_pairing`: the pairing
+  `∫ g (ψ − ψ 0)` converges absolutely for every test function `ψ` if and only if the moment
+  condition holds, so `hgmom` and the hypothesis `hgint` of the finite-mass form are equivalent;
 * `integrable_prod_mul_density`, `integral_mul_integral_density`: convolution against the density
   in the merged form is self-adjoint for the pairing with a test function, the Fubini interchanges
   being dominated by `|u x| · g z min(1, ‖z‖)`;
@@ -120,6 +122,59 @@ theorem integrable_density_mul_sub (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g 
   rw [Real.norm_eq_abs, abs_mul, abs_of_nonneg (hg₀ z)]
   calc g z * |φ z - φ 0| ≤ g z * (C * min 1 ‖z‖) := mul_le_mul_of_nonneg_left hz (hg₀ z)
     _ = C * (g z * min 1 ‖z‖) := by ring
+
+/-- **The moment condition follows from the absolute convergence of every pairing.** Conversely to
+`integrable_density_mul_sub`: if `∫ g (ψ − ψ 0)` converges absolutely for *every* test function
+`ψ`, then `∫ g(z) min(1, ‖z‖) dz < ∞`.
+
+Test against the coordinate functions cut off by a bump `χ` that is `1` on the unit ball, and
+against `χ` itself: this bounds `∫ g χ |z j|` for `j = 0, 1` and `∫ g |χ − 1|`, and
+`min(1, ‖z‖) ≤ χ(z) (|z₀| + |z₁|) + |χ(z) − 1|` because `‖z‖ ≤ |z₀| + |z₁|`, the first summand
+carrying the bound near the origin and the second the bound at infinity. -/
+theorem integrable_mul_min_one_of_pairing (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g z)
+    (hgint : ∀ ψ : (Fin 2 → ℝ) → ℝ, IsTestFunction ψ →
+      Integrable fun z => g z * (ψ z - ψ 0)) :
+    Integrable fun z => g z * min 1 ‖z‖ := by
+  obtain ⟨χ, hχ, hχ₀, hχ₁⟩ := exists_isTestFunction_eq_one_of_isCompact
+    (isCompact_closedBall (0 : Fin 2 → ℝ) 1)
+  have hχ0 : χ 0 = 1 := hχ₁ 0 (Metric.mem_closedBall_self zero_le_one)
+  have hcoord : ∀ j : Fin 2, IsTestFunction fun z : Fin 2 → ℝ => z j * χ z := fun j =>
+    ⟨(contDiff_apply ℝ ℝ j).mul hχ.1, hχ.2.mul_left⟩
+  have hA : ∀ j : Fin 2, Integrable fun z : Fin 2 → ℝ => |g z * (z j * χ z)| := fun j => by
+    have h := hgint _ (hcoord j)
+    simp only [Pi.zero_apply, zero_mul, sub_zero] at h
+    exact h.abs
+  have hB : Integrable fun z : Fin 2 → ℝ => |g z * (χ z - 1)| := by
+    have h := hgint χ hχ
+    rw [hχ0] at h
+    exact h.abs
+  have hnorm : ∀ z : Fin 2 → ℝ, ‖z‖ ≤ |z 0| + |z 1| := fun z => by
+    refine (pi_norm_le_iff_of_nonneg (by positivity)).2 ?_
+    rw [Fin.forall_fin_two]
+    refine ⟨?_, ?_⟩
+    · rw [Real.norm_eq_abs]; linarith [abs_nonneg (z 1)]
+    · rw [Real.norm_eq_abs]; linarith [abs_nonneg (z 0)]
+  refine ((hA 0).fun_add ((hA 1).fun_add hB)).mono' (hgm.aestronglyMeasurable.mul
+    (continuous_const.min continuous_norm).aestronglyMeasurable)
+    (Filter.Eventually.of_forall fun z => ?_)
+  have hmin : (0 : ℝ) ≤ min 1 ‖z‖ := le_min zero_le_one (norm_nonneg z)
+  have key : min 1 ‖z‖ ≤ χ z * |z 0| + (χ z * |z 1| + |χ z - 1|) := by
+    rcases le_total ‖z‖ 1 with h | h
+    · have hz1 : χ z = 1 := hχ₁ z (mem_closedBall_zero_iff.2 h)
+      rw [hz1]
+      simp only [one_mul, sub_self, abs_zero, add_zero]
+      exact (min_le_right _ _).trans (hnorm z)
+    · have h1 : (1 : ℝ) ≤ |z 0| + |z 1| := h.trans (hnorm z)
+      have h2 : 1 - χ z ≤ |χ z - 1| := by rw [abs_sub_comm]; exact le_abs_self _
+      have h3 : χ z * 1 ≤ χ z * (|z 0| + |z 1|) := mul_le_mul_of_nonneg_left h1 (hχ₀ z)
+      calc min 1 ‖z‖ ≤ 1 := min_le_left _ _
+        _ ≤ χ z * |z 0| + (χ z * |z 1| + |χ z - 1|) := by nlinarith [h2, h3]
+  rw [Real.norm_eq_abs, abs_of_nonneg (mul_nonneg (hg₀ z) hmin)]
+  calc g z * min 1 ‖z‖ ≤ g z * (χ z * |z 0| + (χ z * |z 1| + |χ z - 1|)) :=
+        mul_le_mul_of_nonneg_left key (hg₀ z)
+    _ = |g z * (z 0 * χ z)| + (|g z * (z 1 * χ z)| + |g z * (χ z - 1)|) := by
+        simp only [abs_mul, abs_of_nonneg (hg₀ z), abs_of_nonneg (hχ₀ z)]
+        ring
 
 /-- The integrand of the self-adjointness step is integrable on the product: it is dominated by
 `C |u x| · g z min(1, ‖z‖)`, a product of integrable functions. -/
