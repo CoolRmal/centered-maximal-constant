@@ -400,6 +400,159 @@ private theorem abs_jumpGen_spline_le {z : Fin 2 → ℝ} (hz : z ≠ 0) :
           _ = _ := by ring
     _ = _ := by ring
 
+/-! ### Two one-dimensional weights
+
+Both halves of the base estimate integrate the weight `|t|^{-11/5}` against a bound on the second
+difference of the truncated base. Two profiles arise: the *tail* weight, for a second difference
+that vanishes below a threshold and grows linearly above it, and the *cut* profile, which carries
+the `L¹` mass of the kernel along a line at distance `b` from the origin. -/
+
+/-- `∫_c^∞ t^{-6/5} dt = 5 c^{-1/5}`. -/
+private theorem integral_Ioi_rpow_six_fifths {c : ℝ} (hc : 0 < c) :
+    ∫ t in Ioi c, t ^ (-(6 / 5) : ℝ) = 5 * c ^ (-(1 / 5) : ℝ) := by
+  have h : (-(6 / 5) : ℝ) + 1 = -(1 / 5) := by norm_num
+  rw [integral_Ioi_rpow_of_lt (by norm_num : (-(6 / 5) : ℝ) < -1) hc, h]
+  ring
+
+private theorem integrableOn_Ioi_rpow_six_fifths {c : ℝ} (hc : 0 < c) :
+    IntegrableOn (fun t : ℝ => t ^ (-(6 / 5) : ℝ)) (Ioi c) :=
+  integrableOn_Ioi_rpow_of_lt (by norm_num) hc
+
+/-- The tail weight `|t|^{-6/5}` outside the window `|t| ≤ δ`. -/
+private def tailWeight (δ t : ℝ) : ℝ := if δ < |t| then |t| ^ (-(6 / 5) : ℝ) else 0
+
+private theorem tailWeight_nonneg (δ t : ℝ) : 0 ≤ tailWeight δ t := by
+  rw [tailWeight]
+  split
+  · exact Real.rpow_nonneg (abs_nonneg _) _
+  · exact le_rfl
+
+private theorem tailWeight_neg (δ t : ℝ) : tailWeight δ (-t) = tailWeight δ t := by
+  rw [tailWeight, tailWeight, abs_neg]
+
+private theorem measurable_tailWeight (δ : ℝ) : Measurable (tailWeight δ) := by
+  refine Measurable.ite ?_ (continuous_abs.measurable.pow_const _) measurable_const
+  exact measurableSet_lt measurable_const continuous_abs.measurable
+
+private theorem integrableOn_tailWeight {δ : ℝ} (hδ : 0 < δ) :
+    IntegrableOn (tailWeight δ) (Ioi 0) := by
+  rw [← Ioc_union_Ioi_eq_Ioi hδ.le, integrableOn_union]
+  refine ⟨(integrable_zero ℝ ℝ _).integrableOn.congr_fun (fun t ht => ?_) measurableSet_Ioc,
+    (integrableOn_Ioi_rpow_six_fifths hδ).congr_fun (fun t ht => ?_) measurableSet_Ioi⟩
+  · show (0 : ℝ) = tailWeight δ t
+    rw [tailWeight, if_neg (by rw [abs_of_pos ht.1]; exact not_lt.2 ht.2)]
+  · show t ^ (-(6 / 5) : ℝ) = tailWeight δ t
+    rw [tailWeight, if_pos (by rw [abs_of_pos (hδ.trans ht)]; exact ht),
+      abs_of_pos (hδ.trans ht)]
+
+private theorem integrable_tailWeight {δ : ℝ} (hδ : 0 < δ) : Integrable (tailWeight δ) :=
+  CenteredMaximal.integrable_of_even (tailWeight_neg δ) (integrableOn_tailWeight hδ)
+
+/-- **The tail weight has mass `10 δ^{-1/5}`.** -/
+private theorem integral_tailWeight {δ : ℝ} (hδ : 0 < δ) :
+    ∫ t, tailWeight δ t = 10 * δ ^ (-(1 / 5) : ℝ) := by
+  have hzero : ∫ t in Ioc (0 : ℝ) δ, tailWeight δ t = 0 := by
+    rw [setIntegral_congr_fun (g := fun _ => (0 : ℝ)) measurableSet_Ioc fun t ht => ?_,
+      integral_zero]
+    rw [tailWeight, if_neg (by rw [abs_of_pos ht.1]; exact not_lt.2 ht.2)]
+  have htail : ∫ t in Ioi δ, tailWeight δ t = 5 * δ ^ (-(1 / 5) : ℝ) := by
+    rw [setIntegral_congr_fun (g := fun t : ℝ => t ^ (-(6 / 5) : ℝ)) measurableSet_Ioi
+      fun t ht => ?_, integral_Ioi_rpow_six_fifths hδ]
+    rw [tailWeight, if_pos (by rw [abs_of_pos (hδ.trans ht)]; exact ht),
+      abs_of_pos (hδ.trans ht)]
+  have hIoc : IntegrableOn (tailWeight δ) (Ioc 0 δ) :=
+    (integrableOn_tailWeight hδ).mono_set (Ioc_subset_Ioi_self)
+  have hIoi : IntegrableOn (tailWeight δ) (Ioi δ) :=
+    (integrableOn_tailWeight hδ).mono_set (fun t ht => hδ.trans ht)
+  rw [CenteredMaximal.integral_of_even (tailWeight_neg δ) (integrableOn_tailWeight hδ),
+    ← Ioc_union_Ioi_eq_Ioi hδ.le,
+    setIntegral_union Ioc_disjoint_Ioi_same measurableSet_Ioi hIoc hIoi, hzero, htail]
+  ring
+
+/-- The line profile of the kernel at distance `b` from the origin: the constant `b^{-6/5}` on the
+window `|t| < b` and `|t|^{-6/5}` beyond. -/
+private def cutProfile (b t : ℝ) : ℝ :=
+  if |t| < b then b ^ (-(6 / 5) : ℝ) else |t| ^ (-(6 / 5) : ℝ)
+
+private theorem cutProfile_nonneg {b : ℝ} (hb : 0 ≤ b) (t : ℝ) : 0 ≤ cutProfile b t := by
+  rw [cutProfile]
+  split
+  · exact Real.rpow_nonneg hb _
+  · exact Real.rpow_nonneg (abs_nonneg _) _
+
+private theorem cutProfile_neg (b t : ℝ) : cutProfile b (-t) = cutProfile b t := by
+  rw [cutProfile, cutProfile, abs_neg]
+
+private theorem measurable_cutProfile (b : ℝ) : Measurable (cutProfile b) := by
+  refine Measurable.ite ?_ measurable_const (continuous_abs.measurable.pow_const _)
+  exact measurableSet_lt continuous_abs.measurable measurable_const
+
+/-- **The line profile dominates the kernel's radial power along a line at distance `b`.** -/
+private theorem rpow_add_le_cutProfile {b : ℝ} (hb : 0 < b) (u : ℝ) :
+    (|u| + b) ^ (-(6 / 5) : ℝ) ≤ cutProfile b u := by
+  rw [cutProfile]
+  split
+  · exact Real.rpow_le_rpow_of_nonpos hb (by linarith [abs_nonneg u]) (by norm_num)
+  · rename_i hcase
+    have hu : 0 < |u| := lt_of_lt_of_le hb (not_lt.1 hcase)
+    exact Real.rpow_le_rpow_of_nonpos hu (by linarith) (by norm_num)
+
+private theorem integrableOn_cutProfile {b : ℝ} (hb : 0 < b) :
+    IntegrableOn (cutProfile b) (Ioi 0) := by
+  rw [← Ioc_union_Ioi_eq_Ioi hb.le, integrableOn_union]
+  refine ⟨(integrableOn_const (C := b ^ (-(6 / 5) : ℝ)) (by
+      rw [Real.volume_Ioc]; exact ENNReal.ofReal_ne_top)).congr_fun (fun t ht => ?_)
+      measurableSet_Ioc,
+    (integrableOn_Ioi_rpow_six_fifths hb).congr_fun (fun t ht => ?_) measurableSet_Ioi⟩
+  · show b ^ (-(6 / 5) : ℝ) = cutProfile b t
+    rcases lt_or_ge t b with hlt | hge
+    · rw [cutProfile, if_pos (by rwa [abs_of_pos ht.1])]
+    · have ht' : t = b := le_antisymm ht.2 hge
+      rw [cutProfile, if_neg (by rw [abs_of_pos ht.1, ht']; exact lt_irrefl b), ht',
+        abs_of_pos hb]
+  · show t ^ (-(6 / 5) : ℝ) = cutProfile b t
+    rw [cutProfile, if_neg (by rw [abs_of_pos (hb.trans ht)]; exact not_lt.2 ht.le),
+      abs_of_pos (hb.trans ht)]
+
+private theorem integrable_cutProfile {b : ℝ} (hb : 0 < b) : Integrable (cutProfile b) :=
+  CenteredMaximal.integrable_of_even (cutProfile_neg b) (integrableOn_cutProfile hb)
+
+/-- **The line profile has mass `12 b^{-1/5}`.** -/
+private theorem integral_cutProfile {b : ℝ} (hb : 0 < b) :
+    ∫ t, cutProfile b t = 12 * b ^ (-(1 / 5) : ℝ) := by
+  have hb1 : b * b ^ (-(6 / 5) : ℝ) = b ^ (-(1 / 5) : ℝ) := by
+    rw [show (-(1 / 5) : ℝ) = 1 + -(6 / 5) from by norm_num, Real.rpow_add hb, Real.rpow_one]
+  have hhead : ∫ t in Ioc (0 : ℝ) b, cutProfile b t = b ^ (-(1 / 5) : ℝ) := by
+    rw [setIntegral_congr_fun (g := fun _ => b ^ (-(6 / 5) : ℝ)) measurableSet_Ioc fun t ht => ?_,
+      setIntegral_const, Real.volume_real_Ioc_of_le hb.le, sub_zero, smul_eq_mul, hb1]
+    rcases lt_or_ge t b with hlt | hge
+    · rw [cutProfile, if_pos (by rwa [abs_of_pos ht.1])]
+    · have ht' : t = b := le_antisymm ht.2 hge
+      rw [cutProfile, if_neg (by rw [abs_of_pos ht.1, ht']; exact lt_irrefl b), ht',
+        abs_of_pos hb]
+  have htail : ∫ t in Ioi b, cutProfile b t = 5 * b ^ (-(1 / 5) : ℝ) := by
+    rw [setIntegral_congr_fun (g := fun t : ℝ => t ^ (-(6 / 5) : ℝ)) measurableSet_Ioi
+      fun t ht => ?_, integral_Ioi_rpow_six_fifths hb]
+    rw [cutProfile, if_neg (by rw [abs_of_pos (hb.trans ht)]; exact not_lt.2 ht.le),
+      abs_of_pos (hb.trans ht)]
+  have hIoc : IntegrableOn (cutProfile b) (Ioc 0 b) :=
+    (integrableOn_cutProfile hb).mono_set Ioc_subset_Ioi_self
+  have hIoi : IntegrableOn (cutProfile b) (Ioi b) :=
+    (integrableOn_cutProfile hb).mono_set fun t ht => hb.trans ht
+  rw [CenteredMaximal.integral_of_even (cutProfile_neg b) (integrableOn_cutProfile hb),
+    ← Ioc_union_Ioi_eq_Ioi hb.le,
+    setIntegral_union Ioc_disjoint_Ioi_same measurableSet_Ioi hIoc hIoi, hhead, htail]
+  ring
+
+/-- The translate of the line profile has the same mass. -/
+private theorem integral_cutProfile_add {b : ℝ} (hb : 0 < b) (c : ℝ) :
+    ∫ t, cutProfile b (t + c) = 12 * b ^ (-(1 / 5) : ℝ) := by
+  rw [integral_add_right_eq_self (fun u : ℝ => cutProfile b u) c, integral_cutProfile hb]
+
+private theorem integrable_cutProfile_add {b : ℝ} (hb : 0 < b) (c : ℝ) :
+    Integrable fun t : ℝ => cutProfile b (t + c) :=
+  (integrable_cutProfile hb).comp_add_right c
+
 end CenteredMaximal.Fractional
 
 end
