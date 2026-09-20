@@ -1063,6 +1063,163 @@ private theorem abs_integral_dir_truncBase_ext {z : Fin 2 → ℝ} (h0 : z 0 ≠
   · exact abs_integral_dir_ext_of_le h0 h1 hz j hcase
   · exact abs_integral_dir_ext_of_ge h0 h1 hz j hcase
 
+/-! ### Integrability of the two integrands
+
+`CenteredMaximal.jumpGen_add` splits the generator of `fracKernel = a T + S` only where both
+integrands are integrable. For the spline part that is
+`CenteredMaximal.Fractional.integrable_secondDiff_splineCell`, summed over the cells. For the base
+it is the diamond power plus the exterior tail inside the diamond, and outside it the second
+difference vanishes for `|t| < r − 7/4` — all three points then lie beyond the support — while being
+bounded by `2 b^{-6/5}` throughout. On the support boundary itself the integrand is *not*
+integrable: that is the corner, and it is excluded as a null set. -/
+
+/-- The weight `|t|^{-11/5}` outside the window `|t| ≤ δ`; integrable because `11/5 > 1`. -/
+private def tailWeight' (δ t : ℝ) : ℝ := if δ < |t| then |t| ^ (-(1 + 6 / 5) : ℝ) else 0
+
+private theorem tailWeight'_nonneg (δ t : ℝ) : 0 ≤ tailWeight' δ t := by
+  rw [tailWeight']
+  split
+  · exact Real.rpow_nonneg (abs_nonneg _) _
+  · exact le_rfl
+
+private theorem tailWeight'_neg (δ t : ℝ) : tailWeight' δ (-t) = tailWeight' δ t := by
+  rw [tailWeight', tailWeight', abs_neg]
+
+private theorem measurable_tailWeight' (δ : ℝ) : Measurable (tailWeight' δ) := by
+  refine Measurable.ite ?_ (continuous_abs.measurable.pow_const _) measurable_const
+  exact measurableSet_lt measurable_const continuous_abs.measurable
+
+private theorem integrable_tailWeight' {δ : ℝ} (hδ : 0 < δ) : Integrable (tailWeight' δ) := by
+  refine CenteredMaximal.integrable_of_even (tailWeight'_neg δ) ?_
+  rw [← Ioc_union_Ioi_eq_Ioi hδ.le, integrableOn_union]
+  refine ⟨(integrable_zero ℝ ℝ _).integrableOn.congr_fun (fun t ht => ?_) measurableSet_Ioc,
+    (integrableOn_Ioi_rpow_of_lt (by norm_num : (-(1 + 6 / 5) : ℝ) < -1)
+      hδ).congr_fun (fun t ht => ?_) measurableSet_Ioi⟩
+  · show (0 : ℝ) = tailWeight' δ t
+    rw [tailWeight', if_neg (by rw [abs_of_pos ht.1]; exact not_lt.2 ht.2)]
+  · show t ^ (-(1 + 6 / 5) : ℝ) = tailWeight' δ t
+    rw [tailWeight', if_pos (by rw [abs_of_pos (hδ.trans ht)]; exact ht),
+      abs_of_pos (hδ.trans ht)]
+
+/-- The integrand of one direction of the generator is measurable. -/
+private theorem measurable_dir_integrand {φ : (Fin 2 → ℝ) → ℝ} (hφ : Measurable φ) (j : Fin 2)
+    (z : Fin 2 → ℝ) :
+    Measurable fun t : ℝ => secondDiff φ j z t * |t| ^ (-(1 + 6 / 5) : ℝ) := by
+  have hc : Continuous fun t : ℝ => z + t • Pi.single j 1 :=
+    continuous_const.add (continuous_id.smul continuous_const)
+  have hc' : Continuous fun t : ℝ => z - t • Pi.single j 1 :=
+    continuous_const.sub (continuous_id.smul continuous_const)
+  unfold secondDiff
+  exact (((hφ.comp hc.measurable).add (hφ.comp hc'.measurable)).sub measurable_const).mul
+    (continuous_abs.measurable.pow_const _)
+
+/-- **The base integrand is integrable off the axes and off the support boundary.** -/
+private theorem integrable_dir_truncBase {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hne : diamondNorm z ≠ 7 / 4) (j : Fin 2) :
+    Integrable fun t : ℝ =>
+      secondDiff (truncBase (6 / 5) (7 / 4)) j z t * |t| ^ (-(1 + 6 / 5) : ℝ) := by
+  have hmeas := measurable_dir_integrand (measurable_truncBase (6 / 5) (7 / 4)) j z
+  rcases lt_or_gt_of_ne hne with hcase | hcase
+  · have hpow : ∀ t : ℝ, secondDiff (truncBase (6 / 5) (7 / 4)) j z t
+        = secondDiff (fun w => diamondPow (6 / 5) w - (7 / 4 : ℝ) ^ (-(6 / 5) : ℝ)) j z t
+          + secondDiff (truncTail (6 / 5) (7 / 4)) j z t := by
+      intro t
+      rw [← secondDiff_add]
+      refine congrArg (fun ψ : (Fin 2 → ℝ) → ℝ => secondDiff ψ j z t) ?_
+      funext w
+      rw [Pi.add_apply, truncBase_eq (6 / 5) (7 / 4) w]
+    have hbase : Integrable fun t : ℝ =>
+        secondDiff (fun w => diamondPow (6 / 5) w - (7 / 4 : ℝ) ^ (-(6 / 5) : ℝ)) j z t
+          * |t| ^ (-(1 + 6 / 5) : ℝ) := by
+      simpa only [secondDiff_sub_const] using
+        integrable_secondDiff_diamondPow (by norm_num) (by norm_num) h0 h1 j
+    have htail := integrable_secondDiff_truncTail (α := 6 / 5) (R := 7 / 4) (by norm_num)
+      h0 h1 hcase j
+    refine (hbase.add htail).congr (.of_forall fun t => ?_)
+    simp only [Pi.add_apply, hpow t]
+    ring
+  · have hδ : 0 < diamondNorm z - 7 / 4 := by linarith
+    have hb : 0 < |z (j + 1)| := coord_succ_pos h0 h1 j
+    have hbpow : (0 : ℝ) < |z (j + 1)| ^ (-(6 / 5) : ℝ) := Real.rpow_pos_of_pos hb _
+    refine ((integrable_tailWeight' hδ).const_mul
+      (2 * |z (j + 1)| ^ (-(6 / 5) : ℝ))).mono' hmeas.aestronglyMeasurable
+      (.of_forall fun t => ?_)
+    have hle : ∀ w : Fin 2 → ℝ, |z (j + 1)| ≤ diamondNorm w →
+        truncBase (6 / 5) (7 / 4) w ≤ |z (j + 1)| ^ (-(6 / 5) : ℝ) := by
+      intro w hw
+      exact (truncBase_le_rpow w).trans
+        (Real.rpow_le_rpow_of_nonpos hb hw (by norm_num))
+    have hp := hle _ (coord_le_dnorm_add z j t)
+    have hm := hle _ (coord_le_dnorm_sub z j t)
+    have hsd := abs_secondDiff_ext_eq hcase.le j t
+    have hw0 : (0 : ℝ) ≤ |t| ^ (-(1 + 6 / 5) : ℝ) := Real.rpow_nonneg (abs_nonneg t) _
+    rw [Real.norm_eq_abs, abs_mul, abs_of_nonneg hw0]
+    rcases le_or_gt |t| (diamondNorm z - 7 / 4) with hsmall | hbig
+    · have hpz : (7 : ℝ) / 4 ≤ diamondNorm (z + t • Pi.single j 1) := by
+        linarith [le_dnorm_add z j t]
+      have hmz : (7 : ℝ) / 4 ≤ diamondNorm (z - t • Pi.single j 1) := by
+        linarith [le_dnorm_sub z j t]
+      rw [hsd, truncBase_eq_zero_ext hpz, truncBase_eq_zero_ext hmz, add_zero, zero_mul]
+      exact mul_nonneg (by positivity) (tailWeight'_nonneg _ t)
+    · rw [tailWeight', if_pos hbig]
+      have hstep : |secondDiff (truncBase (6 / 5) (7 / 4)) j z t|
+          ≤ 2 * |z (j + 1)| ^ (-(6 / 5) : ℝ) := by
+        rw [hsd]
+        linarith
+      calc |secondDiff (truncBase (6 / 5) (7 / 4)) j z t| * |t| ^ (-(1 + 6 / 5) : ℝ)
+          ≤ (2 * |z (j + 1)| ^ (-(6 / 5) : ℝ)) * |t| ^ (-(1 + 6 / 5) : ℝ) :=
+            mul_le_mul_of_nonneg_right hstep hw0
+        _ = _ := rfl
+
+/-- **The spline integrand is integrable**, cell by cell. -/
+private theorem integrable_dir_splinePart (z : Fin 2 → ℝ) (j : Fin 2) :
+    Integrable fun t : ℝ =>
+      secondDiff (fun w => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w) j z t
+        * |t| ^ (-(1 + 6 / 5) : ℝ) := by
+  have hfun : (fun w : Fin 2 → ℝ => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w)
+      = fun w => ∑ ij ∈ fracCellFinset, fracCoeff (fracCellCoeff ij) *
+          (bspline (16 * w 0 - ij.1) * bspline (16 * w 1 - ij.2)) := by
+    funext w
+    rw [fracKernel_eq_finsetSum w]
+    ring
+  have hterm : ∀ ij ∈ fracCellFinset, Integrable fun t : ℝ =>
+      secondDiff (fun w : Fin 2 → ℝ => fracCoeff (fracCellCoeff ij) *
+        (bspline (16 * w 0 - (ij.1 : ℝ)) * bspline (16 * w 1 - (ij.2 : ℝ)))) j z t
+          * |t| ^ (-(1 + 6 / 5) : ℝ) := by
+    intro ij _
+    have hk := secondDiff_const_mul (fracCoeff (fracCellCoeff ij)) (fun w : Fin 2 → ℝ =>
+      bspline (16 * w 0 - (ij.1 : ℝ)) * bspline (16 * w 1 - (ij.2 : ℝ))) j z
+    refine ((integrable_secondDiff_splineCell (α := 6 / 5) (by norm_num) (by norm_num)
+      (by norm_num : (0 : ℝ) < 16) (ij.1 : ℝ) (ij.2 : ℝ) z j).const_mul
+      (fracCoeff (fracCellCoeff ij))).congr (.of_forall fun t => ?_)
+    simp only [hk]
+    ring
+  rw [hfun]
+  refine (integrable_finsetSum fracCellFinset hterm).congr (.of_forall fun t => ?_)
+  simp only [secondDiff_finsetSum, Finset.sum_mul]
+
+/-- **The generator splits into the base and the spline part.** -/
+private theorem jumpGen_fracKernel_split {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hne : diamondNorm z ≠ 7 / 4) :
+    fracDensity z = fracBaseCoeff * jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z
+      + jumpGen (6 / 5) (fun w => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w) z := by
+  have hfun : fracKernel = (fun w => fracBaseCoeff * truncBase (6 / 5) (7 / 4) w)
+      + fun w => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w := by
+    funext w
+    rw [Pi.add_apply]
+    ring
+  have hbase : ∀ j : Fin 2, Integrable fun t : ℝ =>
+      secondDiff (fun w => fracBaseCoeff * truncBase (6 / 5) (7 / 4) w) j z t
+        * |t| ^ (-(1 + 6 / 5) : ℝ) := by
+    intro j
+    refine ((integrable_dir_truncBase h0 h1 hne j).const_mul fracBaseCoeff).congr
+      (.of_forall fun t => ?_)
+    simp only [secondDiff_const_mul]
+    ring
+  rw [fracDensity]
+  conv_lhs => rw [hfun]
+  rw [jumpGen_add hbase (fun j => integrable_dir_splinePart z j), jumpGen_const_mul]
+
 end CenteredMaximal.Fractional
 
 end
