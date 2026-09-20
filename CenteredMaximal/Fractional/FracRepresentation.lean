@@ -56,8 +56,15 @@ function `ψ`:
 * `integral_mul_jumpGen_eq_integral_jumpGen_sub`: **the representation**
   `∫ K · jumpGen α ψ = ∫ (jumpGen α K) (ψ − ψ 0)`;
 * `integrable_jumpGen_mul_min_one`: **the Lévy moment** `Integrable (jumpGen α K · min(1, ‖z‖))`;
+* `jumpMoment_of_hasCompactSupport`: a bounded, compactly supported, quadratically flat kernel
+  satisfies the moment hypothesis;
+* `hasDerivAt_bspline`, `hasDerivAt_bsplineDeriv`, `exists_abs_secondDiff_bspline_le`: the cardinal
+  cubic B-spline is `C^{1,1}`, written through the identity `(y₊)³ = (y³ + y²|y|)/2`, which makes
+  the two derivatives elementary; `jumpMoment_fracCell` is the consequence for a tensor cell;
 * `measurable_fracKernel`, `fracDensity`, `measurable_fracDensity`: the density of the `α = 6/5`
   comparison kernel;
+* `jumpMoment_fracKernel`: the moment hypothesis for the comparison kernel reduces to the same
+  hypothesis for its truncated diamond base `truncBase (6/5) (7/4)`;
 * `hKgen_fracKernel`, `integrable_fracDensity_mul_min_one`: the two hypotheses of
   `CenteredMaximal.convolution_le_of_eq_zero_fp`, both reduced to `JumpMoment (6/5) fracKernel`.
 -/
@@ -514,6 +521,285 @@ theorem integrable_jumpGen_mul_min_one (hmom : JumpMoment α K) :
   rw [← Finset.sum_mul]
   rfl
 
+/-! ### The cardinal cubic B-spline is `C^{1,1}` -/
+
+/-- The truncated cube in a form to which the product rule applies: `(y₊)³ = (y³ + y²|y|)/2`,
+because `|y|³ = y²|y|` and `y₊ = (y + |y|)/2`. -/
+theorem truncCube_eq (y : ℝ) : truncCube y = (y ^ 3 + y ^ 2 * |y|) / 2 := by
+  rcases le_total 0 y with hy | hy
+  · rw [truncCube_of_nonneg hy, abs_of_nonneg hy]; ring
+  · rw [truncCube_of_nonpos hy, abs_of_nonpos hy]; ring
+
+/-- `y ↦ y |y|` is differentiable everywhere with derivative `2 |y|`. Away from the origin it is
+`± y²`; at the origin the slope is `|x|`, which tends to `0`. -/
+theorem hasDerivAt_mul_abs (y : ℝ) : HasDerivAt (fun x : ℝ => x * |x|) (2 * |y|) y := by
+  rcases lt_trichotomy y 0 with hy | hy | hy
+  · have hev : (fun x : ℝ => x * |x|) =ᶠ[nhds y] fun x : ℝ => -(x ^ 2) := by
+      filter_upwards [Iio_mem_nhds hy] with x hx
+      rw [abs_of_neg hx]; ring
+    refine HasDerivAt.congr_of_eventuallyEq ?_ hev
+    refine ((hasDerivAt_pow 2 y).neg).congr_deriv ?_
+    rw [abs_of_neg hy]
+    push_cast
+    ring
+  · subst hy
+    rw [abs_zero, mul_zero, hasDerivAt_iff_tendsto_slope]
+    have hs : ∀ x : ℝ, x ≠ 0 → slope (fun x : ℝ => x * |x|) 0 x = |x| := by
+      intro x hx
+      rw [slope_def_field]
+      field_simp
+      ring
+    have habs : Filter.Tendsto (fun x : ℝ => |x|) (nhdsWithin 0 {(0 : ℝ)}ᶜ) (nhds 0) := by
+      have h : Filter.Tendsto (fun x : ℝ => |x|) (nhds (0 : ℝ)) (nhds |(0 : ℝ)|) :=
+        continuous_abs.tendsto 0
+      rw [abs_zero] at h
+      exact h.mono_left nhdsWithin_le_nhds
+    refine habs.congr' ?_
+    filter_upwards [self_mem_nhdsWithin] with x hx
+    exact (hs x (by simpa using hx)).symm
+  · have hev : (fun x : ℝ => x * |x|) =ᶠ[nhds y] fun x : ℝ => x ^ 2 := by
+      filter_upwards [Ioi_mem_nhds hy] with x hx
+      rw [abs_of_pos hx]; ring
+    refine HasDerivAt.congr_of_eventuallyEq ?_ hev
+    refine (hasDerivAt_pow 2 y).congr_deriv ?_
+    rw [abs_of_pos hy]
+    push_cast
+    ring
+
+/-- `y ↦ y² |y| = |y|³` is differentiable everywhere with derivative `3 y |y|`. -/
+theorem hasDerivAt_sq_mul_abs (y : ℝ) :
+    HasDerivAt (fun x : ℝ => x ^ 2 * |x|) (3 * (y * |y|)) y := by
+  have hfun : (fun x : ℝ => x ^ 2 * |x|) = fun x : ℝ => x * (x * |x|) := by
+    funext x; ring
+  rw [hfun]
+  exact ((hasDerivAt_id y).mul (hasDerivAt_mul_abs y)).congr_deriv (by simp only [id_eq]; ring)
+
+/-- The derivative `3 (y₊)²` of the truncated cube, written so that it is visibly `C¹`. -/
+def truncCubeDeriv (y : ℝ) : ℝ := 3 / 2 * (y ^ 2 + y * |y|)
+
+/-- The second derivative `6 y₊` of the truncated cube. -/
+def truncCubeDeriv2 (y : ℝ) : ℝ := 3 * (y + |y|)
+
+theorem hasDerivAt_truncCube (y : ℝ) : HasDerivAt truncCube (truncCubeDeriv y) y := by
+  have hfun : truncCube = fun x : ℝ => (x ^ 3 + x ^ 2 * |x|) / 2 := funext truncCube_eq
+  rw [hfun]
+  refine (((hasDerivAt_pow 3 y).add (hasDerivAt_sq_mul_abs y)).div_const 2).congr_deriv ?_
+  rw [truncCubeDeriv]
+  push_cast
+  ring
+
+theorem hasDerivAt_truncCubeDeriv (y : ℝ) :
+    HasDerivAt truncCubeDeriv (truncCubeDeriv2 y) y := by
+  have hfun : truncCubeDeriv = fun x : ℝ => 3 / 2 * (x ^ 2 + x * |x|) := rfl
+  rw [hfun]
+  refine (((hasDerivAt_pow 2 y).add (hasDerivAt_mul_abs y)).const_mul (3 / 2 : ℝ)).congr_deriv ?_
+  rw [truncCubeDeriv2]
+  push_cast
+  ring
+
+theorem continuous_truncCubeDeriv2 : Continuous truncCubeDeriv2 := by
+  unfold truncCubeDeriv2
+  fun_prop
+
+/-- The derivative of the B-spline. -/
+def bsplineDeriv (y : ℝ) : ℝ :=
+  1 / 6 * ∑ q ∈ Finset.range 5, (-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCubeDeriv (y + 2 - q)
+
+/-- The second derivative of the B-spline. -/
+def bsplineDeriv2 (y : ℝ) : ℝ :=
+  1 / 6 * ∑ q ∈ Finset.range 5, (-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCubeDeriv2 (y + 2 - q)
+
+theorem hasDerivAt_bspline (y : ℝ) : HasDerivAt bspline (bsplineDeriv y) y := by
+  have hterm : ∀ q ∈ Finset.range 5,
+      HasDerivAt (fun x : ℝ => (-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCube (x + 2 - q))
+        ((-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCubeDeriv (y + 2 - q)) y := by
+    intro q _
+    have hin : HasDerivAt (fun x : ℝ => x + 2 - (q : ℝ)) 1 y :=
+      ((hasDerivAt_id y).add_const 2).sub_const (q : ℝ)
+    have h0 : HasDerivAt (truncCube ∘ fun x : ℝ => x + 2 - (q : ℝ))
+        (truncCubeDeriv (y + 2 - q) * 1) y := (hasDerivAt_truncCube (y + 2 - q)).comp y hin
+    have h : HasDerivAt (fun x : ℝ => truncCube (x + 2 - (q : ℝ)))
+        (truncCubeDeriv (y + 2 - q)) y := by
+      simpa [Function.comp_def] using h0
+    exact h.const_mul _
+  exact ((HasDerivAt.sum hterm).const_mul (1 / 6 : ℝ))
+
+theorem hasDerivAt_bsplineDeriv (y : ℝ) : HasDerivAt bsplineDeriv (bsplineDeriv2 y) y := by
+  have hterm : ∀ q ∈ Finset.range 5,
+      HasDerivAt (fun x : ℝ => (-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCubeDeriv (x + 2 - q))
+        ((-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCubeDeriv2 (y + 2 - q)) y := by
+    intro q _
+    have hin : HasDerivAt (fun x : ℝ => x + 2 - (q : ℝ)) 1 y :=
+      ((hasDerivAt_id y).add_const 2).sub_const (q : ℝ)
+    have h0 : HasDerivAt (truncCubeDeriv ∘ fun x : ℝ => x + 2 - (q : ℝ))
+        (truncCubeDeriv2 (y + 2 - q) * 1) y :=
+      (hasDerivAt_truncCubeDeriv (y + 2 - q)).comp y hin
+    have h : HasDerivAt (fun x : ℝ => truncCubeDeriv (x + 2 - (q : ℝ)))
+        (truncCubeDeriv2 (y + 2 - q)) y := by
+      simpa [Function.comp_def] using h0
+    exact h.const_mul _
+  exact ((HasDerivAt.sum hterm).const_mul (1 / 6 : ℝ))
+
+/-- Past `y = 2` every breakpoint is nonnegative, so the alternating sum is the fourth difference of
+the linear function `6 y` and vanishes. -/
+theorem bsplineDeriv2_of_two_le {y : ℝ} (hy : 2 ≤ y) : bsplineDeriv2 y = 0 := by
+  have h : ∀ q ∈ Finset.range 5,
+      (-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCubeDeriv2 (y + 2 - q)
+        = (-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) *
+          (0 * (y + 2 - q) ^ 3 + 0 * (y + 2 - q) ^ 2 + 6 * (y + 2 - q) + 0) := by
+    intro q hq
+    have hq4 : (q : ℝ) ≤ 4 := by
+      exact_mod_cast Nat.lt_succ_iff.1 (Finset.mem_range.1 hq)
+    rw [truncCubeDeriv2, abs_of_nonneg (by linarith : (0 : ℝ) ≤ y + 2 - q)]
+    ring
+  rw [bsplineDeriv2, Finset.sum_congr rfl h, sum_alt_choose_cubic, mul_zero]
+
+/-- Below `y = −2` every breakpoint is nonpositive, so every second derivative vanishes. -/
+theorem bsplineDeriv2_of_le_neg_two {y : ℝ} (hy : y ≤ -2) : bsplineDeriv2 y = 0 := by
+  have h : ∀ q ∈ Finset.range 5,
+      (-1 : ℝ) ^ q * (Nat.choose 4 q : ℝ) * truncCubeDeriv2 (y + 2 - q) = 0 := by
+    intro q _
+    have hq0 : (0 : ℝ) ≤ q := Nat.cast_nonneg q
+    rw [truncCubeDeriv2, abs_of_nonpos (by linarith : y + 2 - (q : ℝ) ≤ 0)]
+    ring
+  rw [bsplineDeriv2, Finset.sum_congr rfl h, Finset.sum_const_zero, mul_zero]
+
+theorem continuous_bsplineDeriv2 : Continuous bsplineDeriv2 := by
+  unfold bsplineDeriv2
+  exact continuous_const.mul (continuous_finsetSum _ fun q _ =>
+    continuous_const.mul (continuous_truncCubeDeriv2.comp
+      ((continuous_id.add continuous_const).sub continuous_const)))
+
+theorem hasCompactSupport_bsplineDeriv2 : HasCompactSupport bsplineDeriv2 := by
+  refine HasCompactSupport.intro (isCompact_Icc (a := (-2 : ℝ)) (b := 2)) fun y hy => ?_
+  simp only [Set.mem_Icc, not_and_or, not_le] at hy
+  rcases hy with h | h
+  · exact bsplineDeriv2_of_le_neg_two h.le
+  · exact bsplineDeriv2_of_two_le h.le
+
+theorem hasCompactSupport_bspline : HasCompactSupport bspline := by
+  refine HasCompactSupport.intro (isCompact_Icc (a := (-2 : ℝ)) (b := 2)) fun y hy => ?_
+  simp only [Set.mem_Icc, not_and_or, not_le] at hy
+  refine bspline_eq_zero_of_two_le ?_
+  rcases hy with h | h
+  · rw [abs_of_nonpos (by linarith)]; linarith
+  · rw [abs_of_nonneg (by linarith)]; linarith
+
+/-- **The B-spline is bounded.** -/
+theorem exists_abs_bspline_le : ∃ M : ℝ, 0 ≤ M ∧ ∀ y, |bspline y| ≤ M := by
+  obtain ⟨M, hM⟩ := continuous_bspline.bounded_above_of_compact_support hasCompactSupport_bspline
+  exact ⟨M, (norm_nonneg _).trans (hM 0), fun y => by simpa [Real.norm_eq_abs] using hM y⟩
+
+/-- **The B-spline is `C^{1,1}`**: its second difference is quadratically small, uniformly. The
+second derivative is the alternating sum of the piecewise linear functions `6 (·)₊` at the five
+breakpoints, which is continuous and supported in `[−2, 2]`, hence bounded. -/
+theorem exists_abs_secondDiff_bspline_le :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ x s : ℝ,
+      |bspline (x + s) + bspline (x - s) - 2 * bspline x| ≤ M * s ^ 2 := by
+  obtain ⟨M, hM⟩ := continuous_bsplineDeriv2.bounded_above_of_compact_support
+    hasCompactSupport_bsplineDeriv2
+  refine ⟨M, (norm_nonneg _).trans (hM 0), fun x s => ?_⟩
+  exact Cauchy.abs_secondDiff_le_sq_of_deriv hasDerivAt_bspline hasDerivAt_bsplineDeriv
+    (fun y => by simpa [Real.norm_eq_abs] using hM y) x s
+
+/-! ### The tensor B-spline cells satisfy the moment hypothesis -/
+
+/-- A single tensor B-spline cell of the comparison kernel: the scale is `16` and the offsets are
+`i` and `j`. -/
+def fracCell (i j : ℝ) (z : Fin 2 → ℝ) : ℝ := bspline (16 * z 0 - i) * bspline (16 * z 1 - j)
+
+theorem measurable_fracCell (i j : ℝ) : Measurable (fracCell i j) :=
+  ((continuous_bspline.comp ((continuous_const.mul (continuous_apply 0)).sub
+    continuous_const)).mul (continuous_bspline.comp ((continuous_const.mul
+    (continuous_apply 1)).sub continuous_const))).measurable
+
+private theorem norm_eq_max (z : Fin 2 → ℝ) : ‖z‖ = max |z 0| |z 1| := by
+  refine le_antisymm ?_ (max_le (by simpa using norm_le_pi_norm z 0)
+    (by simpa using norm_le_pi_norm z 1))
+  rw [pi_norm_le_iff_of_nonneg (by positivity), Fin.forall_fin_two]
+  exact ⟨by simp, by simp⟩
+
+private theorem two_le_abs_of_lt {c x i : ℝ} (hi : (|i| + 18) / 16 ≤ c) (hx : c < |x|) :
+    2 ≤ |16 * x - i| := by
+  have h16 : |16 * x| - |i| ≤ |16 * x - i| := abs_sub_abs_le_abs_sub _ _
+  have habs : |16 * x| = 16 * |x| := by
+    rw [abs_mul, abs_of_nonneg (by norm_num : (0 : ℝ) ≤ 16)]
+  have hci : |i| + 18 ≤ 16 * c := by
+    rw [div_le_iff₀ (by norm_num : (0 : ℝ) < 16)] at hi
+    linarith
+  have : 16 * c < 16 * |x| := by linarith
+  rw [habs] at h16
+  linarith
+
+theorem hasCompactSupport_fracCell (i j : ℝ) : HasCompactSupport (fracCell i j) := by
+  refine HasCompactSupport.intro
+    (isCompact_closedBall (0 : Fin 2 → ℝ) ((|i| + |j| + 18) / 16)) fun z hz => ?_
+  simp only [Metric.mem_closedBall, dist_zero_right, not_le] at hz
+  rw [norm_eq_max, lt_max_iff] at hz
+  have hi : (|i| + 18) / 16 ≤ (|i| + |j| + 18) / 16 := by linarith [abs_nonneg j]
+  have hj : (|j| + 18) / 16 ≤ (|i| + |j| + 18) / 16 := by linarith [abs_nonneg i]
+  rcases hz with h | h
+  · rw [fracCell, bspline_eq_zero_of_two_le (two_le_abs_of_lt hi h), zero_mul]
+  · rw [fracCell, bspline_eq_zero_of_two_le (two_le_abs_of_lt hj h), mul_zero]
+
+private theorem secondDiff_fracCell_zero (i j : ℝ) (z : Fin 2 → ℝ) (t : ℝ) :
+    secondDiff (fracCell i j) 0 z t
+      = (bspline (16 * z 0 - i + 16 * t) + bspline (16 * z 0 - i - 16 * t)
+          - 2 * bspline (16 * z 0 - i)) * bspline (16 * z 1 - j) := by
+  have e0 : (t • Pi.single (0 : Fin 2) (1 : ℝ)) 0 = t := by
+    rw [Pi.smul_apply, Pi.single_eq_same, smul_eq_mul, mul_one]
+  have e1 : (t • Pi.single (0 : Fin 2) (1 : ℝ)) 1 = 0 := by
+    rw [Pi.smul_apply, Pi.single_eq_of_ne (by decide), smul_zero]
+  simp only [secondDiff, fracCell, Pi.add_apply, Pi.sub_apply, e0, e1, add_zero, sub_zero,
+    show (16 : ℝ) * (z 0 + t) - i = 16 * z 0 - i + 16 * t from by ring,
+    show (16 : ℝ) * (z 0 - t) - i = 16 * z 0 - i - 16 * t from by ring]
+  ring
+
+private theorem secondDiff_fracCell_one (i j : ℝ) (z : Fin 2 → ℝ) (t : ℝ) :
+    secondDiff (fracCell i j) 1 z t
+      = bspline (16 * z 0 - i) * (bspline (16 * z 1 - j + 16 * t)
+          + bspline (16 * z 1 - j - 16 * t) - 2 * bspline (16 * z 1 - j)) := by
+  have e0 : (t • Pi.single (1 : Fin 2) (1 : ℝ)) 0 = 0 := by
+    rw [Pi.smul_apply, Pi.single_eq_of_ne (by decide), smul_zero]
+  have e1 : (t • Pi.single (1 : Fin 2) (1 : ℝ)) 1 = t := by
+    rw [Pi.smul_apply, Pi.single_eq_same, smul_eq_mul, mul_one]
+  simp only [secondDiff, fracCell, Pi.add_apply, Pi.sub_apply, e0, e1, add_zero, sub_zero,
+    show (16 : ℝ) * (z 1 + t) - j = 16 * z 1 - j + 16 * t from by ring,
+    show (16 : ℝ) * (z 1 - t) - j = 16 * z 1 - j - 16 * t from by ring]
+  ring
+
+/-- **Each tensor B-spline cell satisfies the moment hypothesis.** It is bounded, compactly
+supported, and quadratically flat: along either axis its second difference is the one-dimensional
+second difference of the B-spline at scale `16`, times the untouched factor. -/
+theorem jumpMoment_fracCell (hα : 0 < α) (hα' : α < 2) (i j : ℝ) :
+    JumpMoment α (fracCell i j) := by
+  obtain ⟨M₀, hM₀0, hM₀⟩ := exists_abs_bspline_le
+  obtain ⟨M, hM0, hM⟩ := exists_abs_secondDiff_bspline_le
+  refine jumpMoment_of_hasCompactSupport hα hα' (measurable_fracCell i j)
+    (hasCompactSupport_fracCell i j) (M₀ := M₀ * M₀) (M₂ := 256 * (M * M₀))
+    (fun z => ?_) (fun k z t => ?_)
+  · rw [fracCell, abs_mul]
+    exact mul_le_mul (hM₀ _) (hM₀ _) (abs_nonneg _) hM₀0
+  · have hkey : ∀ x : ℝ, |bspline (x + 16 * t) + bspline (x - 16 * t) - 2 * bspline x|
+        ≤ M * (256 * t ^ 2) := by
+      intro x
+      refine (hM x (16 * t)).trans_eq ?_
+      ring
+    have hcases : ∀ k : Fin 2, k = 0 ∨ k = 1 := by decide
+    rcases hcases k with rfl | rfl
+    · rw [secondDiff_fracCell_zero, abs_mul]
+      calc |bspline (16 * z 0 - i + 16 * t) + bspline (16 * z 0 - i - 16 * t)
+              - 2 * bspline (16 * z 0 - i)| * |bspline (16 * z 1 - j)|
+          ≤ M * (256 * t ^ 2) * M₀ :=
+            mul_le_mul (hkey _) (hM₀ _) (abs_nonneg _) (mul_nonneg hM0 (by positivity))
+        _ = 256 * (M * M₀) * t ^ 2 := by ring
+    · rw [secondDiff_fracCell_one, abs_mul]
+      calc |bspline (16 * z 0 - i)| * |bspline (16 * z 1 - j + 16 * t)
+              + bspline (16 * z 1 - j - 16 * t) - 2 * bspline (16 * z 1 - j)|
+          ≤ M₀ * (M * (256 * t ^ 2)) :=
+            mul_le_mul (hM₀ _) (hkey _) (abs_nonneg _) hM₀0
+        _ = 256 * (M * M₀) * t ^ 2 := by ring
+
 /-! ### The `α = 6/5` comparison kernel -/
 
 /-- The comparison kernel is measurable. It is *not* continuous: the truncated diamond base jumps at
@@ -529,6 +815,26 @@ theorem measurable_fracKernel : Measurable fracKernel := by
   exact ((continuous_bspline.comp ((continuous_const.mul (continuous_apply 0)).sub
     continuous_const)).mul (continuous_bspline.comp ((continuous_const.mul
     (continuous_apply 1)).sub continuous_const))).measurable
+
+/-- **The moment hypothesis for the comparison kernel reduces to its truncated diamond base.**
+The `1201` tensor B-spline cells are bounded, compactly supported and quadratically flat, so each
+of them satisfies the hypothesis by `jumpMoment_fracCell`, and the hypothesis is additive. What is
+left is the base `(r^{-6/5} - (7/4)^{-6/5})₊`, which is neither bounded at the origin nor
+quadratically flat along the two coordinate axes. -/
+theorem jumpMoment_fracKernel (hbase : JumpMoment (6 / 5) (truncBase (6 / 5) (7 / 4))) :
+    JumpMoment (6 / 5) fracKernel := by
+  have hcells : JumpMoment (6 / 5) fun z : Fin 2 → ℝ =>
+      ∑ ij ∈ fracCellFinset, fracCoeff (fracCellCoeff ij) *
+        (bspline (16 * z 0 - ij.1) * bspline (16 * z 1 - ij.2)) :=
+    jumpMoment_finsetSum fracCellFinset fun ij _ =>
+      (jumpMoment_fracCell (α := 6 / 5) (by norm_num) (by norm_num)
+        (ij.1 : ℝ) (ij.2 : ℝ)).const_mul _
+  have hsum : JumpMoment (6 / 5) fun z : Fin 2 → ℝ =>
+      fracBaseCoeff * truncBase (6 / 5) (7 / 4) z
+        + ∑ ij ∈ fracCellFinset, fracCoeff (fracCellCoeff ij) *
+            (bspline (16 * z 0 - ij.1) * bspline (16 * z 1 - ij.2)) :=
+    (hbase.const_mul fracBaseCoeff).add hcells
+  exact hsum.congr (funext fracKernel_eq_finsetSum).symm
 
 /-- **The generator density of the `α = 6/5` comparison kernel**: its own pointwise jump generator.
 On the two coordinate axes, where the jump integrand is not integrable, Mathlib's convention makes
