@@ -420,14 +420,14 @@ theorem hgconv_of_gagliardo {A p q : ℝ} (hgm : Measurable g) (hg₀ : ∀ z, 0
 /-- **`hgconv` from finite jump energy**, which is the form in which the obstacle solution carries
 its energy (`CenteredMaximal.EnergySpace`): the comparison
 `CenteredMaximal.gagliardo_le_jumpEnergy` turns it into finite Gagliardo energy. -/
-theorem hgconv_of_jumpEnergy {A p q : ℝ} (hα : 0 < α) (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g z)
+theorem hgconv_of_jumpEnergy {A p q : ℝ} (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g z)
     (hp : 2 < p) (hq : 2 < q) (hp' : 2 * p < 4 + α) (hq' : 2 * q < 4 + α)
     (hgb : ∀ z, z ≠ 0 → g z ≤ A * (diamondNorm z ^ (-p) + diamondNorm z ^ (-q)))
     (hum : Measurable u) (huint : Integrable u) (hE : jumpEnergy α u ≠ ⊤) :
     ∀ w : (Fin 2 → ℝ) → ℝ, IsTestFunction w →
       Integrable (fun p : (Fin 2 → ℝ) × (Fin 2 → ℝ) =>
         g p.2 * ((u (p.1 - p.2) - u p.1) * w p.1)) (volume.prod volume) := by
-  have hle := gagliardo_le_jumpEnergy hum hα
+  have hle := gagliardo_le_jumpEnergy hum (by linarith : (0 : ℝ) < α)
   exact hgconv_of_gagliardo hgm hg₀ hp hq hp' hq' hgb hum huint
     (ne_top_of_le_ne_top (ENNReal.mul_ne_top ENNReal.ofReal_ne_top hE) hle)
 
@@ -442,8 +442,8 @@ theorem hgconv_of_jumpEnergy_six_fifths {A : ℝ} (hgm : Measurable g) (hg₀ : 
     ∀ w : (Fin 2 → ℝ) → ℝ, IsTestFunction w →
       Integrable (fun p : (Fin 2 → ℝ) × (Fin 2 → ℝ) =>
         g p.2 * ((u (p.1 - p.2) - u p.1) * w p.1)) (volume.prod volume) :=
-  hgconv_of_jumpEnergy (by norm_num) hgm hg₀ (by norm_num) (by norm_num) (by norm_num)
-    (by norm_num) hgb hum huint hE
+  hgconv_of_jumpEnergy hgm hg₀ (by norm_num) (by norm_num) (by norm_num) (by norm_num) hgb hum
+    huint hE
 
 end CenteredMaximal.Fractional
 
