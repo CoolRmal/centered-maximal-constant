@@ -232,6 +232,219 @@ theorem hgconv_of_local_modulus {θ : ℝ} (hgm : Measurable g) (hg₀ : ∀ z, 
   rw [lintegral_const_mul' _ _ (by finiteness)]
   exact ENNReal.mul_lt_top (by finiteness) (lt_top_iff_ne_top.2 hmom)
 
+/-! ### The two-regime bound from finite Gagliardo energy -/
+
+/-- Splitting the weight for the Cauchy–Schwarz in the difference variable: the two factors
+`‖z‖^{(2+α)/2}` and `‖z‖^{−(2+α)/2}` cancel away from the origin, and at the origin both sides
+vanish because `P 0 = 0`. -/
+private theorem mul_eq_weight_split (g : (Fin 2 → ℝ) → ℝ) {P : (Fin 2 → ℝ) → ℝ≥0∞}
+    (hP0 : P 0 = 0) (α : ℝ) (z : Fin 2 → ℝ) :
+    ENNReal.ofReal (g z) * P z
+      = ENNReal.ofReal (g z) * ENNReal.ofReal (‖z‖ ^ ((2 + α) / 2)) *
+        (P z * ENNReal.ofReal (‖z‖ ^ (-(2 + α) / 2))) := by
+  rcases eq_or_ne z 0 with rfl | hz
+  · simp [hP0]
+  · have hz0 : (0 : ℝ) < ‖z‖ := norm_pos_iff.2 hz
+    have hcancel : ENNReal.ofReal (‖z‖ ^ ((2 + α) / 2)) *
+        ENNReal.ofReal (‖z‖ ^ (-(2 + α) / 2)) = 1 := by
+      rw [← ENNReal.ofReal_mul (Real.rpow_nonneg hz0.le _), ← Real.rpow_add hz0,
+        show (2 + α) / 2 + -(2 + α) / 2 = 0 by ring, Real.rpow_zero, ENNReal.ofReal_one]
+    calc ENNReal.ofReal (g z) * P z
+        = ENNReal.ofReal (g z) * P z *
+            (ENNReal.ofReal (‖z‖ ^ ((2 + α) / 2)) *
+              ENNReal.ofReal (‖z‖ ^ (-(2 + α) / 2))) := by rw [hcancel, mul_one]
+      _ = _ := by ring
+
+/-- Doubling a negative rpow exponent. -/
+private theorem rpow_neg_sq {r : ℝ} (hr : 0 ≤ r) (t : ℝ) :
+    (r ^ (-t)) ^ 2 = r ^ (-(2 * t)) := by
+  rw [← Real.rpow_natCast (r ^ (-t)) 2, ← Real.rpow_mul hr]
+  congr 1
+  push_cast
+  ring
+
+/-- **The two-regime bound, and the whole mathematical content of this file.** For a density
+dominated by `A (r^{−p} + r^{−q})` with `2 < p, q` and `2p, 2q < 4 + α`, and for `u` integrable
+with finite Gagliardo energy of order `α/2`, the localised quantity
+`∫ z, g z ∫_K |u(x − z) − u x| dx` that `hgconv_of_setLIntegral_ne_top` asks for is finite on every
+compact `K`. No pointwise modulus of continuity on `u` is used, and none is available: the squared
+increment `sqIncrement u` stays under the `z`-integral throughout.
+
+Near the origin, Cauchy–Schwarz in `z` against the weight `‖z‖^{±(2+α)/2}` splits the integral
+into a moment of `g²` against `min(1, ‖z‖^{2+α})` — finite because `2p, 2q < 4 + α` — and
+`|K| · [u]²`, by the Cauchy–Schwarz `sq_setLIntegral_enorm_sub_le` on `K` and the
+difference-variable form `gagliardo_eq_lintegral_sqIncrement` of the energy. Away from the origin
+no modulus is needed: the increment is bounded by `2 ‖u‖₁` and the weight `min(1, ‖z‖^{2+α})` is
+`1`, so the same moment lemma applied to `g` itself finishes. -/
+theorem setLIntegral_conv_ne_top {A p q : ℝ} (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g z)
+    (hp : 2 < p) (hq : 2 < q) (hp' : 2 * p < 4 + α) (hq' : 2 * q < 4 + α)
+    (hgb : ∀ z, z ≠ 0 → g z ≤ A * (diamondNorm z ^ (-p) + diamondNorm z ^ (-q)))
+    (hum : Measurable u) (huint : Integrable u) (hgag : gagliardo α u ≠ ⊤)
+    {K : Set (Fin 2 → ℝ)} (hK : IsCompact K) :
+    ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (g z) * ∫⁻ x in K, ‖u (x - z) - u x‖ₑ ≠ ⊤ := by
+  have hθ : (0 : ℝ) < 2 + α := by linarith
+  have hKvol : volume K ≠ ⊤ := hK.measure_lt_top.ne
+  set P : (Fin 2 → ℝ) → ℝ≥0∞ := fun z => ∫⁻ x in K, ‖u (x - z) - u x‖ₑ with hPdef
+  have hPm : Measurable P := by
+    have h : Measurable fun pt : (Fin 2 → ℝ) × (Fin 2 → ℝ) => ‖u (pt.2 - pt.1) - u pt.2‖ₑ := by
+      fun_prop
+    exact h.lintegral_prod_right' (ν := volume.restrict K)
+  have hP0 : P 0 = 0 := by simp [hPdef]
+  -- the density, truncated at the origin, where the hypothesis `hgb` says nothing
+  set g' : (Fin 2 → ℝ) → ℝ := ({0}ᶜ : Set (Fin 2 → ℝ)).indicator g with hg'def
+  have hg'm : Measurable g' := hgm.indicator (measurableSet_singleton _).compl
+  have hg'zero : g' 0 = 0 := Set.indicator_of_notMem (by simp) g
+  have hg'eq : ∀ z : Fin 2 → ℝ, z ≠ 0 → g' z = g z := fun z hz =>
+    Set.indicator_of_mem (by simpa using hz) g
+  have hg'0 : ∀ z, 0 ≤ g' z := by
+    intro z
+    rcases eq_or_ne z 0 with rfl | hz
+    · rw [hg'zero]
+    · rw [hg'eq z hz]; exact hg₀ z
+  have hd0 : diamondNorm (0 : Fin 2 → ℝ) = 0 := diamondNorm_eq_zero_iff.2 rfl
+  have hb1 : ∀ z : Fin 2 → ℝ, g' z ≤ A * (diamondNorm z ^ (-p) + diamondNorm z ^ (-q)) := by
+    intro z
+    rcases eq_or_ne z 0 with rfl | hz
+    · rw [hg'zero, hd0, Real.zero_rpow (by linarith : (-p) ≠ 0),
+        Real.zero_rpow (by linarith : (-q) ≠ 0)]
+      simp
+    · rw [hg'eq z hz]; exact hgb z hz
+  have hb2 : ∀ z : Fin 2 → ℝ, g' z ^ 2
+      ≤ 2 * A ^ 2 * (diamondNorm z ^ (-(2 * p)) + diamondNorm z ^ (-(2 * q))) := by
+    intro z
+    have hr : 0 ≤ diamondNorm z := diamondNorm_nonneg z
+    rw [← rpow_neg_sq hr p, ← rpow_neg_sq hr q]
+    nlinarith [mul_self_le_mul_self (hg'0 z) (hb1 z),
+      sq_nonneg (A * (diamondNorm z ^ (-p) - diamondNorm z ^ (-q)))]
+  have hmin0 : ∀ z : Fin 2 → ℝ, 0 ≤ min 1 (‖z‖ ^ (2 + α)) := fun z =>
+    le_min zero_le_one (Real.rpow_nonneg (norm_nonneg z) _)
+  have hmom1 : ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (g' z * min 1 (‖z‖ ^ (2 + α))) ≠ ⊤ := by
+    have hint := integrable_mul_min_one_rpow_of_le (θ := 2 + α) (p := p) (q := q)
+      hg'm hg'0 hθ hp (by linarith) hq (by linarith) hb1
+    exact ((hasFiniteIntegral_iff_ofReal
+      (.of_forall fun z => mul_nonneg (hg'0 z) (hmin0 z))).1 hint.hasFiniteIntegral).ne
+  have hmom2 : ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (g' z ^ 2 * min 1 (‖z‖ ^ (2 + α))) ≠ ⊤ := by
+    have hint := integrable_mul_min_one_rpow_of_le (θ := 2 + α) (p := 2 * p) (q := 2 * q)
+      (hg'm.pow_const 2) (fun z => sq_nonneg _) hθ (by linarith) (by linarith) (by linarith)
+      (by linarith) hb2
+    exact ((hasFiniteIntegral_iff_ofReal
+      (.of_forall fun z => mul_nonneg (sq_nonneg _) (hmin0 z))).1 hint.hasFiniteIntegral).ne
+  set N : Set (Fin 2 → ℝ) := {z | ‖z‖ ≤ 1} with hNdef
+  have hNm : MeasurableSet N := measurableSet_le measurable_norm measurable_const
+  -- the near regime: two Cauchy–Schwarz inequalities and the Gagliardo energy
+  have hnear : ∫⁻ z in N, ENNReal.ofReal (g z) * P z ≠ ⊤ := by
+    have hfm : Measurable fun z : Fin 2 → ℝ =>
+        ENNReal.ofReal (g z) * ENNReal.ofReal (‖z‖ ^ ((2 + α) / 2)) :=
+      (ENNReal.measurable_ofReal.comp hgm).mul
+        (ENNReal.measurable_ofReal.comp (measurable_norm.pow_const _))
+    have hhm : Measurable fun z : Fin 2 → ℝ => P z * ENNReal.ofReal (‖z‖ ^ (-(2 + α) / 2)) :=
+      hPm.mul (ENNReal.measurable_ofReal.comp (measurable_norm.pow_const _))
+    have hCS := ENNReal.sq_lintegral_mul_le (μ := volume.restrict N)
+      hfm.aemeasurable hhm.aemeasurable
+    have hLHS : ∫⁻ z in N, ENNReal.ofReal (g z) * P z
+        = ∫⁻ z in N, ENNReal.ofReal (g z) * ENNReal.ofReal (‖z‖ ^ ((2 + α) / 2)) *
+            (P z * ENNReal.ofReal (‖z‖ ^ (-(2 + α) / 2))) :=
+      lintegral_congr fun z => mul_eq_weight_split g hP0 α z
+    have hfin1 : ∫⁻ z in N,
+        (ENNReal.ofReal (g z) * ENNReal.ofReal (‖z‖ ^ ((2 + α) / 2))) ^ 2 ≠ ⊤ := by
+      refine ne_top_of_le_ne_top hmom2
+        ((setLIntegral_mono' hNm fun z hz => ?_).trans (setLIntegral_le_lintegral _ _))
+      rcases eq_or_ne z 0 with rfl | hz0
+      · rw [norm_zero, Real.zero_rpow (by linarith : (2 + α) / 2 ≠ 0)]
+        simp
+      · have hminz : min 1 (‖z‖ ^ (2 + α)) = ‖z‖ ^ (2 + α) :=
+          min_eq_right (Real.rpow_le_one (norm_nonneg z) hz hθ.le)
+        rw [hg'eq z hz0, hminz, mul_pow, ← ENNReal.ofReal_pow (hg₀ z),
+          ofReal_rpow_half_sq (norm_nonneg z) (2 + α), ← ENNReal.ofReal_mul (sq_nonneg _)]
+    have hfin2 : ∫⁻ z in N, (P z * ENNReal.ofReal (‖z‖ ^ (-(2 + α) / 2))) ^ 2
+        ≤ volume K * gagliardo α u := by
+      calc ∫⁻ z in N, (P z * ENNReal.ofReal (‖z‖ ^ (-(2 + α) / 2))) ^ 2
+          ≤ ∫⁻ z : Fin 2 → ℝ,
+              volume K * (sqIncrement u z * ENNReal.ofReal (‖z‖ ^ (-(2 + α)))) := by
+            refine (setLIntegral_le_lintegral _ _).trans (lintegral_mono fun z => ?_)
+            rw [mul_pow, ofReal_rpow_half_sq (norm_nonneg z) (-(2 + α)), ← mul_assoc]
+            gcongr
+            exact sq_setLIntegral_enorm_sub_le hum K z
+        _ = volume K * gagliardo α u := by
+            rw [gagliardo_eq_lintegral_sqIncrement hum α, lintegral_const_mul' _ _ hKvol]
+    have hsq : (∫⁻ z in N, ENNReal.ofReal (g z) * P z) ^ 2 ≠ ⊤ := by
+      rw [hLHS]
+      exact ne_top_of_le_ne_top
+        (ENNReal.mul_ne_top hfin1
+          (ne_top_of_le_ne_top (ENNReal.mul_ne_top hKvol hgag) hfin2)) hCS
+    exact fun h => hsq (by simp [h])
+  -- the far regime: no modulus of continuity at all, just `‖u‖₁`
+  have hfar : ∫⁻ z in Nᶜ, ENNReal.ofReal (g z) * P z ≠ ⊤ := by
+    have hL : ∫⁻ x : Fin 2 → ℝ, ‖u x‖ₑ ≠ ⊤ :=
+      (hasFiniteIntegral_iff_enorm.1 huint.hasFiniteIntegral).ne
+    have hPle : ∀ z : Fin 2 → ℝ, P z ≤ 2 * ∫⁻ x : Fin 2 → ℝ, ‖u x‖ₑ := by
+      intro z
+      calc P z ≤ ∫⁻ x : Fin 2 → ℝ, ‖u (x - z) - u x‖ₑ := setLIntegral_le_lintegral _ _
+        _ ≤ ∫⁻ x : Fin 2 → ℝ, (‖u (x - z)‖ₑ + ‖u x‖ₑ) := lintegral_mono fun _ => enorm_sub_le
+        _ = (∫⁻ x : Fin 2 → ℝ, ‖u (x - z)‖ₑ) + ∫⁻ x : Fin 2 → ℝ, ‖u x‖ₑ :=
+            lintegral_add_left (by fun_prop) _
+        _ = 2 * ∫⁻ x : Fin 2 → ℝ, ‖u x‖ₑ := by
+            rw [lintegral_sub_right_eq_self (fun x : Fin 2 → ℝ => ‖u x‖ₑ) z, two_mul]
+    have hbd : ∀ z ∈ Nᶜ, ENNReal.ofReal (g z) * P z
+        ≤ 2 * (∫⁻ x : Fin 2 → ℝ, ‖u x‖ₑ) *
+            ENNReal.ofReal (g' z * min 1 (‖z‖ ^ (2 + α))) := by
+      intro z hz
+      have hz1 : 1 < ‖z‖ := not_le.1 hz
+      have hz0 : z ≠ 0 := fun h => by rw [h, norm_zero] at hz1; linarith
+      rw [hg'eq z hz0, min_eq_left (Real.one_le_rpow hz1.le hθ.le), mul_one]
+      calc ENNReal.ofReal (g z) * P z
+          ≤ ENNReal.ofReal (g z) * (2 * ∫⁻ x : Fin 2 → ℝ, ‖u x‖ₑ) := by gcongr; exact hPle z
+        _ = 2 * (∫⁻ x : Fin 2 → ℝ, ‖u x‖ₑ) * ENNReal.ofReal (g z) := by ring
+    refine ne_of_lt (lt_of_le_of_lt (setLIntegral_mono' hNm.compl hbd)
+      (lt_of_le_of_lt (setLIntegral_le_lintegral _ _) ?_))
+    rw [lintegral_const_mul' _ _ (ENNReal.mul_ne_top (by norm_num) hL)]
+    exact ENNReal.mul_lt_top (lt_top_iff_ne_top.2 (ENNReal.mul_ne_top (by norm_num) hL))
+      (lt_top_iff_ne_top.2 hmom1)
+  rw [← lintegral_add_compl _ hNm]
+  exact ENNReal.add_ne_top.2 ⟨hnear, hfar⟩
+
+/-- **`hgconv` from finite Gagliardo energy.** The joint integrability hypothesis of
+`CenteredMaximal.convolution_le_of_eq_zero_fp` holds for any integrable `u` of finite Gagliardo
+energy of order `α/2` and any nonnegative density dominated by `A (r^{−p} + r^{−q})` with
+`2 < p, q` and `2p, 2q < 4 + α`. No modulus of continuity on `u` is required. -/
+theorem hgconv_of_gagliardo {A p q : ℝ} (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g z)
+    (hp : 2 < p) (hq : 2 < q) (hp' : 2 * p < 4 + α) (hq' : 2 * q < 4 + α)
+    (hgb : ∀ z, z ≠ 0 → g z ≤ A * (diamondNorm z ^ (-p) + diamondNorm z ^ (-q)))
+    (hum : Measurable u) (huint : Integrable u) (hgag : gagliardo α u ≠ ⊤) :
+    ∀ w : (Fin 2 → ℝ) → ℝ, IsTestFunction w →
+      Integrable (fun p : (Fin 2 → ℝ) × (Fin 2 → ℝ) =>
+        g p.2 * ((u (p.1 - p.2) - u p.1) * w p.1)) (volume.prod volume) :=
+  hgconv_of_setLIntegral_ne_top hgm hg₀ hum fun _ hK =>
+    setLIntegral_conv_ne_top hgm hg₀ hp hq hp' hq' hgb hum huint hgag hK
+
+/-- **`hgconv` from finite jump energy**, which is the form in which the obstacle solution carries
+its energy (`CenteredMaximal.EnergySpace`): the comparison
+`CenteredMaximal.gagliardo_le_jumpEnergy` turns it into finite Gagliardo energy. -/
+theorem hgconv_of_jumpEnergy {A p q : ℝ} (hα : 0 < α) (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g z)
+    (hp : 2 < p) (hq : 2 < q) (hp' : 2 * p < 4 + α) (hq' : 2 * q < 4 + α)
+    (hgb : ∀ z, z ≠ 0 → g z ≤ A * (diamondNorm z ^ (-p) + diamondNorm z ^ (-q)))
+    (hum : Measurable u) (huint : Integrable u) (hE : jumpEnergy α u ≠ ⊤) :
+    ∀ w : (Fin 2 → ℝ) → ℝ, IsTestFunction w →
+      Integrable (fun p : (Fin 2 → ℝ) × (Fin 2 → ℝ) =>
+        g p.2 * ((u (p.1 - p.2) - u p.1) * w p.1)) (volume.prod volume) := by
+  have hle := gagliardo_le_jumpEnergy hum hα
+  exact hgconv_of_gagliardo hgm hg₀ hp hq hp' hq' hgb hum huint
+    (ne_top_of_le_ne_top (ENNReal.mul_ne_top ENNReal.ofReal_ne_top hE) hle)
+
+/-- **The numerical case of the `α = 6/5` certificate.** The generator density of `fracKernel`
+behaves like `r^{−12/5}` at the origin and like `r^{−11/5}` at infinity, and both doubled exponents
+`24/5` and `22/5` are below `4 + 6/5 = 26/5`, so an integrable solution of the obstacle problem with
+finite jump energy satisfies the joint integrability hypothesis `hgconv`. -/
+theorem hgconv_of_jumpEnergy_six_fifths {A : ℝ} (hgm : Measurable g) (hg₀ : ∀ z, 0 ≤ g z)
+    (hgb : ∀ z, z ≠ 0 → g z ≤ A * (diamondNorm z ^ (-(12 / 5) : ℝ) +
+      diamondNorm z ^ (-(11 / 5) : ℝ)))
+    (hum : Measurable u) (huint : Integrable u) (hE : jumpEnergy (6 / 5) u ≠ ⊤) :
+    ∀ w : (Fin 2 → ℝ) → ℝ, IsTestFunction w →
+      Integrable (fun p : (Fin 2 → ℝ) × (Fin 2 → ℝ) =>
+        g p.2 * ((u (p.1 - p.2) - u p.1) * w p.1)) (volume.prod volume) :=
+  hgconv_of_jumpEnergy (by norm_num) hgm hg₀ (by norm_num) (by norm_num) (by norm_num)
+    (by norm_num) hgb hum huint hE
+
 end CenteredMaximal.Fractional
 
 end
