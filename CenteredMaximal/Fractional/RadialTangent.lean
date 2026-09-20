@@ -23,7 +23,7 @@ a function of the diamond radius alone.  A certificate leaf has to turn that int
 throughout a dyadic rectangle.  **Endpoint monotonicity is not good enough.**  At subdivision depth
 `3` the radius varies by `2 / 16 / 8 = 1 / 64` across a rectangle and `d/dr r ^ (-12/5) ≈ -2.4` near
 `r = 1`, so replacing `r` by the largest radius of the rectangle throws away about `0.038`, against
-a certificate margin of `7.05 · 10⁻⁵`.
+a certificate margin of `7.11 · 10⁻⁵`, the smallest of the `4582` leaf bounds.
 
 Both summands are *convex* in `r`, so both lie above their tangent lines, and the tangent line loses
 nothing to first order.  This file supplies those two tangent minorants and the observation that

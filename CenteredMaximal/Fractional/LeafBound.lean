@@ -38,8 +38,10 @@ rectangle.
 `abs_jumpGen1_bspline_sub_taylor` are *five different* cubics, one per centre `c + 2 − q`, so they
 are not annihilated: their weighted sum is what reproduces the fourth difference.  The error term of
 `abs_jumpGen1_bspline_sub_taylor` is therefore `∑_q C(4,q) · (9/625) δ⁴ (|c + 2 − q| − δ)^{-11/5}`,
-which is `16 · (9/625) δ⁴ · O(1)` and *not* zero.  It is small because `δ ≤ 1/32` at the depths the
-certificate reaches, not because of cancellation.
+which is `16 · (9/625) δ⁴ · O(1)` and *not* zero.  It is small because it is `O(δ⁴)` — a leaf at
+subdivision depth `d` has `δ = 2^{-d-1}` in grid coordinates, and the search program refines a
+rectangle until its total is positive, reaching depth `5` on the `4582` leaves of the certificate —
+not because of any cancellation.
 -/
 
 @[expose] public section
