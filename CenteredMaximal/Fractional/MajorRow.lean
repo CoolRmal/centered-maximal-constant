@@ -24,7 +24,7 @@ A row `⟨k, l, tgt, ext, mq, s₀, s₁, s₂, t₀, t₁, t₂⟩` asserts `tg
 on the one cell whose unit triangles the degree-`6` Bernstein test cannot certify.
 
 The two rational enclosures of `q ^ (-6/5)` and `q ^ (-11/5)` are *not* stored on the row: they are
-read out of `majEncTable` by the radius, because the `790` rows use only `30` distinct radii.  A
+read out of `majEncTable` by the radius, because the `814` rows use only `34` distinct radii.  A
 radius missing from the table makes `majLo` return `0`, which is still a valid lower bound for a
 positive power — so `majLo_le` needs no side condition, and a row simply fails its Bernstein check
 if a radius is missing.
@@ -53,7 +53,7 @@ namespace CenteredMaximal.Fractional
 
 /-! ### The fifth-root enclosures of the radii -/
 
-/-- The `60` fifth-root enclosures the majorization certificate reads: for each of the `30` radii
+/-- The `68` fifth-root enclosures the majorization certificate reads: for each of the `34` radii
 `q = mq / 64` that occur, the lower ends of `q ^ (-6/5)` and `q ^ (-11/5)` at precision `12`. -/
 def majEncTable : List FifthEnc :=
   [⟨4, 64, -6, 27857618025475⟩, ⟨4, 64, -11, 445721888407615⟩, ⟨8, 64, -6, 12125732532083⟩,
@@ -70,14 +70,17 @@ def majEncTable : List FifthEnc :=
    ⟨68, 64, -11, 875137582365⟩, ⟨72, 64, -6, 868194385654⟩, ⟨72, 64, -11, 771728342803⟩,
    ⟨76, 64, -6, 813653801840⟩, ⟨76, 64, -11, 685182148918⟩, ⟨80, 64, -6, 765081999832⟩,
    ⟨80, 64, -11, 612065599865⟩, ⟨84, 64, -6, 721573915824⟩, ⟨84, 64, -11, 549770602532⟩,
-   ⟨88, 64, -6, 682396455256⟩, ⟨88, 64, -11, 496288331095⟩, ⟨90, 64, -6, 664239896819⟩,
-   ⟨90, 64, -11, 472348371071⟩, ⟨92, 64, -6, 646949789607⟩, ⟨92, 64, -11, 450052027552⟩,
-   ⟨94, 64, -6, 630467268369⟩, ⟨94, 64, -11, 429254310379⟩, ⟨96, 64, -6, 614738607654⟩,
-   ⟨96, 64, -11, 409825738436⟩, ⟨100, 64, -6, 585350466466⟩, ⟨100, 64, -11, 374624298538⟩,
-   ⟨104, 64, -6, 558439284037⟩, ⟨104, 64, -11, 343654944023⟩, ⟨108, 64, -6, 533712607810⟩,
-   ⟨108, 64, -11, 316274137961⟩, ⟨112, 64, -6, 510921691804⟩, ⟨112, 64, -11, 291955252459⟩]
+   ⟨88, 64, -6, 682396455256⟩, ⟨88, 64, -11, 496288331095⟩, ⟨89, 64, -6, 673205973342⟩,
+   ⟨89, 64, -11, 484103171841⟩, ⟨90, 64, -6, 664239896819⟩, ⟨90, 64, -11, 472348371071⟩,
+   ⟨91, 64, -6, 655490343238⟩, ⟨91, 64, -11, 461004197442⟩, ⟨92, 64, -6, 646949789607⟩,
+   ⟨92, 64, -11, 450052027552⟩, ⟨93, 64, -6, 638611052313⟩, ⟨93, 64, -11, 439474272559⟩,
+   ⟨94, 64, -6, 630467268369⟩, ⟨94, 64, -11, 429254310379⟩, ⟨95, 64, -6, 622511877882⟩,
+   ⟨95, 64, -11, 419376422994⟩, ⟨96, 64, -6, 614738607654⟩, ⟨96, 64, -11, 409825738436⟩,
+   ⟨100, 64, -6, 585350466466⟩, ⟨100, 64, -11, 374624298538⟩, ⟨104, 64, -6, 558439284037⟩,
+   ⟨104, 64, -11, 343654944023⟩, ⟨108, 64, -6, 533712607810⟩, ⟨108, 64, -11, 316274137961⟩,
+   ⟨112, 64, -6, 510921691804⟩, ⟨112, 64, -11, 291955252459⟩]
 
-/-- **All `60` enclosures verify.** -/
+/-- **All `68` enclosures verify.** -/
 theorem majEncTable_ok : majEncTable.all (fun c => c.check 12) = true := by decide +kernel
 
 /-- The stored lower end of `(n / 64) ^ (e / 5)`, or `0` when the radius is not tabulated. -/
