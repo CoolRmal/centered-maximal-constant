@@ -710,6 +710,159 @@ private theorem lintegral_abs_brk_mul_le {α : ℝ} (hα : 1 < α) (hα' : α < 
         congr 1
         ring
 
+/-! ### The truncated base near and across the truncation radius -/
+
+/-- The Lipschitz constant of `x ↦ (x^{-α} − R^{-α})₊` on `[R/2, ∞)`. -/
+private def lipC (α R : ℝ) : ℝ := α * (R / 2) ^ (-α - 1)
+
+private theorem lipC_pos {α R : ℝ} (hα : 0 < α) (hR : 0 < R) : 0 < lipC α R := by
+  rw [lipC]
+  exact mul_pos hα (Real.rpow_pos_of_pos (by linarith) _)
+
+/-- The mean value bound for `x ↦ x^{-α}` on `[c, ∞)`. -/
+private theorem abs_rpow_sub_le {α c x y : ℝ} (hα : 0 < α) (hc : 0 < c) (hx : c ≤ x)
+    (hy : c ≤ y) : |x ^ (-α) - y ^ (-α)| ≤ α * c ^ (-α - 1) * |x - y| := by
+  have h := abs_rpow_shift_sub_le (α := α) (b := c) (x := x - c) (y := y - c) hα hc
+    (by linarith) (by linarith)
+  rwa [show x - c + c = x from by ring, show y - c + c = y from by ring,
+    show x - c - (y - c) = x - y from by ring] at h
+
+/-- **The truncated base is Lipschitz away from the origin.** -/
+private theorem abs_truncBase_sub_le {α R : ℝ} (hα : 0 < α) (hR : 0 < R) {y w : Fin 2 → ℝ}
+    (hy : R / 2 ≤ diamondNorm y) (hw : R / 2 ≤ diamondNorm w) :
+    |truncBase α R y - truncBase α R w| ≤ lipC α R * |diamondNorm y - diamondNorm w| := by
+  refine le_trans (abs_max_sub_max_le_abs _ _ _) ?_
+  rw [show diamondNorm y ^ (-α) - R ^ (-α) - (diamondNorm w ^ (-α) - R ^ (-α))
+      = diamondNorm y ^ (-α) - diamondNorm w ^ (-α) from by ring, lipC]
+  exact abs_rpow_sub_le hα (by linarith) hy hw
+
+/-- Inside the punctured closed diamond the base is the diamond power up to a constant. -/
+private theorem truncBase_eq_sub {α R : ℝ} (hα : 0 < α) {y : Fin 2 → ℝ}
+    (hy : 0 < diamondNorm y) (hyR : diamondNorm y ≤ R) :
+    truncBase α R y = diamondPow α y - R ^ (-α) := by
+  have h := Real.rpow_le_rpow_of_nonpos hy hyR (neg_nonpos.2 hα.le)
+  rw [truncBase, diamondPow, max_eq_left (by linarith)]
+
+/-- Outside the closed diamond the base vanishes. -/
+private theorem truncBase_eq_zero_of_le {α R : ℝ} (hα : 0 < α) (hR : 0 < R) {y : Fin 2 → ℝ}
+    (hy : R ≤ diamondNorm y) : truncBase α R y = 0 :=
+  max_eq_right (by linarith [Real.rpow_le_rpow_of_nonpos hR hy (neg_nonpos.2 hα.le)])
+
+private theorem abs_diamondNorm_add_single_sub (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    |diamondNorm (z + t • Pi.single j 1) - diamondNorm z| ≤ |t| := by
+  rw [diamondNorm_add_single, diamondNorm_eq_abs_add z j,
+    show |z j + t| + |z (j + 1)| - (|z j| + |z (j + 1)|) = |z j + t| - |z j| from by ring]
+  simpa using abs_abs_sub_abs_le_abs_sub (z j + t) (z j)
+
+private theorem sub_single_eq_add_single (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    z - t • Pi.single j 1 = z + (-t) • Pi.single j 1 := by
+  rw [neg_smul, ← sub_eq_add_neg]
+
+private theorem abs_diamondNorm_sub_single_sub (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    |diamondNorm (z - t • Pi.single j 1) - diamondNorm z| ≤ |t| := by
+  rw [sub_single_eq_add_single]
+  simpa using abs_diamondNorm_add_single_sub z j (-t)
+
+private theorem diamondNorm_add_single_ge (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    |z (j + 1)| ≤ diamondNorm (z + t • Pi.single j 1) := by
+  rw [diamondNorm_add_single]
+  linarith [abs_nonneg (z j + t)]
+
+private theorem diamondNorm_sub_single_ge (z : Fin 2 → ℝ) (j : Fin 2) (t : ℝ) :
+    |z (j + 1)| ≤ diamondNorm (z - t • Pi.single j 1) := by
+  rw [sub_single_eq_add_single]
+  exact diamondNorm_add_single_ge z j (-t)
+
+/-- **The pointwise majorant.** Off the coordinate line `z (j+1) = 0`, the weighted second
+difference of the truncated base at a step smaller than `R/4` is bounded by the shell term and
+the second difference of the diamond power. -/
+private theorem enorm_secondDiff_truncBase_le {α R : ℝ} (hα : 0 < α) (hR : 0 < R) (j : Fin 2)
+    {z : Fin 2 → ℝ} (hz : z (j + 1) ≠ 0) {t : ℝ} (ht : |t| < R / 4) :
+    ENNReal.ofReal (|secondDiff (truncBase α R) j z t| * min 1 ‖z‖)
+      ≤ {w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|}.indicator
+            (fun _ => ENNReal.ofReal (2 * lipC α R * |t|)) z
+        + ENNReal.ofReal (|(brk α |z j| |z (j + 1)| |t|)| * (|z j| + |z (j + 1)|)) := by
+  have hb : (0 : ℝ) < |z (j + 1)| := abs_pos.2 hz
+  have ht0 : (0 : ℝ) ≤ |t| := abs_nonneg t
+  have hmin1 : min 1 ‖z‖ ≤ 1 := min_le_left _ _
+  have hmin0 : (0 : ℝ) ≤ min 1 ‖z‖ := le_min zero_le_one (norm_nonneg _)
+  have hmin2 : min 1 ‖z‖ ≤ |z j| + |z (j + 1)| := by
+    rw [← diamondNorm_eq_abs_add z j]
+    exact (min_le_right _ _).trans (norm_le_diamondNorm z)
+  have hrz : diamondNorm z = |z j| + |z (j + 1)| := diamondNorm_eq_abs_add z j
+  have hp := abs_diamondNorm_add_single_sub z j t
+  have hm := abs_diamondNorm_sub_single_sub z j t
+  rcases lt_or_ge (diamondNorm z) (R - |t|) with hcase | hcase
+  · -- inside: the base is the diamond power up to a constant at all three points
+    have hzR : diamondNorm z ≤ R := by linarith
+    have hz0 : (0 : ℝ) < diamondNorm z := by rw [hrz]; linarith [abs_nonneg (z j)]
+    have hpR : diamondNorm (z + t • Pi.single j 1) ≤ R := by
+      have := abs_le.1 hp
+      linarith [this.2]
+    have hmR : diamondNorm (z - t • Pi.single j 1) ≤ R := by
+      have := abs_le.1 hm
+      linarith [this.2]
+    have hp0 : (0 : ℝ) < diamondNorm (z + t • Pi.single j 1) :=
+      lt_of_lt_of_le hb (diamondNorm_add_single_ge z j t)
+    have hm0 : (0 : ℝ) < diamondNorm (z - t • Pi.single j 1) :=
+      lt_of_lt_of_le hb (diamondNorm_sub_single_ge z j t)
+    have hsd : secondDiff (truncBase α R) j z t = brk α |z j| |z (j + 1)| |t| := by
+      rw [← secondDiff_diamondPow_eq α z j t, secondDiff, secondDiff,
+        truncBase_eq_sub hα hp0 hpR, truncBase_eq_sub hα hm0 hmR, truncBase_eq_sub hα hz0 hzR]
+      ring
+    refine le_trans ?_ (le_add_self)
+    rw [hsd]
+    exact ENNReal.ofReal_le_ofReal
+      (mul_le_mul_of_nonneg_left hmin2 (abs_nonneg _))
+  · rcases le_or_gt (diamondNorm z) (R + |t|) with hcase' | hcase'
+    · -- the shell
+      have hshell : |diamondNorm z - R| ≤ |t| := by
+        rw [abs_le]; constructor <;> linarith
+      have hzhalf : R / 2 ≤ diamondNorm z := by linarith
+      have hphalf : R / 2 ≤ diamondNorm (z + t • Pi.single j 1) := by
+        have := abs_le.1 hp
+        linarith [this.1]
+      have hmhalf : R / 2 ≤ diamondNorm (z - t • Pi.single j 1) := by
+        have := abs_le.1 hm
+        linarith [this.1]
+      have h1 := abs_truncBase_sub_le hα hR hphalf hzhalf
+      have h2 := abs_truncBase_sub_le hα hR hmhalf hzhalf
+      have hL : (0 : ℝ) ≤ lipC α R := (lipC_pos hα hR).le
+      have hbound : |secondDiff (truncBase α R) j z t| ≤ 2 * lipC α R * |t| := by
+        have e1 : |truncBase α R (z + t • Pi.single j 1) - truncBase α R z| ≤ lipC α R * |t| :=
+          h1.trans (mul_le_mul_of_nonneg_left hp hL)
+        have e2 : |truncBase α R (z - t • Pi.single j 1) - truncBase α R z| ≤ lipC α R * |t| :=
+          h2.trans (mul_le_mul_of_nonneg_left hm hL)
+        have hsplit : secondDiff (truncBase α R) j z t
+            = (truncBase α R (z + t • Pi.single j 1) - truncBase α R z)
+              + (truncBase α R (z - t • Pi.single j 1) - truncBase α R z) := by
+          rw [secondDiff]; ring
+        calc |secondDiff (truncBase α R) j z t| ≤ _ := by rw [hsplit]; exact abs_add_le _ _
+          _ ≤ lipC α R * |t| + lipC α R * |t| := add_le_add e1 e2
+          _ = 2 * lipC α R * |t| := by ring
+      have hmem : z ∈ {w : Fin 2 → ℝ | |diamondNorm w - R| ≤ |t|} := hshell
+      rw [indicator_of_mem hmem]
+      refine le_trans ?_ le_self_add
+      refine ENNReal.ofReal_le_ofReal ?_
+      calc |secondDiff (truncBase α R) j z t| * min 1 ‖z‖
+          ≤ 2 * lipC α R * |t| * 1 :=
+            mul_le_mul hbound hmin1 hmin0 (by positivity)
+        _ = 2 * lipC α R * |t| := by ring
+    · -- outside: all three points lie beyond the truncation radius
+      have hpout : R ≤ diamondNorm (z + t • Pi.single j 1) := by
+        have := abs_le.1 hp
+        linarith [this.1]
+      have hmout : R ≤ diamondNorm (z - t • Pi.single j 1) := by
+        have := abs_le.1 hm
+        linarith [this.1]
+      have hsd : secondDiff (truncBase α R) j z t = 0 := by
+        rw [secondDiff, truncBase_eq_zero_of_le hα hR hpout,
+          truncBase_eq_zero_of_le hα hR hmout,
+          truncBase_eq_zero_of_le hα hR (by linarith : R ≤ diamondNorm z)]
+        ring
+      rw [hsd]
+      simp
+
 end CenteredMaximal.Fractional
 
 end
