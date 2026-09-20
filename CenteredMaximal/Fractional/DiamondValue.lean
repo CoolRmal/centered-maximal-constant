@@ -9,29 +9,34 @@ public import CenteredMaximal.Fractional.BetaIntegral
 public import CenteredMaximal.Fractional.DiamondConstancy
 
 /-!
-# The Gamma-quotient form of the diamond constant
+# The value of the diamond constant
 
-`CenteredMaximal.Fractional.DiamondConstancy` shows that the diamond profile `Theta α` is constant
-on `(0, 1)`. Its constant value is naturally produced as a combination of Beta and Gamma values,
+`CenteredMaximal.Fractional.DiamondConstancy` shows that the diamond profile `Theta α` has
+derivative `0` throughout `(0, 1)`, so it is constant there, but says nothing about the constant.
+This file computes it: for `1 < α < 2`,
 
-`2 Β (1 - α, 2α) - Γ (-α) Γ (1 - α) Γ (2α) sin (2πα) / π`,
-
-and this file rewrites that combination in the pole-free closed form
-
-`2π Γ (2α) cos (πα/2) / (α Γ α ^ 2 sin (πα/2))`,
-
-valid for `1 < α < 2`. It also records the Gamma recurrence that relates `Β (1 - α, 2α)`, whose
-first argument is negative, to `Β (2 - α, 2α)`, whose two arguments are both positive and which is
-therefore the one with a convergent type-2 Beta integral.
+`Θ α (1/2) = 2π Γ (2α) cos (πα/2) / (α Γ α ^ 2 sin (πα/2))`.
 
 ## Main results
 
-* `two_betaFun_sub_betaFun`: the closed form of the constant.
-* `betaFun_one_sub_left_rec`: `Β (1 - α, 2α) = ((α + 1) / (1 - α)) Β (2 - α, 2α)`.
+* `two_betaFun_sub_betaFun`: the pure Gamma identity
+  `2 Β (1 - α, 2α) - Γ (-α) Γ (1 - α) Γ (2α) sin (2πα) / π`
+  `  = 2π Γ (2α) cos (πα/2) / (α Γ α ^ 2 sin (πα/2))`.
+* `betaFun_one_sub_left_rec`: `Β (1 - α, 2α) = ((α + 1) / (1 - α)) Β (2 - α, 2α)`, which trades the
+  negative first argument for two positive ones.
+* `betaStep_left`, `betaStep_right`: the two exact Beta recurrences on `[p, 1 - p]`.
+* `integral_diamondMid_chain`: three Beta steps carry the middle integrand `t^{-α}(1-t)^{-α-1}`,
+  divergent at both ends, to `t^{1-α}(1-t)^{1-α}`, convergent at both.
+* `integral_Ioi_diamondFar_chain`: one integration by parts on the half line carries
+  `t^{-α}(1+t)^{-α-1}` to `t^{1-α}(1+t)^{-α-2}`.
+* `Theta_eq_regularised`: the resulting exact rewriting of `Theta α p` on `(0, 1/2)`.
+* `Gamma_mul_Gamma_four_sub_two_mul`, `betaFun_two_sub_self_eq`, `regularised_limit`: the Gamma
+  bookkeeping identifying the limit.
+* `Theta_half_eq`: the value of the constant.
 
-## The computation
+## The Gamma identity
 
-Both statements are Euler's reflection formula plus the functional equation. Writing
+`two_betaFun_sub_betaFun` is Euler's reflection formula plus the functional equation. Writing
 `Γ (α + 1) = α Γ α` and `Γ (1 - α) = π / (sin (πα) Γ α)` turns the first term into
 `2π Γ (2α) / (α sin (πα) Γ α ^ 2)`. For the second, `Γ (1 - α) = -α Γ (-α)` eliminates `Γ (-α)`
 and the doubling formula `sin (2πα) = 2 sin (πα) cos (πα)` cancels one power of `sin (πα)`,
@@ -42,11 +47,38 @@ bracket `1 + cos (πα)`, and the half-angle identities `1 + cos θ = 2 cos (θ/
 
 The closed form is deliberately written with `Γ (2α)` and the half-angle tangent rather than as
 `Β (-α, 1 - α) = Γ (-α) Γ (1 - α) / Γ (1 - 2α)`: the latter has a pole at `α = 3/2`, where
-`1 - 2α = -2`, whereas every factor above is finite and nonzero throughout `1 < α < 2`.
+`1 - 2α = -2`, whereas every factor above is finite and nonzero throughout `1 < α < 2`. Note that
+`sin (πα) < 0` on this range, since `πα ∈ (π, 2π)`; the proofs use only that it is nonzero, and the
+nonvanishing of `sin (πα/2)` and `cos (πα/2)` is then read off the doubling formula.
 
-Note that `sin (πα) < 0` on this range, since `πα ∈ (π, 2π)`; the proofs only use that it is
-nonzero, and the nonvanishing of `sin (πα/2)` and `cos (πα/2)` is then read off the doubling
-formula rather than proved separately.
+## Evaluating the profile
+
+`Theta α` is already known to be constant, so it suffices to identify `lim_{p → 0⁺} Θ α p`. Three
+of its four terms diverge, so they are first rewritten by *exact* identities valid for every
+`p ∈ (0, 1/2)`, after which every remaining piece has a limit that can be taken term by term.
+
+The engine in both cases is the fundamental theorem of calculus on a compact interval strictly
+inside the domain, where the integrands are continuous and no convergence hypothesis is needed.
+Applied to `t ↦ t^a (1-t)^b` on `[p, 1-p]` it gives `a Β(a,b) - (a+b) Β(a+1,b)` and
+`(a+b) Β(a,b+1) - b Β(a,b)` in terms of the endpoint values, which are `betaStep_left` and
+`betaStep_right`; chaining one step in the first argument and two in the second sends `(1 - α, -α)`
+to `(2 - α, 2 - α)`, both positive. Applied to `t ↦ t^{1-α}(1+t)^{-α-1}` on `[p, R]` and letting
+`R → ∞` — the value at infinity has exponent `-2α < 0` and so vanishes — it gives the half-line
+integration by parts. Mathlib has no by-parts lemma for a half line with a singular endpoint, but
+none is needed on this route.
+
+What is left of the boundary terms, together with `(1/α)(p(1-p))^{-α}`, is the remainder
+`2 p^{1-α} N α p / (α (1 - α))` with `N = diamondRem`. Individually the pieces diverge at the
+orders `p^{-α}` and `p^{1-α}`; that they cancel is exactly `diamondRem_zero`, `N α 0 = 0`. Since
+`N` is also differentiable at `0`, the quotient `N α p / p` stays bounded, and the remainder is
+`p^{2-α}` times a bounded factor, hence tends to `0` because `α < 2`. No asymptotic expansion and
+no mean value estimate is needed.
+
+The two surviving integrals tend to `Β (2 - α, 2α)` and `Β (2 - α, 2 - α)` by continuity of a
+primitive, and the Gamma bookkeeping that assembles them uses the reflection formula in the
+pole-free form `Γ (2α) Γ (4 - 2α) sin (2πα) = 2π (1 - 2α)(3 - 2α)(1 - α)`. That identity holds
+throughout `1 < α < 2`, but its proof splits at `α = 3/2`: there both sides vanish, while the
+recurrence `Γ (4 - 2α) = (3 - 2α) Γ (3 - 2α)` fails because `Γ (1 - 2α) = Γ (-2)` sits on a pole.
 -/
 
 @[expose] public section
@@ -534,6 +566,206 @@ theorem regularised_limit {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
     ring
   rw [h₁, betaFun_two_sub_self_eq hα hα', ← two_betaFun_sub_betaFun hα hα']
   ring
+
+/-! ### Passing to the limit `p → 0⁺` -/
+
+theorem nhdsGT_zero_eq_Ioo : 𝓝[>] (0:ℝ) = 𝓝[Ioo (0:ℝ) (1/2)] 0 := by
+  have h := nhdsWithin_restrict' (a := (0:ℝ)) (Ioi (0:ℝ))
+    (Iio_mem_nhds (by norm_num : (0:ℝ) < 1/2))
+  rwa [Ioi_inter_Iio] at h
+
+theorem nhdsGT_zero_le {b : ℝ} (hb : 1/2 ≤ b) : 𝓝[>] (0:ℝ) ≤ 𝓝[Icc (0:ℝ) b] 0 := by
+  rw [nhdsGT_zero_eq_Ioo]
+  exact nhdsWithin_mono _ fun x hx => ⟨hx.1.le, by linarith [hx.2]⟩
+
+/-- The primitive of an interval-integrable function is continuous, so it vanishes in the limit at
+its own base point. -/
+theorem tendsto_integral_zero {f : ℝ → ℝ} {b : ℝ} (hb : (0:ℝ) < b)
+    (hf : IntervalIntegrable f volume 0 b) :
+    Tendsto (fun p : ℝ => ∫ t in (0:ℝ)..p, f t) (𝓝[Icc (0:ℝ) b] 0) (𝓝 0) := by
+  have hcont := intervalIntegral.continuousOn_primitive_interval' hf left_mem_uIcc
+  rw [uIcc_of_le hb.le] at hcont
+  have h0 : Tendsto (fun p : ℝ => ∫ t in (0:ℝ)..p, f t) (𝓝[Icc (0:ℝ) b] 0)
+      (𝓝 (∫ t in (0:ℝ)..(0:ℝ), f t)) := hcont 0 (left_mem_Icc.mpr hb.le)
+  rwa [intervalIntegral.integral_same] at h0
+
+/-- The same continuity read at the far endpoint: `∫_0^{1-p} → ∫_0^1` as `p → 0⁺`. -/
+theorem tendsto_integral_one_sub {f : ℝ → ℝ} (hf : IntervalIntegrable f volume 0 1) :
+    Tendsto (fun p : ℝ => ∫ t in (0:ℝ)..(1 - p), f t) (𝓝[>] (0:ℝ))
+      (𝓝 (∫ t in (0:ℝ)..(1:ℝ), f t)) := by
+  have hcont := intervalIntegral.continuousOn_primitive_interval' hf left_mem_uIcc
+  rw [uIcc_of_le zero_le_one] at hcont
+  have h1 : Tendsto (fun x : ℝ => ∫ t in (0:ℝ)..x, f t) (𝓝[Icc (0:ℝ) 1] 1)
+      (𝓝 (∫ t in (0:ℝ)..(1:ℝ), f t)) := hcont 1 (right_mem_Icc.mpr zero_le_one)
+  have hmap : Tendsto (fun p : ℝ => 1 - p) (𝓝[>] (0:ℝ)) (𝓝[Icc (0:ℝ) 1] 1) := by
+    rw [tendsto_nhdsWithin_iff]
+    refine ⟨?_, ?_⟩
+    · have h : Tendsto (fun p : ℝ => 1 - p) (𝓝 (0:ℝ)) (𝓝 (1 - (0:ℝ))) :=
+        (continuous_const.sub continuous_id).tendsto 0
+      simpa using h.mono_left nhdsWithin_le_nhds
+    · rw [nhdsGT_zero_eq_Ioo]
+      filter_upwards [self_mem_nhdsWithin] with p hp
+      exact ⟨by linarith [hp.2], by linarith [hp.1]⟩
+  simpa [Function.comp_def] using h1.comp hmap
+
+/-- Splitting an integral over `(0, ∞)` at an interior point. -/
+theorem integral_Ioi_split {f : ℝ → ℝ} {p : ℝ} (hp : 0 < p) (hf : IntegrableOn f (Ioi 0)) :
+    (∫ t in Ioi (0:ℝ), f t) = (∫ t in (0:ℝ)..p, f t) + ∫ t in Ioi p, f t := by
+  rw [← Ioc_union_Ioi_eq_Ioi hp.le,
+    setIntegral_union (Ioc_disjoint_Ioi le_rfl) measurableSet_Ioi
+      (hf.mono_set fun x hx => hx.1) (hf.mono_set (Ioi_subset_Ioi hp.le)),
+    intervalIntegral.integral_of_le hp.le]
+
+theorem tendsto_integral_diamondNear {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    Tendsto (fun p : ℝ => ∫ t in (0:ℝ)..p, diamondNear α t) (𝓝[>] (0:ℝ)) (𝓝 0) :=
+  (tendsto_integral_zero (by norm_num)
+    (intervalIntegrable_diamondNear (by linarith) hα' (by norm_num) (by norm_num))).mono_left
+    (nhdsGT_zero_le le_rfl)
+
+theorem intervalIntegrable_midKernelReg {α : ℝ} (hα' : α < 2) :
+    IntervalIntegrable (fun t : ℝ => t ^ (1 - α) * (1 - t) ^ (1 - α)) volume 0 1 := by
+  have h := intervalIntegrable_rpow_mul_one_sub_rpow (a := 2 - α) (b := 2 - α)
+    (by linarith) (by linarith)
+  rwa [show (2:ℝ) - α - 1 = 1 - α from by ring] at h
+
+theorem tendsto_integral_midKernelReg {α : ℝ} (hα' : α < 2) :
+    Tendsto (fun p : ℝ => ∫ t in p..(1 - p), t ^ (1 - α) * (1 - t) ^ (1 - α)) (𝓝[>] (0:ℝ))
+      (𝓝 (betaFun (2 - α) (2 - α))) := by
+  have hint := intervalIntegrable_midKernelReg hα'
+  have hval : (∫ t in (0:ℝ)..(1:ℝ), t ^ (1 - α) * (1 - t) ^ (1 - α))
+      = betaFun (2 - α) (2 - α) := by
+    have h := betaFun_eq_integral (a := 2 - α) (b := 2 - α) (by linarith) (by linarith)
+    rw [show (2:ℝ) - α - 1 = 1 - α from by ring] at h
+    exact h.symm
+  have hsplit : ∀ᶠ p : ℝ in 𝓝[>] (0:ℝ),
+      (∫ t in (0:ℝ)..(1 - p), t ^ (1 - α) * (1 - t) ^ (1 - α))
+          - ∫ t in (0:ℝ)..p, t ^ (1 - α) * (1 - t) ^ (1 - α)
+        = ∫ t in p..(1 - p), t ^ (1 - α) * (1 - t) ^ (1 - α) := by
+    rw [nhdsGT_zero_eq_Ioo]
+    filter_upwards [self_mem_nhdsWithin] with p hp
+    have h₁ : IntervalIntegrable (fun t : ℝ => t ^ (1 - α) * (1 - t) ^ (1 - α)) volume 0 p := by
+      refine hint.mono_set ?_
+      rw [uIcc_of_le hp.1.le, uIcc_of_le zero_le_one]
+      exact Icc_subset_Icc le_rfl (by linarith [hp.2])
+    have h₂ : IntervalIntegrable (fun t : ℝ => t ^ (1 - α) * (1 - t) ^ (1 - α))
+        volume p (1 - p) := by
+      refine hint.mono_set ?_
+      rw [uIcc_of_le (by linarith [hp.2] : p ≤ 1 - p), uIcc_of_le zero_le_one]
+      exact Icc_subset_Icc hp.1.le (by linarith [hp.1])
+    rw [eq_comm, eq_sub_iff_add_eq, add_comm]
+    exact intervalIntegral.integral_add_adjacent_intervals h₁ h₂
+  rw [← hval]
+  refine Tendsto.congr' hsplit ?_
+  simpa only [sub_zero] using (tendsto_integral_one_sub hint).sub
+    ((tendsto_integral_zero zero_lt_one hint).mono_left (nhdsGT_zero_le (by norm_num)))
+
+theorem tendsto_integral_farKernelReg {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    Tendsto (fun p : ℝ => ∫ t in Ioi p, t ^ (1 - α) * (1 + t) ^ (-α - 2)) (𝓝[>] (0:ℝ))
+      (𝓝 (betaFun (2 - α) (2*α))) := by
+  have hI := integrableOn_farKernelReg hα hα'
+  have hint : IntervalIntegrable (fun t : ℝ => t ^ (1 - α) * (1 + t) ^ (-α - 2)) volume 0 1 :=
+    (intervalIntegrable_iff_integrableOn_Ioc_of_le zero_le_one).mpr
+      (hI.mono_set fun x hx => hx.1)
+  have hval : (∫ t in Ioi (0:ℝ), t ^ (1 - α) * (1 + t) ^ (-α - 2)) = betaFun (2 - α) (2*α) := by
+    have h := betaFun_eq_integral_Ioi (a := 2 - α) (b := 2*α) (by linarith) (by linarith)
+    rw [show (2:ℝ) - α - 1 = 1 - α from by ring,
+      show -(2 - α) - 2*α = -α - 2 from by ring] at h
+    exact h.symm
+  have hsplit : ∀ᶠ p : ℝ in 𝓝[>] (0:ℝ),
+      (∫ t in Ioi (0:ℝ), t ^ (1 - α) * (1 + t) ^ (-α - 2))
+          - ∫ t in (0:ℝ)..p, t ^ (1 - α) * (1 + t) ^ (-α - 2)
+        = ∫ t in Ioi p, t ^ (1 - α) * (1 + t) ^ (-α - 2) := by
+    filter_upwards [self_mem_nhdsWithin] with p hp
+    rw [eq_comm, eq_sub_iff_add_eq, add_comm]
+    exact (integral_Ioi_split hp hI).symm
+  rw [← hval]
+  refine Tendsto.congr' hsplit ?_
+  simpa only [sub_zero] using tendsto_const_nhds.sub
+    ((tendsto_integral_zero zero_lt_one hint).mono_left (nhdsGT_zero_le (by norm_num)))
+
+theorem differentiableAt_diamondRem (α : ℝ) : DifferentiableAt ℝ (diamondRem α) 0 := by
+  have h₁ : DifferentiableAt ℝ (fun p : ℝ => (1 + p) ^ (-α - 1)) 0 :=
+    (HasDerivAt.rpow_const (f := fun p : ℝ => 1 + p) ((hasDerivAt_id' (0:ℝ)).const_add 1)
+      (.inl (by norm_num))).differentiableAt
+  have h₂ : DifferentiableAt ℝ (fun p : ℝ => (1 - p) ^ (-α)) 0 :=
+    (HasDerivAt.rpow_const (f := fun p : ℝ => 1 - p) ((hasDerivAt_id' (0:ℝ)).const_sub 1)
+      (.inl (by norm_num))).differentiableAt
+  have h₃ : DifferentiableAt ℝ (fun p : ℝ => α + (1 - 2*α) * p * (3 - 2*p)) 0 := by fun_prop
+  show DifferentiableAt ℝ (fun p : ℝ => -α * (1 + p) ^ (-α - 1)
+    + (1 - p) ^ (-α) * (α + (1 - 2*α) * p * (3 - 2*p))) 0
+  exact (h₁.const_mul _).add (h₂.mul h₃)
+
+/-- Because `diamondRem α` vanishes at `0` and is differentiable there, the quotient
+`diamondRem α p / p` stays bounded as `p → 0`; that is all that is needed, and the value of the
+derivative is irrelevant. -/
+theorem tendsto_diamondRem_div (α : ℝ) :
+    Tendsto (fun p : ℝ => diamondRem α p / p) (𝓝[≠] (0:ℝ)) (𝓝 (deriv (diamondRem α) 0)) := by
+  have h := hasDerivAt_iff_tendsto_slope.mp (differentiableAt_diamondRem α).hasDerivAt
+  refine h.congr fun p => ?_
+  rw [slope_def_field, diamondRem_zero, sub_zero, sub_zero]
+
+theorem tendsto_diamondRem_term {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    Tendsto (fun p : ℝ => 2 * p ^ (1 - α) * diamondRem α p / (α * (1 - α))) (𝓝[>] (0:ℝ))
+      (𝓝 0) := by
+  have hα0 : (0:ℝ) < α := by linarith
+  have h1α : (1:ℝ) - α ≠ 0 := sub_ne_zero.mpr hα.ne
+  have hpow : Tendsto (fun p : ℝ => p ^ (2 - α)) (𝓝[>] (0:ℝ)) (𝓝 0) := by
+    have hc : Tendsto (fun p : ℝ => p ^ (2 - α)) (𝓝 (0:ℝ)) (𝓝 ((0:ℝ) ^ (2 - α))) :=
+      Real.continuousAt_rpow_const 0 (2 - α) (.inr (by linarith))
+    rw [Real.zero_rpow (by linarith : (0:ℝ) < 2 - α).ne'] at hc
+    exact hc.mono_left nhdsWithin_le_nhds
+  have hsub : Ioi (0:ℝ) ⊆ {(0:ℝ)}ᶜ := fun x hx => by
+    simp only [mem_compl_iff, mem_singleton_iff]
+    exact (mem_Ioi.mp hx).ne'
+  have hslope := (tendsto_diamondRem_div α).mono_left (nhdsWithin_mono 0 hsub)
+  have key : Tendsto (fun p : ℝ => 2 / (α * (1 - α)) * (p ^ (2 - α) * (diamondRem α p / p)))
+      (𝓝[>] (0:ℝ)) (𝓝 0) := by
+    simpa using (hpow.mul hslope).const_mul (2 / (α * (1 - α)))
+  refine key.congr' ?_
+  filter_upwards [self_mem_nhdsWithin] with p hp
+  have hp0 : (0:ℝ) < p := hp
+  have hp2 : p ^ (2 - α) = p * p ^ (1 - α) := by
+    rw [show (2:ℝ) - α = 1 + (1 - α) from by ring, Real.rpow_add hp0, Real.rpow_one]
+  rw [hp2]
+  field_simp
+
+/-- The limit of the regularised diamond profile as `p → 0⁺`.  The two boundary contributions
+vanish and the two convergent integrals reach their Beta values. -/
+theorem tendsto_Theta_regularised {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    Tendsto (fun p : ℝ => Theta α p) (𝓝[>] (0:ℝ))
+      (𝓝 (2 * (α + 1) / (1 - α) * betaFun (2 - α) (2*α)
+        + 2 * (1 - 2*α) * (3 - 2*α) / (α * (1 - α)) * betaFun (2 - α) (2 - α))) := by
+  have hEq : ∀ᶠ p : ℝ in 𝓝[>] (0:ℝ), Theta α p
+      = 2 * (∫ t in (0:ℝ)..p, diamondNear α t)
+        + 2 * (α + 1) / (1 - α) * (∫ t in Ioi p, t ^ (1 - α) * (1 + t) ^ (-α - 2))
+        + 2 * (1 - 2*α) * (3 - 2*α) / (α * (1 - α))
+            * (∫ t in p..(1 - p), t ^ (1 - α) * (1 - t) ^ (1 - α))
+        + 2 * p ^ (1 - α) * diamondRem α p / (α * (1 - α)) := by
+    rw [nhdsGT_zero_eq_Ioo]
+    filter_upwards [self_mem_nhdsWithin] with p hp
+    exact Theta_eq_regularised hα hα' hp.1 hp.2
+  refine Tendsto.congr' (hEq.mono fun p h => h.symm) ?_
+  have h := ((((tendsto_integral_diamondNear hα hα').const_mul 2).add
+      ((tendsto_integral_farKernelReg hα hα').const_mul (2 * (α + 1) / (1 - α)))).add
+      ((tendsto_integral_midKernelReg hα').const_mul
+        (2 * (1 - 2*α) * (3 - 2*α) / (α * (1 - α))))).add
+      (tendsto_diamondRem_term hα hα')
+  simpa using h
+
+/-- **The value of the diamond constant.**  For `1 < α < 2`,
+`Θ α (1/2) = 2π Γ (2α) cos (πα/2) / (α Γ α ^ 2 sin (πα/2))`.
+Combined with `Theta_eq_Theta_half` this evaluates `Θ α p` for every `p ∈ (0, 1/2]`. -/
+theorem Theta_half_eq {α : ℝ} (hα : 1 < α) (hα' : α < 2) :
+    Theta α (1/2)
+      = 2 * π * Real.Gamma (2*α) * Real.cos (π*α/2)
+          / (α * Real.Gamma α ^ 2 * Real.sin (π*α/2)) := by
+  have hconst : Tendsto (fun p : ℝ => Theta α p) (𝓝[>] (0:ℝ)) (𝓝 (Theta α (1/2))) := by
+    refine Tendsto.congr' ?_ tendsto_const_nhds
+    rw [nhdsGT_zero_eq_Ioo]
+    filter_upwards [self_mem_nhdsWithin] with p hp
+    exact (Theta_eq_Theta_half hα hα' hp.1 hp.2.le).symm
+  rw [tendsto_nhds_unique hconst (tendsto_Theta_regularised hα hα')]
+  exact regularised_limit hα hα'
 
 end CenteredMaximal.Fractional
 
