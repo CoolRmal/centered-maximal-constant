@@ -5,16 +5,21 @@ Authors: Yongxi Lin
 -/
 module
 
+public import CenteredMaximal.Fractional.KernelData
 public import CenteredMaximal.Fractional.TensorSpline
 public import CenteredMaximal.Fractional.TruncatedBase
 
 /-!
-# The mass of the ingredients of the fractional comparison kernel
+# The mass of the fractional comparison kernel
 
-The comparison kernel of order `α = 6/5` is
-`K = a · truncBase α R + ∑_{ij} C_{ij} β(N z₀ − i) β(N z₁ − j)`,
-and its *mass* `∫ K` is twice the comparison cost the certificate pays. This file computes the
-mass of each of the three ingredients separately.
+The comparison kernel of order `α = 6/5`, truncation radius `R = 7/4` and spline scale `N = 16` is
+
+`K z = a · truncBase (6/5) (7/4) z + ∑_{(i,j)} C_{ij} β(16 z₀ − i) β(16 z₁ − j)`,
+
+and its *mass* `∫ K` is twice the comparison cost the certificate pays. This file computes the mass
+of each of the three ingredients, assembles the kernel from the data of
+`CenteredMaximal.Fractional.KernelData`, and evaluates its mass numerically. The two finite
+certificate checks — `K ≥ 1` on the unit diamond and `A K ≥ 0` — are *not* addressed here.
 
 ## Main results
 
@@ -25,6 +30,14 @@ mass of each of the three ingredients separately.
 * `integral_truncBase`: `∫ truncBase α R = (4/(2 − α) − 2) R^{2−α}` for `0 < α < 2`, `0 < R`.
   At `α = 6/5` this is `3 R^{4/5}` (`integral_truncBase_six_fifths`).
 * `integral_splineCell`: `∫ β(c z₀ − i) β(c z₁ − j) = (c²)⁻¹` for `c > 0`.
+* `fracKernel`: the kernel itself, with base coefficient `fracBaseCoeff` and the `1201` cells of
+  `fracCells`; `integrable_fracKernel`.
+* `integral_fracKernel`: the exact mass
+  `∫ K = 2 ((3/2) a R^{4/5} + (∑ C)/(2 N²))`, with `a = fracBaseCoeff` and `∑ C = fracCellSum`.
+* `rpow_four_fifths_pow_five`, `lt_rpow_four_fifths`, `rpow_four_fifths_lt`: the exact fifth-root
+  enclosure `1.564697 < (7/4)^{4/5} < 1.564698`, from `x⁵ = (7/4)⁴ = 2401/256`.
+* `fracKernel_mass_lt'`, `fracKernel_mass_lt`: `∫ K < 2 · 3.6218 < 2 · 3.622`. The exact half-mass
+  is `3.62172286599…`, so the first bound has about `7.7 · 10^{-5}` of margin.
 
 ## Method
 
@@ -43,6 +56,14 @@ A single spline cell is a tensor product, so Fubini on `Fin 2 → ℝ` through
 `volume_preserving_finTwoArrow` reduces its mass to two copies of `∫ β(c x − d) dx = c⁻¹`, which is
 `integral_bspline` composed with the affine substitutions `Measure.integral_comp_mul_left` and
 `integral_sub_right_eq_self`.
+
+Assembling the three masses needs the integral of a *list* sum, since the coefficient data is a
+`List`; that is `integral_listSum`, proved by induction from `integral_add`.
+
+The numeric bound needs an upper bound on `(7/4)^{4/5}`, which comes from the **exact fifth-root
+enclosure**: `x = (7/4)^{4/5}` satisfies `x⁵ = (7/4)⁴ = 2401/256`, so a rational `u` with
+`u⁵ > 2401/256` bounds it above and a rational `l` with `l⁵ < 2401/256` bounds it below, by
+`lt_of_pow_lt_pow_left₀`. No transcendental input at all is required.
 -/
 
 @[expose] public section
@@ -316,6 +337,145 @@ theorem integral_splineCell {c : ℝ} (hc : 0 < c) (i j : ℝ) :
     integral_prod_mul (fun x : ℝ => bspline (c * x - i)) (fun y : ℝ => bspline (c * y - j)),
     integral_bspline_affine hc, integral_bspline_affine hc]
   ring
+
+/-! ### Finite sums over a list of cells -/
+
+/-- A list sum of integrable functions is integrable. -/
+private theorem integrable_listSum {ι : Type*} (f : ι → (Fin 2 → ℝ) → ℝ) :
+    ∀ l : List ι, (∀ a ∈ l, Integrable (f a)) →
+      Integrable fun z : Fin 2 → ℝ => (l.map fun a => f a z).sum := by
+  intro l
+  induction l with
+  | nil => intro _; simp
+  | cons a t ih =>
+      intro h
+      simp only [List.map_cons, List.sum_cons]
+      exact (h a (List.mem_cons_self ..)).add (ih fun b hb => h b (List.mem_cons_of_mem a hb))
+
+/-- The integral of a list sum of integrable functions is the list sum of their integrals. -/
+private theorem integral_listSum {ι : Type*} (f : ι → (Fin 2 → ℝ) → ℝ) :
+    ∀ l : List ι, (∀ a ∈ l, Integrable (f a)) →
+      ∫ z, (l.map fun a => f a z).sum = (l.map fun a => ∫ z, f a z).sum := by
+  intro l
+  induction l with
+  | nil => intro _; simp
+  | cons a t ih =>
+      intro h
+      simp only [List.map_cons, List.sum_cons]
+      rw [integral_add (h a (List.mem_cons_self ..))
+          (integrable_listSum f t fun b hb => h b (List.mem_cons_of_mem a hb)),
+        ih fun b hb => h b (List.mem_cons_of_mem a hb)]
+
+/-! ### The comparison kernel -/
+
+/-- The coefficient with numerator `n` over the certificate's common denominator `5 · 10^16`. -/
+def fracCoeff (n : ℤ) : ℝ := (n : ℝ) / (fracDenNum : ℝ)
+
+theorem fracCoeff_eq (n : ℤ) : fracCoeff n = (n : ℝ) / 50000000000000000 := rfl
+
+/-- The base coefficient `a = 45006666551170177/25000000000000000 ≈ 1.800266662047`. -/
+def fracBaseCoeff : ℝ := fracCoeff fracBaseNum
+
+theorem fracBaseCoeff_eq : fracBaseCoeff = 45006666551170177 / 25000000000000000 := by
+  rw [fracBaseCoeff, fracCoeff_eq]
+  norm_num [fracBaseNum]
+
+theorem fracBaseCoeff_pos : 0 < fracBaseCoeff := by
+  rw [fracBaseCoeff_eq]; norm_num
+
+/-- The total spline coefficient mass `∑ C`. -/
+def fracCellSum : ℝ := fracCoeff fracCellSumNum
+
+/-- **`∑ C = −3862955144582110129/12500000000000000 = −309.0364115666…`.** -/
+theorem fracCellSum_eq : fracCellSum = -3862955144582110129 / 12500000000000000 := by
+  rw [fracCellSum, fracCoeff_eq, fracCellSumNum_eq]
+  norm_num
+
+/-- **The `α = 6/5` comparison kernel**: the truncated diamond base of order `6/5` and radius
+`7/4`, weighted by `a`, corrected by the `1201` tensor B-spline cells of `fracCells` at scale
+`N = 16`. -/
+def fracKernel (z : Fin 2 → ℝ) : ℝ :=
+  fracBaseCoeff * truncBase (6 / 5) (7 / 4) z
+    + (fracCells.map fun p =>
+        fracCoeff p.2 * (bspline (16 * z 0 - p.1.1) * bspline (16 * z 1 - p.1.2))).sum
+
+/-- Pulling the coefficient out of a list sum of cells. -/
+private theorem listSum_map_fracCoeff_mul (k : ℝ) (l : List ((ℤ × ℤ) × ℤ)) :
+    (l.map fun p => fracCoeff p.2 * k).sum = fracCoeff ((l.map fun p => p.2).sum) * k := by
+  induction l with
+  | nil => simp [fracCoeff_eq]
+  | cons a t ih =>
+      rw [List.map_cons, List.sum_cons, ih, List.map_cons, List.sum_cons]
+      simp only [fracCoeff_eq]
+      push_cast
+      ring
+
+/-- Every cell of the kernel is integrable. -/
+private theorem integrable_fracCell (p : (ℤ × ℤ) × ℤ) : Integrable fun z : Fin 2 → ℝ =>
+    fracCoeff p.2 * (bspline (16 * z 0 - (p.1.1 : ℝ)) * bspline (16 * z 1 - (p.1.2 : ℝ))) :=
+  (integrable_splineCell (by norm_num) _ _).const_mul _
+
+/-- The comparison kernel is integrable. -/
+theorem integrable_fracKernel : Integrable fracKernel :=
+  ((integrable_truncBase (by norm_num) (by norm_num) (by norm_num)).const_mul _).add
+    (integrable_listSum _ fracCells fun p _ => integrable_fracCell p)
+
+/-- **The mass of the comparison kernel**: the base contributes `3 a R^{4/5}` and the `1201` cells
+contribute `(∑ C) / N²`, so the comparison cost `½ ∫ K` is `(3/2) a R^{4/5} + (∑ C)/(2 N²)`. -/
+theorem integral_fracKernel :
+    ∫ z, fracKernel z
+      = 2 * (3 / 2 * fracBaseCoeff * (7 / 4 : ℝ) ^ (4 / 5 : ℝ)
+          + fracCellSum / (2 * 16 ^ 2)) := by
+  have hterm : ∀ p : (ℤ × ℤ) × ℤ, (∫ z : Fin 2 → ℝ,
+      fracCoeff p.2 * (bspline (16 * z 0 - (p.1.1 : ℝ)) * bspline (16 * z 1 - (p.1.2 : ℝ))))
+        = fracCoeff p.2 * (((16 : ℝ)) ^ 2)⁻¹ := fun p => by
+    rw [integral_const_mul, integral_splineCell (by norm_num)]
+  simp only [fracKernel]
+  rw [integral_add ((integrable_truncBase (by norm_num) (by norm_num) (by norm_num)).const_mul _)
+      (integrable_listSum _ fracCells fun p _ => integrable_fracCell p),
+    integral_const_mul, integral_truncBase_six_fifths (by norm_num),
+    integral_listSum _ fracCells fun p _ => integrable_fracCell p]
+  simp only [hterm]
+  rw [listSum_map_fracCoeff_mul, ← fracCellSumNum_def, ← fracCellSum]
+  ring
+
+/-! ### The exact fifth-root enclosure of `(7/4)^{4/5}` -/
+
+/-- **`x = (7/4)^{4/5}` satisfies `x⁵ = (7/4)⁴ = 2401/256`.** -/
+theorem rpow_four_fifths_pow_five : ((7 / 4 : ℝ) ^ (4 / 5 : ℝ)) ^ 5 = 2401 / 256 := by
+  rw [← Real.rpow_natCast ((7 / 4 : ℝ) ^ (4 / 5 : ℝ)) 5,
+    ← Real.rpow_mul (by norm_num : (0 : ℝ) ≤ 7 / 4),
+    show (4 / 5 : ℝ) * ((5 : ℕ) : ℝ) = ((4 : ℕ) : ℝ) from by push_cast; ring,
+    Real.rpow_natCast]
+  norm_num
+
+theorem rpow_four_fifths_pos : (0 : ℝ) < (7 / 4 : ℝ) ^ (4 / 5 : ℝ) :=
+  Real.rpow_pos_of_pos (by norm_num) _
+
+/-- **The upper half of the enclosure**: `(7/4)^{4/5} < 1.564698`, since
+`1.564698⁵ > 2401/256`. -/
+theorem rpow_four_fifths_lt : (7 / 4 : ℝ) ^ (4 / 5 : ℝ) < 1564698 / 1000000 :=
+  lt_of_pow_lt_pow_left₀ 5 (by norm_num) (by rw [rpow_four_fifths_pow_five]; norm_num)
+
+/-- **The lower half of the enclosure**: `1.564697 < (7/4)^{4/5}`, because `1.564697⁵ < 2401/256`.
+Together with `rpow_four_fifths_lt` this pins `(7/4)^{4/5} = 1.5646976811…` to a window of
+width `10^{-6}`. -/
+theorem lt_rpow_four_fifths : (1564697 : ℝ) / 1000000 < (7 / 4 : ℝ) ^ (4 / 5 : ℝ) :=
+  lt_of_pow_lt_pow_left₀ 5 rpow_four_fifths_pos.le
+    (by rw [rpow_four_fifths_pow_five]; norm_num)
+
+/-! ### The numeric mass bound -/
+
+/-- **The sharp form of the mass bound**: `∫ K < 2 · 3.6218`, so the comparison cost of the
+`α = 6/5` kernel is below `3.6218`. The exact half-mass is `3.62172286599…`. -/
+theorem fracKernel_mass_lt' : ∫ z, fracKernel z < 2 * (36218 / 10000) := by
+  rw [integral_fracKernel, fracBaseCoeff_eq, fracCellSum_eq]
+  linarith [rpow_four_fifths_lt]
+
+/-- **The mass bound**: `∫ K < 2 · 3.622`. -/
+theorem fracKernel_mass_lt : ∫ z, fracKernel z < 2 * (3622 / 1000) := by
+  refine lt_trans fracKernel_mass_lt' ?_
+  norm_num
 
 end CenteredMaximal.Fractional
 
