@@ -312,11 +312,6 @@ theorem measurable_potential : Measurable potential := by
   unfold potential diamondNorm
   fun_prop
 
-/-- The sup norm is at most the diamond radius. -/
-theorem norm_le_diamondNorm (z : Fin 2 → ℝ) : ‖z‖ ≤ diamondNorm z := by
-  refine (pi_norm_le_iff_of_nonneg (diamondNorm_nonneg z)).2 fun i => ?_
-  fin_cases i <;> simp [diamondNorm]
-
 /-- The diamond radius is at most twice the sup norm, so diamonds and sup balls are comparable. -/
 theorem diamondNorm_le_two_mul_norm (z : Fin 2 → ℝ) : diamondNorm z ≤ 2 * ‖z‖ := by
   have h₀ : |z 0| ≤ ‖z‖ := by simpa [Real.norm_eq_abs] using norm_le_pi_norm z 0

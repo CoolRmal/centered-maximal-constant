@@ -122,13 +122,6 @@ theorem integral_compKernel_pos : 0 < ∫ z, compKernel z := by
   rw [integral_compKernel, looseCost_eq]
   norm_num
 
-/-- The Euclidean norm of the plane is at most the diamond radius, since
-`‖z‖ = max |z₀| |z₁| ≤ |z₀| + |z₁|`. -/
-theorem norm_le_diamondNorm (z : Fin 2 → ℝ) : ‖z‖ ≤ diamondNorm z := by
-  rw [pi_norm_le_iff_of_nonneg (diamondNorm_nonneg z), Fin.forall_fin_two]
-  refine ⟨?_, ?_⟩ <;> rw [Real.norm_eq_abs] <;> unfold diamondNorm <;>
-    linarith [abs_nonneg (z 0), abs_nonneg (z 1)]
-
 /-- The patched kernel is supported in the Euclidean ball of radius `R`, which contains the
 diamond of radius `R` since the norm is dominated by the diamond radius. -/
 theorem hasCompactSupport_compKernel : HasCompactSupport compKernel := by

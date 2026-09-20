@@ -96,6 +96,11 @@ theorem looseCost_lt : looseCost < 3879 / 1000 := by
 theorem diamondNorm_nonneg (z : Fin 2 → ℝ) : 0 ≤ diamondNorm z :=
   add_nonneg (abs_nonneg _) (abs_nonneg _)
 
+/-- The sup norm is at most the diamond radius: `‖z‖ = max |z₀| |z₁| ≤ |z₀| + |z₁|`. -/
+theorem norm_le_diamondNorm (z : Fin 2 → ℝ) : ‖z‖ ≤ diamondNorm z := by
+  refine (pi_norm_le_iff_of_nonneg (diamondNorm_nonneg z)).2 fun i => ?_
+  fin_cases i <;> simp [diamondNorm]
+
 /-- The diamond radius is even. -/
 theorem diamondNorm_neg (z : Fin 2 → ℝ) : diamondNorm (-z) = diamondNorm z := by
   simp [diamondNorm]
