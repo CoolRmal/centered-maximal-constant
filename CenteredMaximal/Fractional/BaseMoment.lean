@@ -56,20 +56,21 @@ private theorem lintegral_Ioi_rpow {p c : ℝ} (hp : p < -1) (hc : 0 < c) :
   rw [← ofReal_integral_eq_lintegral_ofReal (integrableOn_Ioi_rpow_of_lt hp hc) hnn,
     integral_Ioi_rpow_of_lt hp hc]
 
-/-- Translating the half-line: `∫₀^∞ g(m + v) dv = ∫_m^∞ g(t) dt`. -/
-private theorem lintegral_Ioi_comp_add (g : ℝ → ℝ≥0∞) (m : ℝ) :
-    ∫⁻ v in Ioi 0, g (m + v) = ∫⁻ t in Ioi m, g t := by
+/-- Translating a half-line: `∫_c^∞ g(m + v) dv = ∫_{m+c}^∞ g(t) dt`. -/
+private theorem lintegral_Ioi_comp_add (g : ℝ → ℝ≥0∞) (c m : ℝ) :
+    ∫⁻ v in Ioi c, g (m + v) = ∫⁻ t in Ioi (m + c), g t := by
   rw [← lintegral_indicator measurableSet_Ioi, ← lintegral_indicator measurableSet_Ioi,
-    ← lintegral_add_left_eq_self (fun t => (Ioi m).indicator g t) m]
+    ← lintegral_add_left_eq_self (fun t => (Ioi (m + c)).indicator g t) m]
   refine lintegral_congr fun v => ?_
   simp [indicator_apply]
 
-/-- `∫₀^∞ (v + m)^p dv = −m^{p+1}/(p+1)` for `p < −1` and `0 < m`. -/
-private theorem lintegral_Ioi_zero_add_rpow {p m : ℝ} (hp : p < -1) (hm : 0 < m) :
-    ∫⁻ v in Ioi 0, ENNReal.ofReal ((v + m) ^ p) = ENNReal.ofReal (-m ^ (p + 1) / (p + 1)) := by
-  calc ∫⁻ v in Ioi 0, ENNReal.ofReal ((v + m) ^ p)
-      = ∫⁻ t in Ioi m, ENNReal.ofReal (t ^ p) := by
-        rw [← lintegral_Ioi_comp_add (fun t : ℝ => ENNReal.ofReal (t ^ p)) m]
+/-- `∫_c^∞ (v + m)^p dv = −(m + c)^{p+1}/(p+1)` for `p < −1` and `0 < m + c`. -/
+private theorem lintegral_Ioi_add_rpow {p c m : ℝ} (hp : p < -1) (hm : 0 < m + c) :
+    ∫⁻ v in Ioi c, ENNReal.ofReal ((v + m) ^ p)
+      = ENNReal.ofReal (-(m + c) ^ (p + 1) / (p + 1)) := by
+  calc ∫⁻ v in Ioi c, ENNReal.ofReal ((v + m) ^ p)
+      = ∫⁻ t in Ioi (m + c), ENNReal.ofReal (t ^ p) := by
+        rw [← lintegral_Ioi_comp_add (fun t : ℝ => ENNReal.ofReal (t ^ p)) c m]
         exact lintegral_congr fun v => by rw [add_comm]
     _ = _ := lintegral_Ioi_rpow hp hm
 
@@ -328,6 +329,386 @@ private theorem abs_brk_le_sum {α a b s : ℝ} (hα : 0 < α) (hb : 0 < b) (ha 
   have h4 : (0 : ℝ) ≤ (a + b) ^ (-α) := Real.rpow_nonneg hab.le _
   rw [brk, abs_le]
   constructor <;> linarith
+
+/-! ### The inner integral in the first coordinate -/
+
+/-- `−x/(1 − α) = x/(α − 1)`. -/
+private theorem neg_div_one_sub {α : ℝ} (x : ℝ) : -x / (1 - α) = x / (α - 1) := by
+  rw [neg_div, show (1 - α : ℝ) = -(α - 1) from by ring, div_neg, neg_neg]
+
+private theorem measurable_brk (α s : ℝ) : Measurable fun p : ℝ × ℝ => brk α p.1 p.2 s := by
+  have h1 : Continuous fun p : ℝ × ℝ => p.1 + s + p.2 := by fun_prop
+  have h2 : Continuous fun p : ℝ × ℝ => |p.1 - s| + p.2 :=
+    ((continuous_fst.sub continuous_const).abs).add continuous_snd
+  have h3 : Continuous fun p : ℝ × ℝ => p.1 + p.2 := by fun_prop
+  unfold brk
+  exact ((h1.measurable.pow_const _).add (h2.measurable.pow_const _)).sub
+    (measurable_const.mul (h3.measurable.pow_const _))
+
+/-- `b^{-α-1} · b = b^{-α}`. -/
+private theorem rpow_neg_sub_one_mul {α b : ℝ} (hb : 0 < b) : b ^ (-α - 1) * b = b ^ (-α) := by
+  rw [← Real.rpow_add_one hb.ne' (-α - 1), show (-α - 1 + 1 : ℝ) = -α from by ring]
+
+/-- **The leading region `a > 2s`.** -/
+private theorem lintegral_a_far {α b s : ℝ} (hα : 1 < α) (hb : 0 < b) (hs : 0 < s) :
+    ∫⁻ a in Ioi (2 * s), ENNReal.ofReal (32 * α * (α + 1) * s ^ 2 * (a + b) ^ (-α - 1))
+      = ENNReal.ofReal (32 * (α + 1) * s ^ 2 * (b + 2 * s) ^ (-α)) := by
+  have hα0 : (0 : ℝ) < α := by linarith
+  have hK : (0 : ℝ) ≤ 32 * α * (α + 1) * s ^ 2 := by positivity
+  calc ∫⁻ a in Ioi (2 * s), ENNReal.ofReal (32 * α * (α + 1) * s ^ 2 * (a + b) ^ (-α - 1))
+      = ∫⁻ a in Ioi (2 * s),
+          ENNReal.ofReal (32 * α * (α + 1) * s ^ 2) * ENNReal.ofReal ((a + b) ^ (-α - 1)) :=
+        lintegral_congr fun a => ENNReal.ofReal_mul hK
+    _ = ENNReal.ofReal (32 * α * (α + 1) * s ^ 2)
+          * ∫⁻ a in Ioi (2 * s), ENNReal.ofReal ((a + b) ^ (-α - 1)) :=
+        lintegral_const_mul' _ _ ENNReal.ofReal_ne_top
+    _ = ENNReal.ofReal (32 * α * (α + 1) * s ^ 2)
+          * ENNReal.ofReal (-(b + 2 * s) ^ (-α) / (-α)) := by
+        rw [lintegral_Ioi_add_rpow (p := -α - 1) (c := 2 * s) (m := b) (by linarith)
+          (by linarith), show (-α - 1 + 1 : ℝ) = -α from by ring]
+    _ = ENNReal.ofReal (32 * (α + 1) * s ^ 2 * (b + 2 * s) ^ (-α)) := by
+        rw [← ENNReal.ofReal_mul hK]
+        congr 1
+        field_simp
+
+/-- **The near region `0 < a ≤ 2s`.** Past `b = 4s` the near-axis bound applies; below it the
+crude bound with the corner term does. -/
+private theorem lintegral_a_near {α b s : ℝ} (hα : 1 < α) (hα' : α < 2) (hb : 0 < b)
+    (hs : 0 < s) :
+    ∫⁻ a in Ioc 0 (2 * s), ENNReal.ofReal (|brk α a b s| * (a + b))
+      ≤ (Ioi (4 * s)).indicator (fun b => ENNReal.ofReal (8 * α * s ^ 2 * b ^ (-α))) b
+        + (Iic (4 * s)).indicator
+            (fun b => ENNReal.ofReal (30 * s / (α - 1) * b ^ (1 - α))) b := by
+  have hα0 : (0 : ℝ) < α := by linarith
+  by_cases hbs : 4 * s < b
+  · rw [indicator_of_mem (mem_Ioi.2 hbs), indicator_of_notMem (by simp; linarith), add_zero]
+    have hpt : ∀ a ∈ Ioc (0 : ℝ) (2 * s),
+        ENNReal.ofReal (|brk α a b s| * (a + b))
+          ≤ ENNReal.ofReal (4 * α * s * b ^ (-α)) := by
+      intro a ha
+      refine ENNReal.ofReal_le_ofReal ?_
+      calc |brk α a b s| * (a + b) ≤ 2 * (α * b ^ (-α - 1)) * s * (2 * b) :=
+            mul_le_mul (abs_brk_le_lin hα0 hb ha.1.le hs.le) (by linarith [ha.2])
+              (by linarith [ha.1, hb]) (by positivity)
+        _ = 4 * α * s * (b ^ (-α - 1) * b) := by ring
+        _ = 4 * α * s * b ^ (-α) := by rw [rpow_neg_sub_one_mul hb]
+    calc ∫⁻ a in Ioc 0 (2 * s), ENNReal.ofReal (|brk α a b s| * (a + b))
+        ≤ ∫⁻ _a in Ioc (0 : ℝ) (2 * s), ENNReal.ofReal (4 * α * s * b ^ (-α)) :=
+          setLIntegral_mono' measurableSet_Ioc hpt
+      _ = ENNReal.ofReal (4 * α * s * b ^ (-α)) * ENNReal.ofReal (2 * s) := by
+          rw [setLIntegral_const, Real.volume_Ioc, sub_zero]
+      _ = ENNReal.ofReal (8 * α * s ^ 2 * b ^ (-α)) := by
+          rw [← ENNReal.ofReal_mul (by positivity)]
+          congr 1
+          ring
+  · rw [indicator_of_notMem (by simpa using hbs),
+      indicator_of_mem (by simpa using le_of_not_gt hbs), zero_add]
+    have hpt : ∀ a ∈ Ioc (0 : ℝ) (2 * s),
+        ENNReal.ofReal (|brk α a b s| * (a + b))
+          ≤ ENNReal.ofReal (18 * s * (a + b) ^ (-α))
+            + ENNReal.ofReal (6 * s * (|a - s| + b) ^ (-α)) := by
+      intro a ha
+      have ha0 : (0 : ℝ) < a := ha.1
+      rw [← ENNReal.ofReal_add (by positivity) (by positivity)]
+      refine ENNReal.ofReal_le_ofReal ?_
+      have hsum := abs_brk_le_sum (α := α) (a := a) (b := b) (s := s) hα0 hb ha.1.le hs.le
+      have hw : a + b ≤ 6 * s := by linarith [ha.2, le_of_not_gt hbs]
+      calc |brk α a b s| * (a + b)
+          ≤ (3 * (a + b) ^ (-α) + (|a - s| + b) ^ (-α)) * (6 * s) :=
+            mul_le_mul hsum hw (by linarith [ha.1, hb]) (by positivity)
+        _ = 18 * s * (a + b) ^ (-α) + 6 * s * (|a - s| + b) ^ (-α) := by ring
+    have hm1 : Measurable fun a : ℝ => ENNReal.ofReal (18 * s * (a + b) ^ (-α)) :=
+      ENNReal.measurable_ofReal.comp
+        (measurable_const.mul ((measurable_id.add_const b).pow_const _))
+    have hcorner : (∫⁻ a in Ioc (0 : ℝ) (2 * s), ENNReal.ofReal (6 * s * (|a - s| + b) ^ (-α)))
+        ≤ ENNReal.ofReal (12 * s * (b ^ (1 - α) / (α - 1))) := by
+      calc ∫⁻ a in Ioc (0 : ℝ) (2 * s), ENNReal.ofReal (6 * s * (|a - s| + b) ^ (-α))
+          ≤ ∫⁻ a : ℝ, ENNReal.ofReal (6 * s * (|a - s| + b) ^ (-α)) :=
+            setLIntegral_le_lintegral _ _
+        _ = ∫⁻ v : ℝ, ENNReal.ofReal (6 * s * (|v| + b) ^ (-α)) :=
+            lintegral_sub_right_eq_self
+              (fun a : ℝ => ENNReal.ofReal (6 * s * (|a| + b) ^ (-α))) s
+        _ = 2 * ∫⁻ v in Ioi 0, ENNReal.ofReal (6 * s * (v + b) ^ (-α)) :=
+            lintegral_comp_abs fun w => ENNReal.ofReal (6 * s * (w + b) ^ (-α))
+        _ = 2 * (ENNReal.ofReal (6 * s) * ∫⁻ v in Ioi 0, ENNReal.ofReal ((v + b) ^ (-α))) := by
+            rw [← lintegral_const_mul' _ _ ENNReal.ofReal_ne_top]
+            exact congrArg _ (lintegral_congr fun v => ENNReal.ofReal_mul (by positivity))
+        _ = ENNReal.ofReal (12 * s * (b ^ (1 - α) / (α - 1))) := by
+            rw [lintegral_Ioi_add_rpow (p := -α) (c := 0) (m := b) (by linarith) (by linarith),
+              show (-α + 1 : ℝ) = 1 - α from by ring, add_zero, neg_div_one_sub _,
+              ← ENNReal.ofReal_mul (by positivity),
+              show (2 : ℝ≥0∞) = ENNReal.ofReal 2 from by norm_num,
+              ← ENNReal.ofReal_mul (by norm_num : (0 : ℝ) ≤ 2)]
+            congr 1
+            ring
+    have hmain : (∫⁻ a in Ioc (0 : ℝ) (2 * s), ENNReal.ofReal (18 * s * (a + b) ^ (-α)))
+        ≤ ENNReal.ofReal (18 * s * (b ^ (1 - α) / (α - 1))) := by
+      calc ∫⁻ a in Ioc (0 : ℝ) (2 * s), ENNReal.ofReal (18 * s * (a + b) ^ (-α))
+          ≤ ∫⁻ a in Ioi (0 : ℝ), ENNReal.ofReal (18 * s * (a + b) ^ (-α)) :=
+            lintegral_mono_set Ioc_subset_Ioi_self
+        _ = ENNReal.ofReal (18 * s) * ∫⁻ a in Ioi (0 : ℝ), ENNReal.ofReal ((a + b) ^ (-α)) := by
+            rw [← lintegral_const_mul' _ _ ENNReal.ofReal_ne_top]
+            exact lintegral_congr fun v => ENNReal.ofReal_mul (by positivity)
+        _ = ENNReal.ofReal (18 * s * (b ^ (1 - α) / (α - 1))) := by
+            rw [lintegral_Ioi_add_rpow (p := -α) (c := 0) (m := b) (by linarith) (by linarith),
+              show (-α + 1 : ℝ) = 1 - α from by ring, add_zero, neg_div_one_sub _,
+              ← ENNReal.ofReal_mul (by positivity)]
+    calc ∫⁻ a in Ioc 0 (2 * s), ENNReal.ofReal (|brk α a b s| * (a + b))
+        ≤ ∫⁻ a in Ioc (0 : ℝ) (2 * s), (ENNReal.ofReal (18 * s * (a + b) ^ (-α))
+            + ENNReal.ofReal (6 * s * (|a - s| + b) ^ (-α))) :=
+          setLIntegral_mono' measurableSet_Ioc hpt
+      _ = (∫⁻ a in Ioc (0 : ℝ) (2 * s), ENNReal.ofReal (18 * s * (a + b) ^ (-α)))
+            + ∫⁻ a in Ioc (0 : ℝ) (2 * s), ENNReal.ofReal (6 * s * (|a - s| + b) ^ (-α)) :=
+          lintegral_add_left hm1 _
+      _ ≤ ENNReal.ofReal (18 * s * (b ^ (1 - α) / (α - 1)))
+            + ENNReal.ofReal (12 * s * (b ^ (1 - α) / (α - 1))) := add_le_add hmain hcorner
+      _ = ENNReal.ofReal (30 * s / (α - 1) * b ^ (1 - α)) := by
+          rw [← ENNReal.ofReal_add (by positivity) (by positivity)]
+          congr 1
+          ring
+
+/-! ### The outer integral in the second coordinate -/
+
+/-- `x^p · x = x^{p+1}`. -/
+private theorem rpow_succ_mul {x p : ℝ} (hx : 0 < x) : x ^ p * x = x ^ (p + 1) :=
+  (Real.rpow_add_one hx.ne' p).symm
+
+/-- Separating a power of the scale, linear case. -/
+private theorem mul_rpow_scale {s c : ℝ} (hs : 0 < s) (hc : 0 ≤ c) (q : ℝ) :
+    s * (c * s) ^ q = c ^ q * s ^ (1 + q) := by
+  rw [Real.mul_rpow hc hs.le, Real.rpow_add hs, Real.rpow_one]
+  ring
+
+/-- Separating a power of the scale, quadratic case. -/
+private theorem sq_mul_rpow_scale {s c : ℝ} (hs : 0 < s) (hc : 0 ≤ c) (q : ℝ) :
+    s ^ 2 * (c * s) ^ q = c ^ q * s ^ (2 + q) := by
+  rw [Real.mul_rpow hc hs.le, Real.rpow_add hs, Real.rpow_two]
+  ring
+
+/-- The three bounding profiles in the second coordinate. -/
+private def bndFar (α s b : ℝ) : ℝ≥0∞ :=
+  ENNReal.ofReal (32 * (α + 1) * s ^ 2 * (b + 2 * s) ^ (-α))
+
+private def bndTail (α s b : ℝ) : ℝ≥0∞ :=
+  (Ioi (4 * s)).indicator (fun b => ENNReal.ofReal (8 * α * s ^ 2 * b ^ (-α))) b
+
+private def bndCore (α s b : ℝ) : ℝ≥0∞ :=
+  (Iic (4 * s)).indicator (fun b => ENNReal.ofReal (30 * s / (α - 1) * b ^ (1 - α))) b
+
+/-- **The full inner integral in the first coordinate.** -/
+private theorem lintegral_a_le {α b s : ℝ} (hα : 1 < α) (hα' : α < 2) (hb : 0 < b) (hs : 0 < s) :
+    ∫⁻ a in Ioi 0, ENNReal.ofReal (|brk α a b s| * (a + b))
+      ≤ bndFar α s b + bndTail α s b + bndCore α s b := by
+  have hα0 : (0 : ℝ) < α := by linarith
+  have hfar : ∫⁻ a in Ioi (2 * s), ENNReal.ofReal (|brk α a b s| * (a + b)) ≤ bndFar α s b := by
+    rw [bndFar, ← lintegral_a_far hα hb hs]
+    refine setLIntegral_mono' measurableSet_Ioi fun a ha => ENNReal.ofReal_le_ofReal ?_
+    have ha0 : (0 : ℝ) < a := lt_trans (by positivity) ha
+    have hab : (0 : ℝ) < a + b := by linarith
+    have hsq := abs_brk_le_sq (α := α) (a := a) (b := b) (s := s) hα0 hb.le hs.le ha0
+      (le_of_lt ha)
+    have h6 : (0 : ℝ) ≤ (a + b) ^ (-α - 2) := Real.rpow_nonneg hab.le _
+    have hhalf : (a / 2 + b) ^ (-α - 2) ≤ 16 * (a + b) ^ (-α - 2) := by
+      have hge : (1 / 2 : ℝ) * (a + b) ≤ a / 2 + b := by linarith
+      have h1 : (a / 2 + b) ^ (-α - 2) ≤ ((1 / 2 : ℝ) * (a + b)) ^ (-α - 2) :=
+        Real.rpow_le_rpow_of_nonpos (by linarith) hge (by linarith)
+      have h2 : ((1 / 2 : ℝ) * (a + b)) ^ (-α - 2)
+          = (1 / 2 : ℝ) ^ (-α - 2) * (a + b) ^ (-α - 2) :=
+        Real.mul_rpow (by norm_num) hab.le
+      have h3 : (1 / 2 : ℝ) ^ (-α - 2) ≤ 16 := by
+        have h4 : (1 / 2 : ℝ) ^ (-α - 2) ≤ (1 / 2 : ℝ) ^ (-4 : ℝ) :=
+          Real.rpow_le_rpow_of_exponent_ge (by norm_num) (by norm_num) (by linarith)
+        have h5 : (1 / 2 : ℝ) ^ (-4 : ℝ) = 16 := by
+          rw [show (-4 : ℝ) = ((-4 : ℤ) : ℝ) from by norm_num, Real.rpow_intCast]
+          norm_num
+        linarith
+      calc (a / 2 + b) ^ (-α - 2) ≤ (1 / 2 : ℝ) ^ (-α - 2) * (a + b) ^ (-α - 2) := by
+            rw [← h2]; exact h1
+        _ ≤ 16 * (a + b) ^ (-α - 2) := mul_le_mul_of_nonneg_right h3 h6
+    have hkey : (a + b) ^ (-α - 2) * (a + b) = (a + b) ^ (-α - 1) := by
+      rw [rpow_succ_mul hab, show (-α - 2 + 1 : ℝ) = -α - 1 from by ring]
+    calc |brk α a b s| * (a + b)
+        ≤ 2 * (α * (α + 1) * (a / 2 + b) ^ (-α - 2)) * s ^ 2 * (a + b) :=
+          mul_le_mul_of_nonneg_right hsq hab.le
+      _ ≤ 2 * (α * (α + 1) * (16 * (a + b) ^ (-α - 2))) * s ^ 2 * (a + b) := by
+          have hc : (0 : ℝ) ≤ 2 * (α * (α + 1)) * (s ^ 2 * (a + b)) := by positivity
+          nlinarith [hhalf]
+      _ = 32 * α * (α + 1) * s ^ 2 * ((a + b) ^ (-α - 2) * (a + b)) := by ring
+      _ = 32 * α * (α + 1) * s ^ 2 * (a + b) ^ (-α - 1) := by rw [hkey]
+  rw [← Ioc_union_Ioi_eq_Ioi (by positivity : (0 : ℝ) ≤ 2 * s),
+    lintegral_union measurableSet_Ioi Ioc_disjoint_Ioi_same,
+    show bndFar α s b + bndTail α s b + bndCore α s b
+      = bndTail α s b + bndCore α s b + bndFar α s b from by ring]
+  exact add_le_add (lintegral_a_near hα hα' hb hs) hfar
+
+private theorem measurable_bndTail (α s : ℝ) : Measurable (bndTail α s) :=
+  (ENNReal.measurable_ofReal.comp (measurable_const.mul (measurable_id.pow_const _))).indicator
+    measurableSet_Ioi
+
+private theorem measurable_bndFar (α s : ℝ) : Measurable (bndFar α s) :=
+  ENNReal.measurable_ofReal.comp (measurable_const.mul ((measurable_id.add_const _).pow_const _))
+
+private theorem lintegral_bndFar_le {α s : ℝ} (hα : 1 < α) (hs : 0 < s) :
+    ∫⁻ b in Ioi 0, bndFar α s b
+      ≤ ENNReal.ofReal (32 * (α + 1) / (α - 1) * s ^ (3 - α)) := by
+  have hK : (0 : ℝ) ≤ 32 * (α + 1) * s ^ 2 := by positivity
+  have hval : ∫⁻ b in Ioi 0, bndFar α s b
+      = ENNReal.ofReal (32 * (α + 1) * s ^ 2 * ((2 * s) ^ (1 - α) / (α - 1))) := by
+    calc ∫⁻ b in Ioi 0, bndFar α s b
+        = ∫⁻ b in Ioi 0, ENNReal.ofReal (32 * (α + 1) * s ^ 2)
+            * ENNReal.ofReal ((b + 2 * s) ^ (-α)) :=
+          lintegral_congr fun b => by rw [bndFar, ENNReal.ofReal_mul hK]
+      _ = ENNReal.ofReal (32 * (α + 1) * s ^ 2)
+            * ∫⁻ b in Ioi 0, ENNReal.ofReal ((b + 2 * s) ^ (-α)) :=
+          lintegral_const_mul' _ _ ENNReal.ofReal_ne_top
+      _ = ENNReal.ofReal (32 * (α + 1) * s ^ 2 * ((2 * s) ^ (1 - α) / (α - 1))) := by
+          rw [lintegral_Ioi_add_rpow (p := -α) (c := 0) (m := 2 * s) (by linarith) (by linarith),
+            show (-α + 1 : ℝ) = 1 - α from by ring, add_zero, neg_div_one_sub _,
+            ← ENNReal.ofReal_mul hK]
+  rw [hval]
+  refine ENNReal.ofReal_le_ofReal ?_
+  have hsep : s ^ 2 * (2 * s) ^ (1 - α) = 2 ^ (1 - α) * s ^ (3 - α) := by
+    rw [sq_mul_rpow_scale hs (by norm_num) (1 - α),
+      show (2 : ℝ) + (1 - α) = 3 - α from by ring]
+  have h2 : (2 : ℝ) ^ (1 - α) ≤ 1 :=
+    Real.rpow_le_one_of_one_le_of_nonpos (by norm_num) (by linarith)
+  have hsp : (0 : ℝ) ≤ s ^ (3 - α) := Real.rpow_nonneg hs.le _
+  have hc : (0 : ℝ) ≤ 32 * (α + 1) / (α - 1) := by
+    have : (0 : ℝ) < α - 1 := by linarith
+    positivity
+  calc 32 * (α + 1) * s ^ 2 * ((2 * s) ^ (1 - α) / (α - 1))
+      = 32 * (α + 1) / (α - 1) * (2 ^ (1 - α) * s ^ (3 - α)) := by rw [← hsep]; ring
+    _ ≤ 32 * (α + 1) / (α - 1) * (1 * s ^ (3 - α)) :=
+        mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right h2 hsp) hc
+    _ = 32 * (α + 1) / (α - 1) * s ^ (3 - α) := by ring
+
+private theorem lintegral_bndTail_le {α s : ℝ} (hα : 1 < α) (hs : 0 < s) :
+    ∫⁻ b in Ioi 0, bndTail α s b ≤ ENNReal.ofReal (8 * α / (α - 1) * s ^ (3 - α)) := by
+  have hK : (0 : ℝ) ≤ 8 * α * s ^ 2 := by positivity
+  have h0 : (∫⁻ b in Ioi 0, bndTail α s b)
+      = ∫⁻ b in Ioi (4 * s), ENNReal.ofReal (8 * α * s ^ 2 * b ^ (-α)) := by
+    simp only [bndTail]
+    rw [lintegral_indicator measurableSet_Ioi, Measure.restrict_restrict measurableSet_Ioi,
+      Ioi_inter_Ioi, sup_eq_left.2 (by positivity)]
+  have hval : ∫⁻ b in Ioi 0, bndTail α s b
+      = ENNReal.ofReal (8 * α * s ^ 2 * ((4 * s) ^ (1 - α) / (α - 1))) := by
+    rw [h0]
+    calc ∫⁻ b in Ioi (4 * s), ENNReal.ofReal (8 * α * s ^ 2 * b ^ (-α))
+        = ∫⁻ b in Ioi (4 * s), ENNReal.ofReal (8 * α * s ^ 2) * ENNReal.ofReal (b ^ (-α)) :=
+          lintegral_congr fun b => ENNReal.ofReal_mul hK
+      _ = ENNReal.ofReal (8 * α * s ^ 2) * ∫⁻ b in Ioi (4 * s), ENNReal.ofReal (b ^ (-α)) :=
+          lintegral_const_mul' _ _ ENNReal.ofReal_ne_top
+      _ = ENNReal.ofReal (8 * α * s ^ 2 * ((4 * s) ^ (1 - α) / (α - 1))) := by
+          rw [lintegral_Ioi_rpow (p := -α) (c := 4 * s) (by linarith) (by positivity),
+            show (-α + 1 : ℝ) = 1 - α from by ring, neg_div_one_sub _, ← ENNReal.ofReal_mul hK]
+  rw [hval]
+  refine ENNReal.ofReal_le_ofReal ?_
+  have hsep : s ^ 2 * (4 * s) ^ (1 - α) = 4 ^ (1 - α) * s ^ (3 - α) := by
+    rw [sq_mul_rpow_scale hs (by norm_num) (1 - α),
+      show (2 : ℝ) + (1 - α) = 3 - α from by ring]
+  have h4 : (4 : ℝ) ^ (1 - α) ≤ 1 :=
+    Real.rpow_le_one_of_one_le_of_nonpos (by norm_num) (by linarith)
+  have hsp : (0 : ℝ) ≤ s ^ (3 - α) := Real.rpow_nonneg hs.le _
+  have hc : (0 : ℝ) ≤ 8 * α / (α - 1) := by
+    have : (0 : ℝ) < α - 1 := by linarith
+    positivity
+  calc 8 * α * s ^ 2 * ((4 * s) ^ (1 - α) / (α - 1))
+      = 8 * α / (α - 1) * (4 ^ (1 - α) * s ^ (3 - α)) := by rw [← hsep]; ring
+    _ ≤ 8 * α / (α - 1) * (1 * s ^ (3 - α)) :=
+        mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right h4 hsp) hc
+    _ = 8 * α / (α - 1) * s ^ (3 - α) := by ring
+
+private theorem lintegral_bndCore_le {α s : ℝ} (hα : 1 < α) (hα' : α < 2) (hs : 0 < s) :
+    ∫⁻ b in Ioi 0, bndCore α s b
+      ≤ ENNReal.ofReal (120 / ((α - 1) * (2 - α)) * s ^ (3 - α)) := by
+  have hα1 : (0 : ℝ) < α - 1 := by linarith
+  have hα2 : (0 : ℝ) < 2 - α := by linarith
+  have hK : (0 : ℝ) ≤ 30 * s / (α - 1) := by positivity
+  have h0 : (∫⁻ b in Ioi 0, bndCore α s b)
+      = ∫⁻ b in Ioc 0 (4 * s), ENNReal.ofReal (30 * s / (α - 1) * b ^ (1 - α)) := by
+    simp only [bndCore]
+    rw [lintegral_indicator measurableSet_Iic, Measure.restrict_restrict measurableSet_Iic,
+      inter_comm, Ioi_inter_Iic]
+  have hval : ∫⁻ b in Ioi 0, bndCore α s b
+      = ENNReal.ofReal (30 * s / (α - 1) * ((4 * s) ^ (2 - α) / (2 - α))) := by
+    rw [h0]
+    calc ∫⁻ b in Ioc 0 (4 * s), ENNReal.ofReal (30 * s / (α - 1) * b ^ (1 - α))
+        = ∫⁻ b in Ioc 0 (4 * s),
+            ENNReal.ofReal (30 * s / (α - 1)) * ENNReal.ofReal (b ^ (1 - α)) :=
+          lintegral_congr fun b => ENNReal.ofReal_mul hK
+      _ = ENNReal.ofReal (30 * s / (α - 1))
+            * ∫⁻ b in Ioc 0 (4 * s), ENNReal.ofReal (b ^ (1 - α)) :=
+          lintegral_const_mul' _ _ ENNReal.ofReal_ne_top
+      _ = ENNReal.ofReal (30 * s / (α - 1) * ((4 * s) ^ (2 - α) / (2 - α))) := by
+          rw [lintegral_Ioc_rpow (p := 1 - α) (c := 4 * s) (by linarith) (by positivity),
+            show (1 - α + 1 : ℝ) = 2 - α from by ring, ← ENNReal.ofReal_mul hK]
+  rw [hval]
+  refine ENNReal.ofReal_le_ofReal ?_
+  have hsep : s * (4 * s) ^ (2 - α) = 4 ^ (2 - α) * s ^ (3 - α) := by
+    rw [mul_rpow_scale hs (by norm_num) (2 - α), show (1 : ℝ) + (2 - α) = 3 - α from by ring]
+  have h4 : (4 : ℝ) ^ (2 - α) ≤ 4 := by
+    have h := Real.rpow_le_rpow_of_exponent_le (x := (4 : ℝ)) (by norm_num)
+      (show (2 : ℝ) - α ≤ 1 from by linarith)
+    rwa [Real.rpow_one] at h
+  have hsp : (0 : ℝ) ≤ s ^ (3 - α) := Real.rpow_nonneg hs.le _
+  have hc : (0 : ℝ) ≤ 30 / ((α - 1) * (2 - α)) := by positivity
+  calc 30 * s / (α - 1) * ((4 * s) ^ (2 - α) / (2 - α))
+      = 30 / ((α - 1) * (2 - α)) * (4 ^ (2 - α) * s ^ (3 - α)) := by
+        rw [← hsep]
+        field_simp
+    _ ≤ 30 / ((α - 1) * (2 - α)) * (4 * s ^ (3 - α)) :=
+        mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_right h4 hsp) hc
+    _ = 120 / ((α - 1) * (2 - α)) * s ^ (3 - α) := by ring
+
+/-! ### The two-dimensional estimate -/
+
+/-- The constant of the two-dimensional estimate. -/
+private def brkC (α : ℝ) : ℝ :=
+  4 * (32 * (α + 1) / (α - 1) + 8 * α / (α - 1) + 120 / ((α - 1) * (2 - α)))
+
+/-- **The two-dimensional estimate.** The plane integral of the second difference of the diamond
+power at step `s`, weighted by the diamond radius, is `O(s^{3−α})`. -/
+private theorem lintegral_abs_brk_mul_le {α : ℝ} (hα : 1 < α) (hα' : α < 2) {s : ℝ} (hs : 0 < s)
+    (j : Fin 2) :
+    ∫⁻ z : Fin 2 → ℝ, ENNReal.ofReal (|brk α |z j| |z (j + 1)| s| * (|z j| + |z (j + 1)|))
+      ≤ ENNReal.ofReal (brkC α * s ^ (3 - α)) := by
+  have hα1 : (0 : ℝ) < α - 1 := by linarith
+  have hα2 : (0 : ℝ) < 2 - α := by linarith
+  have hsp : (0 : ℝ) ≤ s ^ (3 - α) := Real.rpow_nonneg hs.le _
+  have hmeas : Measurable (Function.uncurry fun a b : ℝ =>
+      ENNReal.ofReal (|brk α a b s| * (a + b))) :=
+    ENNReal.measurable_ofReal.comp
+      ((continuous_abs.measurable.comp (measurable_brk α s)).mul
+        (measurable_fst.add measurable_snd))
+  have hinner : ∫⁻ b in Ioi 0, ∫⁻ a in Ioi 0, ENNReal.ofReal (|brk α a b s| * (a + b))
+      ≤ (∫⁻ b in Ioi 0, bndFar α s b) + (∫⁻ b in Ioi 0, bndTail α s b)
+        + ∫⁻ b in Ioi 0, bndCore α s b := by
+    calc ∫⁻ b in Ioi 0, ∫⁻ a in Ioi 0, ENNReal.ofReal (|brk α a b s| * (a + b))
+        ≤ ∫⁻ b in Ioi 0, (bndFar α s b + bndTail α s b + bndCore α s b) :=
+          setLIntegral_mono' measurableSet_Ioi fun b hb => lintegral_a_le hα hα' hb hs
+      _ = (∫⁻ b in Ioi 0, (bndFar α s b + bndTail α s b)) + ∫⁻ b in Ioi 0, bndCore α s b :=
+          lintegral_add_left ((measurable_bndFar α s).add (measurable_bndTail α s)) _
+      _ = (∫⁻ b in Ioi 0, bndFar α s b) + (∫⁻ b in Ioi 0, bndTail α s b)
+            + ∫⁻ b in Ioi 0, bndCore α s b := by
+          rw [lintegral_add_left (measurable_bndFar α s) _]
+  rw [lintegral_abs_pair _ hmeas j, lintegral_Ioi_swap _ hmeas]
+  calc (4 : ℝ≥0∞) * ∫⁻ b in Ioi 0, ∫⁻ a in Ioi 0, ENNReal.ofReal (|brk α a b s| * (a + b))
+      ≤ 4 * ((∫⁻ b in Ioi 0, bndFar α s b) + (∫⁻ b in Ioi 0, bndTail α s b)
+          + ∫⁻ b in Ioi 0, bndCore α s b) := by gcongr
+    _ ≤ 4 * (ENNReal.ofReal (32 * (α + 1) / (α - 1) * s ^ (3 - α))
+          + ENNReal.ofReal (8 * α / (α - 1) * s ^ (3 - α))
+          + ENNReal.ofReal (120 / ((α - 1) * (2 - α)) * s ^ (3 - α))) := by
+        gcongr
+        · exact lintegral_bndFar_le hα hs
+        · exact lintegral_bndTail_le hα hs
+        · exact lintegral_bndCore_le hα hα' hs
+    _ = ENNReal.ofReal (brkC α * s ^ (3 - α)) := by
+        rw [← ENNReal.ofReal_add (by positivity) (by positivity),
+          ← ENNReal.ofReal_add (by positivity) (by positivity),
+          show (4 : ℝ≥0∞) = ENNReal.ofReal 4 from by norm_num,
+          ← ENNReal.ofReal_mul (by norm_num : (0 : ℝ) ≤ 4), brkC]
+        congr 1
+        ring
 
 end CenteredMaximal.Fractional
 
