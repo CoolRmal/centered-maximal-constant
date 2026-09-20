@@ -180,6 +180,31 @@ theorem jumpGen1_bumpSlice_of_one_le {c : ℝ} (hc : 1 ≤ |c|) (x : ℝ) :
     jumpGen1 1 (bumpSlice c) x = 0 := by
   simp [jumpGen1, bumpSlice_eq_zero hc]
 
+/-- **The integrand of the jump integral of a slice is integrable** away from the corner of the
+slice: a slice that does not vanish identically is a dilate of the squared tent, whose jump
+integrand is integrable by `integrable_tentSqDiff_div_sq`. -/
+theorem integrable_bumpSliceDiff {c x : ℝ} (hx : x ≠ 0) :
+    Integrable fun s : ℝ => (bumpSlice c (x + s) + bumpSlice c (x - s) - 2 * bumpSlice c x)
+      * |s| ^ (-(1 + 1) : ℝ) := by
+  rcases lt_or_ge |c| 1 with hc | hc
+  · have ha : (0 : ℝ) < 1 - |c| := by linarith
+    have ha0 : (1 : ℝ) - |c| ≠ 0 := ha.ne'
+    refine ((integrable_tentSqDiff_div_sq (div_ne_zero hx ha0)).comp_div ha0).congr
+      (Filter.Eventually.of_forall fun s => ?_)
+    have hw : ((s / (1 - |c|)) ^ 2)⁻¹ = (1 - |c|) ^ 2 * (s ^ 2)⁻¹ := by
+      rw [div_pow, inv_div, div_eq_mul_inv]
+    have ea : (x + s) / (1 - |c|) = x / (1 - |c|) + s / (1 - |c|) := by ring
+    have eb : (x - s) / (1 - |c|) = x / (1 - |c|) - s / (1 - |c|) := by ring
+    show tentSqDiff (x / (1 - |c|)) (s / (1 - |c|)) * ((s / (1 - |c|)) ^ 2)⁻¹
+        = (bumpSlice c (x + s) + bumpSlice c (x - s) - 2 * bumpSlice c x)
+          * |s| ^ (-(1 + 1) : ℝ)
+    rw [tentSqDiff, ← ea, ← eb, bumpSlice_eq_smul_tentSq hc (x + s),
+      bumpSlice_eq_smul_tentSq hc (x - s), bumpSlice_eq_smul_tentSq hc x,
+      CenteredMaximal.abs_rpow_neg_two, hw]
+    ring
+  · refine (integrable_zero ℝ ℝ volume).congr (Filter.Eventually.of_forall fun s => ?_)
+    simp [bumpSlice_eq_zero hc]
+
 /-! ### The generator of the bump -/
 
 /-- **The second difference of the bump along the first axis** is the second difference of the

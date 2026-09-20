@@ -462,6 +462,27 @@ private theorem integral_secondDiff_tail (hR : 1 < R) {z : Fin 2 → ℝ} {a v :
     _ = 2 * ((tailF R (v + a) + tailF R (v - a)) / (R - 1)) := by
         rw [integral_tailProfile_line hR hv0 hav]
 
+/-- **The integrand of the generator of the tail is integrable** inside the open diamond: the tail
+vanishes at `z`, so along each coordinate line the second difference collapses to the two boundary
+terms of `integrable_tailProfile_line`. -/
+theorem integrable_secondDiff_tail (hR : 1 < R) {z : Fin 2 → ℝ} (j : Fin 2)
+    (hz : 0 < diamondNorm z) (hzR : diamondNorm z < R) :
+    Integrable fun t : ℝ => secondDiff (tail R) j z t * |t| ^ (-(1 + 1) : ℝ) := by
+  have hv0 : (0 : ℝ) ≤ |z (j + 1)| := abs_nonneg _
+  have hav : |z j| + |z (j + 1)| < R := by rw [← diamondNorm_eq_abs_add]; exact hzR
+  have hz0 : tail R z = 0 := tail_eq_zero hz hzR.le
+  have hg := integrable_tailProfile_line hR hv0 hav
+  refine (hg.add hg.comp_neg).congr (Filter.Eventually.of_forall fun t => ?_)
+  have h1 : tail R (z + t • Pi.single j 1) = tailProfile R (|z j + t| + |z (j + 1)|) := by
+    rw [tail_eq, diamondNorm_add_single]
+  have h2 : tail R (z - t • Pi.single j 1) = tailProfile R (|z j + -t| + |z (j + 1)|) := by
+    rw [sub_eq_add_neg, ← neg_smul, tail_eq, diamondNorm_add_single]
+  show tailProfile R (|z j + t| + |z (j + 1)|) / t ^ 2
+      + tailProfile R (|z j + -t| + |z (j + 1)|) / (-t) ^ 2
+      = secondDiff (tail R) j z t * |t| ^ (-(1 + 1) : ℝ)
+  rw [secondDiff, h1, h2, hz0, abs_rpow_neg_two, neg_sq]
+  ring
+
 private theorem tailF_add_tailF (R x y : ℝ) :
     tailF R (|y| + x) + tailF R (|y| - x) = tailF R (|x| + |y|) + tailF R (|y| - |x|) := by
   rcases le_or_gt 0 x with hx | hx
