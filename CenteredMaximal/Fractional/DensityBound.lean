@@ -49,6 +49,8 @@ noncomputable section
 open MeasureTheory Set
 open CenteredMaximal.Cauchy
 
+open scoped Real
+
 namespace CenteredMaximal.Fractional
 
 /-! ### The one-dimensional spline generator -/
@@ -1219,6 +1221,216 @@ private theorem jumpGen_fracKernel_split {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h
   rw [fracDensity]
   conv_lhs => rw [hfun]
   rw [jumpGen_add hbase (fun j => integrable_dir_splinePart z j), jumpGen_const_mul]
+
+/-! ### The majorant -/
+
+/-- The four terms of the majorant: the interior singularity, the far-field decay, the axis term and
+the corner of the support boundary. -/
+private def majFour (z : Fin 2 → ℝ) : ℝ :=
+  diamondNorm z ^ (-(12 / 5) : ℝ) + diamondNorm z ^ (-(11 / 5) : ℝ)
+    + diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ)
+    + (if |diamondNorm z - 7 / 4| < 1 then |diamondNorm z - 7 / 4| ^ (-(1 / 5) : ℝ) else 0)
+
+private theorem majFour_shell_nonneg (z : Fin 2 → ℝ) :
+    (0 : ℝ) ≤ (if |diamondNorm z - 7 / 4| < 1 then |diamondNorm z - 7 / 4| ^ (-(1 / 5) : ℝ)
+      else 0) := by
+  split
+  · exact Real.rpow_nonneg (abs_nonneg _) _
+  · exact le_rfl
+
+/-- The first and last terms of the majorant, which is all the interior estimate needs. -/
+private theorem interior_le_majFour (z : Fin 2 → ℝ) :
+    diamondNorm z ^ (-(12 / 5) : ℝ)
+        + (if |diamondNorm z - 7 / 4| < 1 then |diamondNorm z - 7 / 4| ^ (-(1 / 5) : ℝ) else 0)
+      ≤ majFour z := by
+  have h1 : (0 : ℝ) ≤ diamondNorm z ^ (-(11 / 5) : ℝ) :=
+    Real.rpow_nonneg (diamondNorm_nonneg z) _
+  have h2 : (0 : ℝ) ≤ diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) :=
+    mul_nonneg h1 (Real.rpow_nonneg (le_min (abs_nonneg _) (abs_nonneg _)) _)
+  rw [majFour]
+  linarith
+
+/-- The second, third and last terms, which is all the exterior estimate needs. -/
+private theorem exterior_le_majFour (z : Fin 2 → ℝ) :
+    diamondNorm z ^ (-(11 / 5) : ℝ)
+        + diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ)
+        + (if |diamondNorm z - 7 / 4| < 1 then |diamondNorm z - 7 / 4| ^ (-(1 / 5) : ℝ) else 0)
+      ≤ majFour z := by
+  have h1 : (0 : ℝ) ≤ diamondNorm z ^ (-(12 / 5) : ℝ) :=
+    Real.rpow_nonneg (diamondNorm_nonneg z) _
+  rw [majFour]
+  linarith
+
+/-- Inside the diamond the gap to the support boundary is either the corner term or harmless. -/
+private theorem gap_int_le {z : Fin 2 → ℝ} (hz0 : z ≠ 0) (hz : diamondNorm z < 7 / 4) :
+    (7 / 4 - diamondNorm z) ^ (-(1 / 5) : ℝ)
+      ≤ (if |diamondNorm z - 7 / 4| < 1 then |diamondNorm z - 7 / 4| ^ (-(1 / 5) : ℝ) else 0)
+        + diamondNorm z ^ (-(12 / 5) : ℝ) := by
+  have hr : 0 < diamondNorm z := diamondNorm_pos hz0
+  have habs : |diamondNorm z - 7 / 4| = 7 / 4 - diamondNorm z := by
+    rw [abs_of_nonpos (by linarith)]; ring
+  rw [habs]
+  rcases lt_or_ge (7 / 4 - diamondNorm z) 1 with hcase | hcase
+  · rw [if_pos hcase]
+    linarith [Real.rpow_nonneg (diamondNorm_nonneg z) (-(12 / 5) : ℝ)]
+  · rw [if_neg (not_lt.2 hcase)]
+    have h1 : (7 / 4 - diamondNorm z) ^ (-(1 / 5) : ℝ) ≤ 1 :=
+      Real.rpow_le_one_of_one_le_of_nonpos hcase (by norm_num)
+    have h2 : (1 : ℝ) ≤ diamondNorm z ^ (-(12 / 5) : ℝ) :=
+      Real.one_le_rpow_of_pos_of_le_one_of_nonpos hr (by linarith) (by norm_num)
+    linarith
+
+/-- Outside the diamond the weighted gap is either the corner term or harmless. -/
+private theorem gap_ext_le {z : Fin 2 → ℝ} (hz : 7 / 4 < diamondNorm z) :
+    diamondNorm z ^ (-(11 / 5) : ℝ) * (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ)
+      ≤ (if |diamondNorm z - 7 / 4| < 1 then |diamondNorm z - 7 / 4| ^ (-(1 / 5) : ℝ) else 0)
+        + diamondNorm z ^ (-(11 / 5) : ℝ) := by
+  have hr : 0 < diamondNorm z := by linarith
+  have hrpow : (0 : ℝ) < diamondNorm z ^ (-(11 / 5) : ℝ) := Real.rpow_pos_of_pos hr _
+  have habs : |diamondNorm z - 7 / 4| = diamondNorm z - 7 / 4 := abs_of_pos (by linarith)
+  have hgap : (0 : ℝ) < (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ) :=
+    Real.rpow_pos_of_pos (by linarith) _
+  rw [habs]
+  rcases lt_or_ge (diamondNorm z - 7 / 4) 1 with hcase | hcase
+  · rw [if_pos hcase]
+    have h1 : diamondNorm z ^ (-(11 / 5) : ℝ) ≤ 1 :=
+      Real.rpow_le_one_of_one_le_of_nonpos (by linarith) (by norm_num)
+    nlinarith
+  · rw [if_neg (not_lt.2 hcase)]
+    have h1 : (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ) ≤ 1 :=
+      Real.rpow_le_one_of_one_le_of_nonpos hcase (by norm_num)
+    nlinarith
+
+/-- The closed-form coefficient of the diamond power's generator at `α = 6/5`. -/
+private def diamondCoeff : ℝ :=
+  -4 * π * Real.Gamma (2 * (6 / 5)) * Real.cos (π * (6 / 5) / 2)
+    / (6 / 5 * Real.Gamma (6 / 5) ^ 2 * Real.sin (π * (6 / 5) / 2))
+
+/-- **The base generator inside the diamond**: the closed form of the diamond power plus the
+exterior tail's corner term. -/
+private theorem abs_jumpGen_truncBase_int_le {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hz : diamondNorm z < 7 / 4) :
+    |jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z|
+      ≤ (|diamondCoeff| + 48) * majFour z := by
+  have hz0 : z ≠ 0 := fun h => h0 (by simp [h])
+  have hsplit : jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z
+      = diamondCoeff * diamondNorm z ^ (-(12 / 5) : ℝ)
+        + jumpGen (6 / 5) (truncTail (6 / 5) (7 / 4)) z := by
+    rw [jumpGen_truncBase (by norm_num) (by norm_num) h0 h1 hz, diamondCoeff,
+      show (-2 * (6 / 5) : ℝ) = -(12 / 5) from by norm_num]
+  have htail := abs_jumpGen_truncTail_le h0 h1 hz
+  have hrpow : (0 : ℝ) ≤ diamondNorm z ^ (-(12 / 5) : ℝ) :=
+    Real.rpow_nonneg (diamondNorm_nonneg z) _
+  have hgap := gap_int_le hz0 hz
+  have hmaj := interior_le_majFour z
+  have hshell := majFour_shell_nonneg z
+  have hC : (0 : ℝ) ≤ |diamondCoeff| := abs_nonneg _
+  calc |jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z|
+      ≤ |diamondCoeff * diamondNorm z ^ (-(12 / 5) : ℝ)|
+          + |jumpGen (6 / 5) (truncTail (6 / 5) (7 / 4)) z| := by
+        rw [hsplit]; exact abs_add_le _ _
+    _ = |diamondCoeff| * diamondNorm z ^ (-(12 / 5) : ℝ)
+          + |jumpGen (6 / 5) (truncTail (6 / 5) (7 / 4)) z| := by
+        rw [abs_mul, abs_of_nonneg hrpow]
+    _ ≤ |diamondCoeff| * diamondNorm z ^ (-(12 / 5) : ℝ)
+          + 48 * (7 / 4 - diamondNorm z) ^ (-(1 / 5) : ℝ) := by linarith
+    _ ≤ (|diamondCoeff| + 48) * majFour z := by nlinarith [hgap, hmaj, hshell]
+
+/-- **The base generator outside the diamond**, direction by direction. -/
+private theorem abs_jumpGen_truncBase_ext_le {z : Fin 2 → ℝ} (h0 : z 0 ≠ 0) (h1 : z 1 ≠ 0)
+    (hz : 7 / 4 < diamondNorm z) :
+    |jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z| ≤ 3072 * majFour z := by
+  have hd0 := abs_integral_dir_truncBase_ext h0 h1 hz 0
+  have hd1 := abs_integral_dir_truncBase_ext h0 h1 hz 1
+  rw [show ((0 : Fin 2) + 1) = 1 from by decide] at hd0
+  rw [show ((1 : Fin 2) + 1) = 0 from by decide, min_comm] at hd1
+  have hrpow : (0 : ℝ) < diamondNorm z ^ (-(11 / 5) : ℝ) :=
+    Real.rpow_pos_of_pos (by linarith) _
+  have hmpow : (0 : ℝ) ≤ (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) :=
+    Real.rpow_nonneg (le_min (abs_nonneg _) (abs_nonneg _)) _
+  have hgap := gap_ext_le hz
+  have hmaj := exterior_le_majFour z
+  rw [jumpGen, Fin.sum_univ_two]
+  refine le_trans (abs_add_le _ _) ?_
+  refine le_trans (add_le_add hd0 hd1) ?_
+  have hexp : 1536 * diamondNorm z ^ (-(11 / 5) : ℝ)
+        * ((diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ) + (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ))
+      ≤ 1536 * majFour z := by
+    have hprod : diamondNorm z ^ (-(11 / 5) : ℝ)
+        * ((diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ) + (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ))
+        = diamondNorm z ^ (-(11 / 5) : ℝ) * (diamondNorm z - 7 / 4) ^ (-(1 / 5) : ℝ)
+          + diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) := by ring
+    rw [mul_assoc, hprod]
+    nlinarith [hgap, hmaj]
+  linarith
+
+/-- The cell sum of the spline bound is nonnegative. -/
+private theorem splineC_nonneg : 0 ≤ splineC := by
+  refine Finset.sum_nonneg fun ij _ => ?_
+  have h1 : (0 : ℝ) ≤ (16 : ℝ) ^ (6 / 5 : ℝ) := Real.rpow_nonneg (by norm_num) _
+  have h2 := cellBound_nonneg ij.1 ij.2
+  have h3 := cellBound_nonneg ij.2 ij.1
+  have h4 : (0 : ℝ) ≤ |fracCoeff (fracCellCoeff ij)| := abs_nonneg _
+  positivity
+
+/-- **The pointwise majorant of the comparison density.** Away from the two coordinate axes and the
+support boundary — a null set — the density of the `α = 6/5` comparison kernel is dominated by
+`A (r^{-12/5} + r^{-11/5} + r^{-11/5} m^{-1/5} + |r − 7/4|^{-1/5})`, the last term windowed to
+`|r − 7/4| < 1`. -/
+theorem exists_abs_fracDensity_le :
+    ∃ A : ℝ, 0 ≤ A ∧ ∀ z : Fin 2 → ℝ, z 0 ≠ 0 → z 1 ≠ 0 → diamondNorm z ≠ 7 / 4 →
+      |fracDensity z| ≤ A * (diamondNorm z ^ (-(12 / 5) : ℝ) + diamondNorm z ^ (-(11 / 5) : ℝ)
+        + diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ)
+        + (if |diamondNorm z - 7 / 4| < 1 then |diamondNorm z - 7 / 4| ^ (-(1 / 5) : ℝ)
+            else 0)) := by
+  have hbase : (0 : ℝ) < fracBaseCoeff := fracBaseCoeff_pos
+  refine ⟨fracBaseCoeff * (|diamondCoeff| + 48 + 3072) + splineC, ?_, fun z h0 h1 hne => ?_⟩
+  · have h1 : (0 : ℝ) ≤ |diamondCoeff| := abs_nonneg _
+    have h2 := splineC_nonneg
+    nlinarith
+  · have hz0 : z ≠ 0 := fun h => h0 (by simp [h])
+    have hmaj : 0 ≤ majFour z := by
+      have h1 : (0 : ℝ) ≤ diamondNorm z ^ (-(12 / 5) : ℝ) :=
+        Real.rpow_nonneg (diamondNorm_nonneg z) _
+      have h2 : (0 : ℝ) ≤ diamondNorm z ^ (-(11 / 5) : ℝ) :=
+        Real.rpow_nonneg (diamondNorm_nonneg z) _
+      have h3 : (0 : ℝ) ≤ (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) :=
+        Real.rpow_nonneg (le_min (abs_nonneg _) (abs_nonneg _)) _
+      have h4 := majFour_shell_nonneg z
+      rw [majFour]
+      nlinarith
+    have hspl : |jumpGen (6 / 5)
+        (fun w => fracKernel w - fracBaseCoeff * truncBase (6 / 5) (7 / 4) w) z|
+        ≤ splineC * majFour z := by
+      refine (abs_jumpGen_spline_le hz0).trans ?_
+      have h1 : diamondNorm z ^ (-(11 / 5) : ℝ) ≤ majFour z := by
+        have h2 : (0 : ℝ) ≤ diamondNorm z ^ (-(12 / 5) : ℝ) :=
+          Real.rpow_nonneg (diamondNorm_nonneg z) _
+        have h3 : (0 : ℝ) ≤ diamondNorm z ^ (-(11 / 5) : ℝ) * (min |z 0| |z 1|) ^ (-(1 / 5) : ℝ) :=
+          mul_nonneg (Real.rpow_nonneg (diamondNorm_nonneg z) _)
+            (Real.rpow_nonneg (le_min (abs_nonneg _) (abs_nonneg _)) _)
+        have h4 := majFour_shell_nonneg z
+        rw [majFour]
+        linarith
+      exact mul_le_mul_of_nonneg_left h1 splineC_nonneg
+    have hbnd : |jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z|
+        ≤ (|diamondCoeff| + 48 + 3072) * majFour z := by
+      rcases lt_or_gt_of_ne hne with hcase | hcase
+      · refine (abs_jumpGen_truncBase_int_le h0 h1 hcase).trans ?_
+        nlinarith [hmaj]
+      · refine (abs_jumpGen_truncBase_ext_le h0 h1 hcase).trans ?_
+        have h1 : (0 : ℝ) ≤ |diamondCoeff| := abs_nonneg _
+        nlinarith [hmaj]
+    have hfinal : |fracDensity z|
+        ≤ (fracBaseCoeff * (|diamondCoeff| + 48 + 3072) + splineC) * majFour z := by
+      rw [jumpGen_fracKernel_split h0 h1 hne]
+      refine (abs_add_le _ _).trans ?_
+      rw [abs_mul, abs_of_pos hbase]
+      have hstep : fracBaseCoeff * |jumpGen (6 / 5) (truncBase (6 / 5) (7 / 4)) z|
+          ≤ fracBaseCoeff * ((|diamondCoeff| + 48 + 3072) * majFour z) :=
+        mul_le_mul_of_nonneg_left hbnd hbase.le
+      nlinarith [hstep, hspl]
+    exact hfinal
 
 end CenteredMaximal.Fractional
 
