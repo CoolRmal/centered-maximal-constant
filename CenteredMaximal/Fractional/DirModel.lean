@@ -53,8 +53,6 @@ and it is subtracted once rather than being carried through the coefficients.
 
 @[expose] public section
 
-noncomputable section
-
 open CenteredMaximal.Cauchy
 
 namespace CenteredMaximal.Fractional
@@ -296,7 +294,5 @@ theorem dirModel_bound {L : List FifthEnc} (hL : L.all (fun c => c.check 12) = t
   exact hstep
 
 end CenteredMaximal.Fractional
-
-end
 
 end

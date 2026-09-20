@@ -51,8 +51,6 @@ origin (see the module docstring of `CenteredMaximal.Fractional.CentredLeaf`).
 
 @[expose] public section
 
-noncomputable section
-
 open CenteredMaximal.Cauchy
 
 namespace CenteredMaximal.Fractional
@@ -243,7 +241,5 @@ theorem jumpGen_fracKernel_nonneg_of_leaf {L : List FifthEnc}
   linarith
 
 end CenteredMaximal.Fractional
-
-end
 
 end

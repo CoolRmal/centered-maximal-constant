@@ -43,8 +43,6 @@ that turns one row's sixteen terms into a list and the list of lists into the fl
 
 @[expose] public section
 
-noncomputable section
-
 namespace CenteredMaximal.Fractional
 
 /-! ### Sums over a range, as list sums -/
@@ -137,7 +135,5 @@ theorem recentre_spec (A : ℕ → ℚ) (μ : ℚ) (t : ℝ) :
   ring
 
 end CenteredMaximal.Fractional
-
-end
 
 end

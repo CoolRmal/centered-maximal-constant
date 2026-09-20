@@ -60,8 +60,6 @@ only genuinely two-sided multiplication of the certificate.  It is what the sear
 
 @[expose] public section
 
-noncomputable section
-
 open CenteredMaximal.Cauchy
 
 namespace CenteredMaximal.Fractional
@@ -85,7 +83,7 @@ structure ModelTerm where
 namespace ModelTerm
 
 /-- The real coefficient a term contributes. -/
-def coR (w : ModelTerm) : ℝ := (w.q : ℝ) * (w.x : ℝ) ^ ((w.e : ℝ) / 5)
+noncomputable def coR (w : ModelTerm) : ℝ := (w.q : ℝ) * (w.x : ℝ) ^ ((w.e : ℝ) / 5)
 
 /-- The interval a term contributes.  An exponent of `0` makes the term exactly rational, and
 sending it to the table would widen it by a unit in the last place for nothing. -/
@@ -109,7 +107,7 @@ end ModelTerm
 /-! ### A list of terms -/
 
 /-- The real coefficient of the bidegree `p` in a list of terms. -/
-def termsCoR (M : List ModelTerm) (p : ℕ × ℕ) : ℝ :=
+noncomputable def termsCoR (M : List ModelTerm) (p : ℕ × ℕ) : ℝ :=
   (M.map fun w => if (w.a, w.b) = p then w.coR else 0).sum
 
 /-- The interval of the coefficient of the bidegree `p` in a list of terms. -/
@@ -118,7 +116,7 @@ def termsCoI (L : List FifthEnc) (M : List ModelTerm) (p : ℕ × ℕ) : RatItv 
 
 /-- The value of a list of terms at a point of the rectangle, in the deviations `s` and `t` from
 its centre. -/
-def termsValR (M : List ModelTerm) (s t : ℝ) : ℝ :=
+noncomputable def termsValR (M : List ModelTerm) (s t : ℝ) : ℝ :=
   (M.map fun w => w.coR * s ^ w.a * t ^ w.b).sum
 
 /-- **Every coefficient of a model lies in its interval.** -/
@@ -177,7 +175,7 @@ theorem termsValR_eq_sum {F : Finset (ℕ × ℕ)} {M : List ModelTerm}
 /-- The constant the spline half of the generator is scaled by: the `625/108` of the fourth
 difference of `CenteredMaximal.Fractional.jumpGen1_bspline_sixFifths` and the `16 ^ (6/5)` of the
 dilation of the spline grid. -/
-def splineScale : ℝ := 625 / 108 * (16 : ℝ) ^ ((6 : ℝ) / 5)
+noncomputable def splineScale : ℝ := 625 / 108 * (16 : ℝ) ^ ((6 : ℝ) / 5)
 
 /-- The interval of `splineScale`, the certificate's only genuinely two-sided multiplication. -/
 def splineScaleI (L : List FifthEnc) : RatItv := RatItv.scale (625 / 108) (encItv L 16 6)
@@ -194,7 +192,7 @@ theorem splineScaleI_mem {L : List FifthEnc} (hL : L.all (fun c => c.check 12) =
 
 /-- The real coefficient of the bidegree `p` in a leaf's model: the spline half, scaled, plus the
 base half. -/
-def leafCoR (Msp Mba : List ModelTerm) (p : ℕ × ℕ) : ℝ :=
+noncomputable def leafCoR (Msp Mba : List ModelTerm) (p : ℕ × ℕ) : ℝ :=
   splineScale * termsCoR Msp p + termsCoR Mba p
 
 /-- The interval of that coefficient. -/
@@ -202,7 +200,7 @@ def leafCoI (L : List FifthEnc) (Msp Mba : List ModelTerm) (p : ℕ × ℕ) : Ra
   RatItv.add (RatItv.mul (splineScaleI L) (termsCoI L Msp p)) (termsCoI L Mba p)
 
 /-- The value of a leaf's model at a point of its rectangle. -/
-def leafValR (Msp Mba : List ModelTerm) (s t : ℝ) : ℝ :=
+noncomputable def leafValR (Msp Mba : List ModelTerm) (s t : ℝ) : ℝ :=
   splineScale * termsValR Msp s t + termsValR Mba s t
 
 theorem leafCoI_mem {L : List FifthEnc} (hL : L.all (fun c => c.check 12) = true)
@@ -314,7 +312,5 @@ theorem jumpGen_fracKernel_nonneg_of_terms {L : List FifthEnc}
     (leafCoR Msp Mba) hcheck h0 h1 hz hu hv (by rw [← hval]; exact hmodel)
 
 end CenteredMaximal.Fractional
-
-end
 
 end

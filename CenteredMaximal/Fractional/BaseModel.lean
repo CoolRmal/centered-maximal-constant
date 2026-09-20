@@ -68,8 +68,6 @@ by `termsCoR` *before* `leafCheckQ` ever takes an absolute value.
 
 @[expose] public section
 
-noncomputable section
-
 namespace CenteredMaximal.Fractional
 
 /-! ### The base coefficient as a rational -/
@@ -181,7 +179,5 @@ theorem termsValR_baseTerms {S r₀ d₀ : ℚ} (hr₀ : 0 < r₀) (K Ltail : �
   ring
 
 end CenteredMaximal.Fractional
-
-end
 
 end
