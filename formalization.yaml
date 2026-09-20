@@ -105,7 +105,7 @@ related_formalizations:
 status:
   scope: |-
     Formalized in full, using only propext, Classical.choice and Quot.sound: c_2 >= Phi (CenteredMaximal.ofReal_phi_le_weakTypeConstant_two), c_d <= 2^d for every d including d = 0 (CenteredMaximal.weakTypeConstant_le_two_pow), 1.685 < Phi < 1.686 (CenteredMaximal.lt_phi, CenteredMaximal.phi_lt), and c_2 <= 3.879 (CenteredMaximal.weakTypeConstant_two_le_upper), which is below the classical 4. The definitions live in Challenge.lean with Mathlib imports only; cubes are Metric.closedBall in Fin d -> R with its sup norm, the maximal function takes values in [0, infinity], and level sets are measured with Lebesgue outer measure.
-    Not formalized: the exact area 2hV - 4ab of the level-one set (only the lower bound is needed); any optimality of Phi (none is claimed); the restricted optimality of the seed lattice certified during the exploration; sharpness of 2^d; the constant 3.615749 of the source manuscript, whose fractional order 6/5 needs special-function theory absent from Mathlib, and any optimality of the kernel used for 3.879.
+    Not formalized: the exact area 2hV - 4ab of the level-one set (only the lower bound is needed); any optimality of Phi (none is claimed); the restricted optimality of the seed lattice certified during the exploration; sharpness of 2^d; the constant 3.615749 of the source manuscript; and any optimality of the kernel used for 3.879. On the manuscript's constant: its analytic content at fractional order 6/5 was developed during this work and found feasible (the diamond-power generator identity, the real Beta integral, and a transfer against a generator density of infinite mass), so the obstruction is not missing theory. It is the finite certificate: the order-6/5 kernel needs 4582 dyadic leaves whose kernel-checked verification was measured at several hours of CPU, which does not fit the comparator's budget. That work is not part of this submission.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: []
@@ -144,7 +144,7 @@ automation:
       spend_usd: subscription-based
       hardware: local machine for Lean builds, API-only for inference
     prompting_notes: |-
-      Human-directed. The maintainer asked for the manuscript's constant 3.615749; the assessment that its fractional order 6/5 needs special-function theory absent from Mathlib led the maintainer to direct a weaker but elementary bound first. Several agents corrected errors in the briefs they were given, including a false Lipschitz claim and an unprovable pointwise bound.
+      Human-directed. The maintainer asked for the manuscript's constant 3.615749, and the elementary alpha = 1 case was formalized first as a tractable target. Work on the fractional order 6/5 was then carried out and abandoned when the finite certificate's kernel-checking cost was measured; only the alpha = 1 development is in this repository. Several agents corrected errors in the briefs they were given, including a false Lipschitz claim, an unprovable pointwise bound, and a kernel majorant that was quantitatively insufficient.
   - method: manual
     models: []
     framework: n/a

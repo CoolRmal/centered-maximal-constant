@@ -77,8 +77,10 @@ unit diamond, this dominates the maximal function, and the resulting constant is
 diamonds to squares.
 
 This is a weaker constant than the `3.615749` of the manuscript this method is taken from, which
-uses the fractional generator of order `6/5` and a cubic-spline kernel; only the elementary
-`α = 1` case is formalized here.
+uses the fractional generator of order `6/5` and a cubic-spline kernel. Only the elementary `α = 1`
+case is formalized here: at `α = 1` the potential is `A`-harmonic off the axes and every integral
+closes in logarithms, whereas order `6/5` requires a finite certificate over 4582 dyadic cells whose
+kernel-checked verification costs hours of CPU.
 
 ## Relation to the literature
 
