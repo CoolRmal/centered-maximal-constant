@@ -50,6 +50,8 @@ the planar and Newtonian radial profile derivatives, their constant flux, and a 
 integration formula for Euclidean balls.
 `Ball/RadialGreenCalculus.lean` proves the finite-annulus integration-by-parts identity for
 both Green profiles from the cumulative Laplacian mass and spherical-mean flux relation.
+`Ball/RadialMassDerivative.lean` proves that the derivative of a smooth compactly supported
+density's mass inside a ball is its spherical integral times the polar Jacobian.
 `Ball/PlanarGreenPairing.lean` proves differentiation of a circle average with respect to its
 radius and a planar polar formula for disk integrals. `Ball/ObstacleExistence.lean` proves an
 abstract Hilbert-space minimizer and its
