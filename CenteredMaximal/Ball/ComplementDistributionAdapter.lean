@@ -51,6 +51,20 @@ namespace DirichletSobolev
 
 variable {n : ℕ}
 
+/-- Turn a difference of weak `L²` functionals into the functional of the difference. -/
+theorem ball_weak_equation_sub
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (U : H01 (ball center R)) (F ρ : L2D (ball center R))
+    (heq : ∀ V : H01 (ball center R),
+      laplaceBilin (ball center R) U V =
+        l2Functional (ball center R) F V -
+          l2Functional (ball center R) ρ V) :
+    ∀ V : H01 (ball center R),
+      laplaceBilin (ball center R) U V =
+        l2Functional (ball center R) (F - ρ) V := by
+  intro V
+  simpa only [l2Functional_apply, inner_sub_left] using heq V
+
 /-- The positive representative of a weak obstacle satisfying `B U = F - ρ` has
 distributional Laplacian `ρ - F` on the ball. -/
 theorem ballPositiveRepresentative_hasLocalDistributionalLaplacian_of_complement
