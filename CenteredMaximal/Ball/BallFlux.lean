@@ -138,5 +138,95 @@ theorem continuous_sphereFlux (n : ℕ) [NeZero n]
       fderiv ℝ w (x + s • (ω : E)) (ω : E))
     (fun _ => C) hmeas hbound (integrable_const C) hlim
 
+/-- The finite shell identity in polar coordinates. -/
+theorem integral_laplacian_mul_smoothBallCutoff_eq_shell (n : ℕ) [NeZero n]
+    (w : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hw : ContDiff ℝ 2 w) (hsw : HasCompactSupport w)
+    (x : EuclideanSpace ℝ (Fin n)) {R δ : ℝ} (hR : 0 < R) (hδ : 0 < δ) :
+    (∫ y, Laplacian.laplacian w y * smoothBallCutoff n x R δ y) =
+      ∫ s in R..(R + δ), -(deriv (radialBallCutoff R δ) s) *
+        (s ^ (n - 1) *
+          (∫ ω : sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+            fderiv ℝ w (x + s • (ω : EuclideanSpace ℝ (Fin n)))
+              (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere))) := by
+  let E := EuclideanSpace ℝ (Fin n)
+  let φ : ℝ → ℝ := fun s =>
+    deriv Real.smoothTransition
+      (((R + δ) ^ 2 - s ^ 2) / ((R + δ) ^ 2 - R ^ 2)) * 2 /
+      ((R + δ) ^ 2 - R ^ 2)
+  let g : E → ℝ := fun y => fderiv ℝ w y (y - x)
+  have hφ : Continuous φ := by
+    have hderiv : Continuous (deriv Real.smoothTransition) :=
+      (Real.smoothTransition.contDiff : ContDiff ℝ 2 Real.smoothTransition).continuous_deriv
+        (by norm_num)
+    dsimp [φ]
+    fun_prop
+  have hgcont : Continuous g := by
+    have hf : Continuous (fderiv ℝ w) := hw.continuous_fderiv (by norm_num)
+    fun_prop
+  have hgsupp : HasCompactSupport g := by
+    apply (hsw.fderiv ℝ).mono'
+    intro y hy
+    apply subset_tsupport
+    intro hz
+    exact hy (by simp [g, hz])
+  have hcont : Continuous (fun y : E => φ ‖y - x‖ * g y) := by
+    fun_prop
+  have hint : Integrable (fun y : E => φ ‖y - x‖ * g y) :=
+    hcont.integrable_of_hasCompactSupport (hgsupp.mul_left)
+  rw [integral_laplacian_mul_smoothBallCutoff n w hw hsw x hR hδ]
+  change (∫ y : E, φ ‖y - x‖ * g y) = _
+  rw [integral_radial_mul_polar_swapped n x φ g hint]
+  let H : ℝ → ℝ := fun s => s ^ (n - 1) *
+    (∫ ω : sphere (0 : E) 1,
+      fderiv ℝ w (x + s • (ω : E)) (ω : E) ∂(volume.toSphere))
+  have hinner (s : ℝ) :
+      (∫ ω : sphere (0 : E) 1, g (x + s • (ω : E)) ∂(volume.toSphere)) =
+        s * (∫ ω : sphere (0 : E) 1,
+          fderiv ℝ w (x + s • (ω : E)) (ω : E) ∂(volume.toSphere)) := by
+    have heq (ω : sphere (0 : E) 1) :
+        g (x + s • (ω : E)) =
+          s * fderiv ℝ w (x + s • (ω : E)) (ω : E) := by
+      simp only [g, add_sub_cancel_left, map_smul, smul_eq_mul]
+    simp_rw [heq, integral_const_mul]
+  have hrad (s : ℝ) :
+      s ^ (n - 1) * φ s *
+        (∫ ω : sphere (0 : E) 1,
+          g (x + s • (ω : E)) ∂(volume.toSphere)) =
+        -(deriv (radialBallCutoff R δ) s) * H s := by
+    rw [hinner, radialBallCutoff_deriv]
+    dsimp [φ, H]
+    ring
+  simp_rw [hrad]
+  change (∫ s in Ioi (0 : ℝ), -(deriv (radialBallCutoff R δ) s) * H s) =
+    ∫ s in R..(R + δ), -(deriv (radialBallCutoff R δ) s) * H s
+  let F : ℝ → ℝ := fun s => -(deriv (radialBallCutoff R δ) s) * H s
+  change (∫ s in Ioi (0 : ℝ), F s) = ∫ s in R..(R + δ), F s
+  calc
+    (∫ s in Ioi (0 : ℝ), F s) =
+        ∫ s in Ioi (0 : ℝ), (Ioc R (R + δ)).indicator F s := by
+      apply setIntegral_congr_fun measurableSet_Ioi
+      intro s hs
+      by_cases hsR : R < s
+      · by_cases hsδ : s ≤ R + δ
+        · simp only [Set.indicator_of_mem (show s ∈ Ioc R (R + δ) from ⟨hsR, hsδ⟩)]
+        · have hz : F s = 0 := by
+            simp [F, radialBallCutoff_deriv_eq_zero_outer_closed hR hδ (le_of_not_ge hsδ)]
+          simp [Set.indicator_of_notMem (show s ∉ Ioc R (R + δ) from by simp [hsδ]), hz]
+      · have hz : F s = 0 := by
+          simp [F, radialBallCutoff_deriv_eq_zero_inner_closed hR hδ hs.out.le (le_of_not_gt hsR)]
+        simp [Set.indicator_of_notMem (show s ∉ Ioc R (R + δ) from by simp [hsR]), hz]
+    _ = ∫ s in Ioc R (R + δ), F s := by
+      rw [setIntegral_indicator measurableSet_Ioc]
+      have hset : Ioi (0 : ℝ) ∩ Ioc R (R + δ) = Ioc R (R + δ) := by
+        ext s
+        change (0 < s ∧ R < s ∧ s ≤ R + δ) ↔ R < s ∧ s ≤ R + δ
+        constructor
+        · intro hs; exact hs.2
+        · intro hs; exact ⟨lt_trans hR hs.1, hs⟩
+      rw [hset]
+    _ = ∫ s in R..(R + δ), F s := by
+      rw [intervalIntegral.integral_of_le (by linarith : R ≤ R + δ)]
+
 
 end CenteredMaximal.Ball
