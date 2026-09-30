@@ -230,4 +230,42 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
     | zero => simpa only [Fin.cons_zero, w, PiLp.toLp_apply] using hθ0t
     | succ i => simpa only [Fin.cons_succ, w, PiLp.toLp_apply] using hθit i
   exact ⟨w, hwmem, hw0', hwi⟩
+
+/-- Dominated pointwise convergence to zero implies convergence in `L²`. The bound is
+itself an `L²` function, so this works on domains of infinite measure too. -/
+theorem tendsto_eLpNorm_two_zero_of_dominated {α : Type*} [MeasurableSpace α]
+    (μ : Measure α) {F : ℕ → α → ℝ} {bound : α → ℝ}
+    (hboundLp : MemLp bound 2 μ)
+    (hFmeas : ∀ n, AEStronglyMeasurable (F n) μ)
+    (hbound : ∀ n x, ‖F n x‖ ≤ ‖bound x‖)
+    (hpoint : ∀ᵐ x ∂μ, Tendsto (fun n => F n x) atTop (𝓝 0)) :
+    Tendsto (fun n => eLpNorm (F n) 2 μ) atTop (𝓝 0) := by
+  have hrepr : ∀ n, eLpNorm (F n) 2 μ =
+      (∫⁻ x, ‖F n x‖ₑ ^ (2 : ℝ) ∂μ) ^ (1 / (2 : ℝ)) := fun n => by
+    rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top,
+      ENNReal.toReal_ofNat]
+  simp only [hrepr]
+  have hlim : Tendsto (fun n => ∫⁻ x, ‖F n x‖ₑ ^ (2 : ℝ) ∂μ) atTop
+      (𝓝 (∫⁻ _, (0 : ℝ≥0∞) ∂μ)) := by
+    refine tendsto_lintegral_of_dominated_convergence'
+      (fun x => ‖bound x‖ₑ ^ (2 : ℝ))
+      (fun n => (hFmeas n).enorm.pow_const _)
+      (fun n => Eventually.of_forall fun x => ?_) ?_ ?_
+    · refine ENNReal.rpow_le_rpow ?_ (by norm_num)
+      rw [enorm_eq_nnnorm, enorm_eq_nnnorm, ENNReal.coe_le_coe,
+        ← NNReal.coe_le_coe, coe_nnnorm, coe_nnnorm]
+      exact hbound n x
+    · exact (lintegral_rpow_enorm_lt_top_of_eLpNorm_lt_top two_ne_zero
+        ENNReal.ofNat_ne_top hboundLp.2).ne
+    · filter_upwards [hpoint] with x hx
+      have henorm : Tendsto (fun n => ‖F n x‖ₑ) atTop (𝓝 0) := by
+        simpa only [Function.comp_def, enorm_zero] using
+          ((continuous_enorm.tendsto (0 : ℝ)).comp hx)
+      have ht := ((ENNReal.continuous_rpow_const (y := (2 : ℝ))).tendsto 0).comp henorm
+      have htwo : (0 : ℝ) < 2 := by norm_num
+      simpa only [Function.comp_def, ENNReal.zero_rpow_of_pos htwo] using ht
+  rw [lintegral_zero] at hlim
+  have ht := ((ENNReal.continuous_rpow_const (y := 1 / (2 : ℝ))).tendsto 0).comp hlim
+  have hhalf : (0 : ℝ) < 1 / 2 := by norm_num
+  simpa only [Function.comp_def, ENNReal.zero_rpow_of_pos hhalf] using ht
 end CenteredMaximal.Ball.DirichletSobolev
