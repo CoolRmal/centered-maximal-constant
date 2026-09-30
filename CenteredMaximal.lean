@@ -9,7 +9,7 @@ public import CenteredMaximal.Numerics
 public import CenteredMaximal.UpperBound
 public import CenteredMaximal.Cauchy.Representation
 public import CenteredMaximal.Lattice.LowerBound
-public import CenteredMaximal.Ball.Comparison
+public import CenteredMaximal.Ball.PlanarMass
 
 /-!
 # The weak type constant of the centred maximal operator over cubes

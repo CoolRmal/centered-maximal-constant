@@ -28,7 +28,11 @@ uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
 The development already checks the radius identities for these constants and proves a general
 comparison lemma: a weak type bound for the maximal operator of a normalized kernel that is at
 least one on the unit ball gives the same bound for `ballMaximalFunction`. Establishing that
-kernel's weak type bound through the obstacle problem is the remaining analytic step.
+kernel's weak type bound through the obstacle problem is the remaining analytic step. The
+logarithmic and Newtonian kernels are defined and proved to dominate the unit ball; their support
+radii are checked. The logarithmic kernel's total mass is proved exactly:
+
+$$\int_{\mathbb R^2} K_2(x)\,dx = \pi e.$$
 
 ## The statement
 
@@ -138,6 +142,8 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/Basic.lean` | the basic API for Euclidean ball averages |
 | `CenteredMaximal/Ball/Constants.lean` | the planar and higher-dimensional radius identities |
 | `CenteredMaximal/Ball/Comparison.lean` | reduction from a kernel maximal bound to ball averages |
+| `CenteredMaximal/Ball/GreenKernel.lean` | Green kernels and their pointwise bounds |
+| `CenteredMaximal/Ball/PlanarMass.lean` | exact mass of the planar logarithmic kernel |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
 | `CenteredMaximal/Obstacle/` | the obstacle problem for the generator |
