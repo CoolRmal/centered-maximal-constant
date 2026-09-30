@@ -8,6 +8,8 @@ module
 public import Mathlib.Analysis.InnerProductSpace.Dual
 public import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
 public import Mathlib.Geometry.Convex.Cone.Basic
+public import Mathlib.MeasureTheory.Function.L2Space
+public import Mathlib.MeasureTheory.Function.LpOrder
 public import Mathlib.Tactic
 
 /-!
@@ -27,6 +29,7 @@ noncomputable section
 
 open InnerProductSpace
 open scoped RealInnerProductSpace
+open scoped ENNReal
 
 namespace CenteredMaximal.Ball
 
@@ -133,5 +136,57 @@ theorem exists_obstacle_upper_cap (source mass : H →L[ℝ] ℝ) (κ : ℝ)
   rw [hsub] at h
   change source φ - κ * mass φ ≤ ⟪u, φ⟫_ℝ at h
   linarith
+
+/-! ### Positive cone pulled back through a Dirichlet-space embedding -/
+
+variable {X : Type*} [MeasurableSpace X] {μ : MeasureTheory.Measure X}
+
+/-- The positive cone in an abstract Hilbert space whose elements have an `L²` representative.
+For `H = H¹₀(D)`, the map is the usual continuous embedding into `L²(D)`. -/
+def positiveLpCone (J : H →L[ℝ] MeasureTheory.Lp ℝ 2 μ) : ConvexCone ℝ H :=
+  { carrier := {u | 0 ≤ J u}
+    smul_mem' := by
+      intro c hc u hu
+      change 0 ≤ J u at hu
+      change 0 ≤ J (c • u)
+      rw [map_smul]
+      rw [← MeasureTheory.Lp.coeFn_nonneg] at hu ⊢
+      filter_upwards [hu, MeasureTheory.Lp.coeFn_smul c (J u)] with x hx hs
+      rw [hs]
+      exact mul_nonneg hc.le hx
+    add_mem' := by
+      intro u hu v hv
+      change 0 ≤ J (u + v)
+      rw [map_add]
+      exact add_nonneg hu hv }
+
+omit [CompleteSpace H] in
+@[simp]
+theorem mem_positiveLpCone (J : H →L[ℝ] MeasureTheory.Lp ℝ 2 μ) (u : H) :
+    u ∈ positiveLpCone J ↔ 0 ≤ J u := Iff.rfl
+
+omit [CompleteSpace H] in
+theorem isClosed_positiveLpCone (J : H →L[ℝ] MeasureTheory.Lp ℝ 2 μ) :
+    IsClosed (positiveLpCone J : Set H) := by
+  change IsClosed (J ⁻¹' Set.Ici 0)
+  exact isClosed_Ici.preimage J.continuous
+
+omit [CompleteSpace H] in
+theorem pointed_positiveLpCone (J : H →L[ℝ] MeasureTheory.Lp ℝ 2 μ) :
+    (positiveLpCone J).Pointed := by
+  simp [ConvexCone.Pointed, positiveLpCone]
+
+/-- The abstract capped obstacle exists on any Hilbert space continuously embedded into `L²`.
+The remaining PDE work is to equip `H¹₀(D)` with its gradient inner product and verify the
+Markov truncation needed for the opposite inequality. -/
+theorem exists_positiveLp_obstacle_upper_cap
+    (J : H →L[ℝ] MeasureTheory.Lp ℝ 2 μ)
+    (source mass : H →L[ℝ] ℝ) (κ : ℝ) :
+    ∃ u : H, 0 ≤ J u ∧ ∀ φ : H, 0 ≤ J φ →
+      source φ - ⟪u, φ⟫_ℝ ≤ κ * mass φ := by
+  obtain ⟨u, hu, hcap⟩ := exists_obstacle_upper_cap source mass κ (positiveLpCone J)
+    (isClosed_positiveLpCone J) (pointed_positiveLpCone J)
+  exact ⟨u, (mem_positiveLpCone J u).1 hu,
+    fun φ hφ => hcap φ ((mem_positiveLpCone J φ).2 hφ)⟩
 
 end CenteredMaximal.Ball
