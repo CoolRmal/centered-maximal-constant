@@ -185,6 +185,24 @@ theorem integral_polar_ball_two
           s * F (x + s • (ω : E)) := by
       rw [setIntegral_indicator measurableSet_Iio, Set.Ioi_inter_Iio]
 
+/-- The planar polar formula with complex unit directions. -/
+theorem integral_polar_ball_two_complex
+    (x : EuclideanSpace ℝ (Fin 2)) (R : ℝ)
+    (F : EuclideanSpace ℝ (Fin 2) → ℝ) (hF : Integrable F) :
+    (∫ y in ball x R, F y) =
+      ∫ ζ : Metric.sphere (0 : ℂ) 1,
+        ∫ s in Set.Ioo (0 : ℝ) R,
+          s * F (x + s • planarComplexIsometry.symm (ζ : ℂ)) ∂volume
+        ∂(volume.toSphere) := by
+  rw [integral_polar_ball_two x R F hF,
+    ← integral_planarSphereEquiv (fun ζ : Metric.sphere (0 : ℂ) 1 ↦
+      ∫ s in Set.Ioo (0 : ℝ) R,
+        s * F (x + s • planarComplexIsometry.symm (ζ : ℂ)) ∂volume)]
+  apply integral_congr_ae
+  filter_upwards with ω
+  congr 1
+  simp [planarSphereEquiv_coe]
+
 /-- Differentiate a circle average by differentiating its integrand in the radial variable.
 The uniform bound is needed only near the radius at which the derivative is taken. -/
 theorem hasDerivAt_circleAverage_of_bounded_radial_deriv
