@@ -77,14 +77,27 @@ equations. `Ball/L2Penalty.lean` applies this to the negative-part penalty, and
 ball. `Ball/BallPenaltyCap.lean` proves its negative-part density is uniformly capped by
 the obstacle level, using a shifted Sobolev positive-part test.
 `Ball/BallFlux.lean` proves the exact ball flux identity needed by the Green calculation.
-The Green pairing has also been proved at arbitrary radii for smooth compact test
-functions, with a stability theorem under pointwise obstacle and almost-everywhere Laplacian
-convergence.
+The Green pairing is proved at arbitrary radii for smooth compact test functions.
+`Ball/BallPenaltyLimit.lean` and `Ball/BallPenaltyVariational.lean` now construct a common weak
+limit of capped penalized solutions and prove that it satisfies the obstacle variational
+inequality. `Ball/ObstacleContact.lean` obtains the contact-set mass bound from that limit.
+`Ball/BallComplementCertificate.lean` packages the correct comparison density: the cap minus
+the nonnegative penalty density. It is nonnegative, bounded by the cap, and occurs with the
+right sign in the weak equation.
 
-The remaining analytic work is to pass from the capped penalized solutions to a weak obstacle
-with a capped density and suitable contact behavior, verify its variational truncation
-inequality, and apply the Green pairing at the obstacle's regularity. Once those pieces are
-proved, the two ball theorems can be added to `Solution.lean` and checked by the comparator.
+`Ball/BallWeakDistribution.lean` derives the local distributional Laplacian from the weak
+equation. `Ball/BallPositiveRepresentative.lean` supplies a nonnegative integrable,
+compactly supported representative that vanishes outside the contact set. Localized Green
+pairing and one cutoff for every relevant center and radius are proved in
+`Ball/LocalWeakPairing.lean`, `Ball/AEGreenFromMollifiers.lean`, and
+`Ball/BallKernelSupport.lean`. The extended-real maximal-function transfer needs Green
+comparison only for almost every center, as formalized in `Ball/AEObstacleTransfer.lean`.
+
+The remaining analytic step is to show that the Laplacians of smooth mollifications of the
+weak obstacle converge to its bounded local density, with a uniform bound in the interior.
+The mollifiers and their Laplacian identities are already formalized. After that step, the
+almost-everywhere Green comparison must be connected to the complementary density, the two
+proofs must be added to `Solution.lean`, and the comparator must pass.
 
 ## The statement
 
