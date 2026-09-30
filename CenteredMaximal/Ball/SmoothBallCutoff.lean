@@ -85,4 +85,43 @@ theorem smoothBallCutoff_hasCompactSupport (n : ℕ)
     exact le_of_lt (by simpa only [mem_closedBall, dist_eq_norm, not_le] using hball)
   exact hy (smoothBallCutoff_zero n x y hR hδ hnorm)
 
+/-- The directional derivative of the smooth ball cutoff. The derivative is radial and
+contains no singular factor at the center. -/
+theorem smoothBallCutoff_fderiv (n : ℕ)
+    (x y v : EuclideanSpace ℝ (Fin n)) (R δ : ℝ) :
+    fderiv ℝ (smoothBallCutoff n x R δ) y v =
+      -(deriv Real.smoothTransition
+        (((R + δ) ^ 2 - ‖y - x‖ ^ 2) / ((R + δ) ^ 2 - R ^ 2))) *
+        (2 * inner ℝ (y - x) v) / ((R + δ) ^ 2 - R ^ 2) := by
+  let gap : ℝ := (R + δ) ^ 2 - R ^ 2
+  let q : EuclideanSpace ℝ (Fin n) → ℝ :=
+    fun z => ((R + δ) ^ 2 - ‖z - x‖ ^ 2) / gap
+  have hsub : HasFDerivAt (fun z : EuclideanSpace ℝ (Fin n) => z - x)
+      (ContinuousLinearMap.id ℝ (EuclideanSpace ℝ (Fin n))) y :=
+    (hasFDerivAt_id y).sub_const x
+  have hsq := hsub.norm_sq
+  have hnum := hsq.const_sub ((R + δ) ^ 2)
+  let L : EuclideanSpace ℝ (Fin n) →L[ℝ] ℝ :=
+    gap⁻¹ • (-(2 • ((innerSL ℝ (y - x)).comp
+      (ContinuousLinearMap.id ℝ (EuclideanSpace ℝ (Fin n))))))
+  have hq : HasFDerivAt q L y := by
+    simpa only [q, div_eq_mul_inv, mul_comm] using hnum.mul_const gap⁻¹
+  have htrans : HasDerivAt Real.smoothTransition
+      (deriv Real.smoothTransition (q y)) (q y) :=
+    ((Real.smoothTransition.contDiff : ContDiff ℝ 1 Real.smoothTransition).differentiable
+      (by norm_num) (q y)).hasDerivAt
+  have h := (htrans.comp_hasFDerivAt y hq).fderiv
+  have hs : fderiv ℝ (smoothBallCutoff n x R δ) y =
+      (deriv Real.smoothTransition (q y)) •
+        (gap⁻¹ • (-(2 • ((innerSL ℝ (y - x)).comp
+          (ContinuousLinearMap.id ℝ (EuclideanSpace ℝ (Fin n))))))) := by
+    change fderiv ℝ (Real.smoothTransition ∘ q) y = _
+    simpa only [L] using h
+  rw [hs]
+  simp only [smul_apply, neg_apply, ContinuousLinearMap.comp_apply,
+    ContinuousLinearMap.id_apply, nsmul_eq_mul]
+  change (deriv Real.smoothTransition (q y)) *
+    (gap⁻¹ * (-(2 * inner ℝ (y - x) v))) = _
+  ring
+
 end CenteredMaximal.Ball
