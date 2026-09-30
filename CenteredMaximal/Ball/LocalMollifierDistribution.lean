@@ -118,4 +118,33 @@ theorem laplacian_normed_bump_convolution_eq_of_local_distribution
   exact reflected_kernel_support_inside_ball center x R φ.rOut (φ.normed volume)
     (by rw [φ.tsupport_normed_eq]) hx
 
+/-- The Laplacians of normalized bump mollifications converge almost everywhere on interior balls. -/
+theorem ae_tendsto_laplacian_mollification_on_ball
+    (center : EuclideanSpace ℝ (Fin n)) (R r : ℝ) (hr : r < R)
+    (u g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hu : Integrable u) (hg : LocallyIntegrable g volume)
+    (hlocal : HasLocalDistributionalLaplacian n (ball center R) u g)
+    (φ : ℕ → ContDiffBump (0 : EuclideanSpace ℝ (Fin n)))
+    (hφ : Tendsto (fun k => (φ k).rOut) atTop (𝓝 0))
+    (hratio : ∃ K : ℝ, ∀ᶠ k : ℕ in atTop, (φ k).rOut ≤ K * (φ k).rIn) :
+    ∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      x ∈ ball center r →
+      Tendsto (fun k => Laplacian.laplacian
+        ((φ k).normed volume ⋆[lsmul ℝ ℝ, volume] u) x)
+        atTop (𝓝 (g x)) := by
+  rcases hratio with ⟨K,hK⟩
+  have hconv := ContDiffBump.ae_convolution_tendsto_right_of_locallyIntegrable
+    hφ hK hg
+  have hgap : 0 < R-r := sub_pos.mpr hr
+  have hev : ∀ᶠ k : ℕ in atTop, (φ k).rOut < R-r :=
+    hφ.eventually (isOpen_Iio.mem_nhds hgap)
+  filter_upwards [hconv] with x hxconv hxin
+  apply hxconv.congr'
+  filter_upwards [hev] with k hk
+  have hsmall : x ∈ ball center (R - (φ k).rOut) := by
+    have hxr : dist x center < r := mem_ball.mp hxin
+    apply mem_ball.mpr
+    linarith
+  exact (laplacian_normed_bump_convolution_eq_of_local_distribution
+    center R u g hu hlocal (φ k) x hsmall).symm
 end CenteredMaximal.Ball
