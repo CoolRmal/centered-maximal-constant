@@ -57,6 +57,8 @@ passes the planar and Newtonian identities to the full interval from the center.
 `Ball/DirectCertificate.lean` accepts a direct bound on the contact-set measure. It removes
 the need to prove a total-mass estimate for the capped density; the obstacle variational
 inequality can instead be tested with a truncation.
+`Ball/ContactTruncation.lean` proves that these truncation inequalities imply the direct
+contact-set bound, including the extended-real integral form used by the certificate.
 `Ball/PlanarGreenPairing.lean` proves differentiation of a circle average with respect to its
 radius and a planar polar formula for disk integrals. `Ball/ObstacleExistence.lean` proves an
 abstract Hilbert-space minimizer and its
@@ -69,11 +71,18 @@ as consequences of the respective obstacle certificates, with all other reductio
 the Poincaré inequality on arbitrary bounded domains by one dimensional slices, Fubini,
 box transport, and density. `Ball/DirichletForm.lean` defines the pure gradient form,
 and the bounded-domain result now proves its coercivity on a ball.
+`Ball/MonotoneSurjectivity.lean` proves solvability of strongly monotone Lipschitz Hilbert
+equations. `Ball/L2Penalty.lean` applies this to the negative-part penalty, and
+`Ball/BallPenalized.lean` constructs a solution of the penalized weak Dirichlet equation on a
+ball. The Green pairing has also been proved at arbitrary radii for smooth compact test
+functions, with a stability theorem under pointwise obstacle and almost-everywhere Laplacian
+convergence.
 
 The remaining analytic work is to derive a capped density and its contact behavior from the
-constructed Dirichlet obstacle, prove the direct contact-set bound, and complete the ball flux
-and weighted Laplacian Green identities. Once those pieces are proved, the two ball theorems can
-be added to `Solution.lean` and checked by the comparator.
+constructed Dirichlet obstacle, verify its variational truncation inequality, complete the ball
+flux identity, and supply the smooth approximation needed to apply the Green pairing to the
+weak obstacle. Once those pieces are proved, the two ball theorems can be added to
+`Solution.lean` and checked by the comparator.
 
 ## The statement
 
@@ -197,6 +206,8 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/DirichletPoincareDensity.lean`, `DirichletPoincareOneDim.lean` | Poincaré steps |
 | `CenteredMaximal/Ball/DirichletForm.lean` | pure gradient form and conditional coercivity |
 | `CenteredMaximal/Ball/ObstacleExistence.lean` | abstract convex obstacle minimizer |
+| `CenteredMaximal/Ball/ContactTruncation.lean` | direct contact mass from variational truncations |
+| `CenteredMaximal/Ball/MonotoneSurjectivity.lean`, `L2Penalty.lean`, `BallPenalized.lean` | penalized weak equation on a ball |
 | `CenteredMaximal/Ball/FinalReduction.lean`, `ChallengeReduction.lean` | conditional bounds for the optimal ball constant |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
