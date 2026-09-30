@@ -5,9 +5,12 @@ Authors: Yongxi Lin
 -/
 module
 
-public import CenteredMaximal.Ball.Basic
+public import CenteredMaximal.Ball.ObstacleCriterion
 public import Mathlib.Analysis.Normed.Lp.SmoothApprox
 public import Mathlib.MeasureTheory.Function.LpSeminorm.CompareExp
+public import Mathlib.MeasureTheory.Function.LpSpace.Complete
+public import Mathlib.MeasureTheory.Function.ConvergenceInMeasure
+public import Mathlib.Analysis.SpecificLimits.Basic
 
 /-!
 # Smooth reduction for the centred ball maximal operator
@@ -126,5 +129,153 @@ theorem exists_smooth_nonneg_approx
     _ ≤ (η : ℝ≥0∞) * (2 * U + 1) := by gcongr
     _ ≤ (δ : ℝ≥0∞) * (2 * U + 1) := by gcongr
     _ < ENNReal.ofReal ε := hδ
+
+private theorem tendsto_setLIntegral_enorm_of_eLpNorm_sub
+    {a : EuclideanSpace ℝ (Fin d) → ℝ}
+    {g : ℕ → EuclideanSpace ℝ (Fin d) → ℝ}
+    (ha : MemLp a 1 (volume : Measure (EuclideanSpace ℝ (Fin d))))
+    (hg : ∀ n, MemLp (g n) 1 (volume : Measure (EuclideanSpace ℝ (Fin d))))
+    (hconv : Filter.Tendsto (fun n ↦ eLpNorm (g n - a) 1 volume) Filter.atTop (nhds 0))
+    (s : Set (EuclideanSpace ℝ (Fin d))) :
+    Filter.Tendsto (fun n ↦ ∫⁻ x in s, ‖g n x‖ₑ)
+      Filter.atTop (nhds (∫⁻ x in s, ‖a x‖ₑ)) := by
+  let μ : Measure (EuclideanSpace ℝ (Fin d)) := volume.restrict s
+  have haμ : MemLp a 1 μ := ha.restrict s
+  have hgμ : ∀ n, MemLp (g n) 1 μ := fun n ↦ (hg n).restrict s
+  have hconvμ : Filter.Tendsto (fun n ↦ eLpNorm (g n - a) 1 μ)
+      Filter.atTop (nhds 0) := by
+    apply tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hconv
+    · intro n
+      exact zero_le
+    · intro n
+      exact eLpNorm_mono_measure _ Measure.restrict_le_self
+  have hLp : Filter.Tendsto (fun n ↦ (hgμ n).toLp (g n)) Filter.atTop
+      (nhds (haμ.toLp a)) :=
+    (Lp.tendsto_Lp_iff_tendsto_eLpNorm'' g hgμ a haμ).2 hconvμ
+  have hnorm := hLp.enorm
+  simpa only [Lp.enorm_def, eLpNorm_one_eq_lintegral_enorm,
+    eLpNorm_congr_ae (MemLp.coeFn_toLp _)] using hnorm
+
+private theorem ballMaximalFunction_abs
+    (f : EuclideanSpace ℝ (Fin d) → ℝ) (x : EuclideanSpace ℝ (Fin d)) :
+    ballMaximalFunction (fun y ↦ |f y|) x = ballMaximalFunction f x := by
+  simp only [ballMaximalFunction, Real.enorm_abs]
+
+private theorem eventually_ball_level_of_eLpNorm_tendsto
+    {a : EuclideanSpace ℝ (Fin d) → ℝ}
+    {g : ℕ → EuclideanSpace ℝ (Fin d) → ℝ}
+    (ha : MemLp a 1 (volume : Measure (EuclideanSpace ℝ (Fin d))))
+    (hg : ∀ n, MemLp (g n) 1 (volume : Measure (EuclideanSpace ℝ (Fin d))))
+    (hconv : Filter.Tendsto (fun n ↦ eLpNorm (g n - a) 1 volume) Filter.atTop (nhds 0))
+    {x : EuclideanSpace ℝ (Fin d)} {α : ℝ≥0∞}
+    (hx : α < ballMaximalFunction a x) :
+    ∀ᶠ n in Filter.atTop, α < ballMaximalFunction (g n) x := by
+  obtain ⟨r, hr, hxr⟩ := exists_lt_ball_average_of_lt_ballMaximalFunction hx
+  have hball := tendsto_setLIntegral_enorm_of_eLpNorm_sub ha hg hconv (ball x r)
+  have hvol : (volume (ball x r))⁻¹ ≠ (⊤ : ℝ≥0∞) := by
+    apply ENNReal.inv_ne_top.mpr
+    exact ne_of_gt (Metric.measure_ball_pos volume x hr)
+  have hscaled := ENNReal.Tendsto.const_mul hball (Or.inr hvol)
+  have hEventually : ∀ᶠ n in Filter.atTop,
+      α < (volume (ball x r))⁻¹ * ∫⁻ y in ball x r, ‖g n y‖ₑ :=
+    hscaled.eventually (lt_mem_nhds hxr)
+  exact hEventually.mono fun n hn ↦ hn.trans_le (le_ballMaximalFunction (g n) x hr)
+
+private theorem ball_level_bound_of_dense_sequence
+    {a : EuclideanSpace ℝ (Fin d) → ℝ}
+    {g : ℕ → EuclideanSpace ℝ (Fin d) → ℝ}
+    {C : ℝ≥0∞} (hC : C ≠ ⊤)
+    (ha : Integrable a volume) (hg : ∀ n, Integrable (g n) volume)
+    (hconv : Filter.Tendsto (fun n ↦ eLpNorm (g n - a) 1 volume)
+      Filter.atTop (nhds 0))
+    (hbound : ∀ (n : ℕ) (α : ℝ≥0∞),
+      α * volume {x | α < ballMaximalFunction (g n) x} ≤
+        C * ∫⁻ y, ‖g n y‖ₑ) (α : ℝ≥0∞) :
+    α * volume {x | α < ballMaximalFunction a x} ≤ C * ∫⁻ y, ‖a y‖ₑ := by
+  let E : ℕ → Set (EuclideanSpace ℝ (Fin d)) :=
+    fun n ↦ {x | α < ballMaximalFunction (g n) x}
+  let F : ℕ → Set (EuclideanSpace ℝ (Fin d)) :=
+    fun N ↦ ⋂ (n : ℕ) (_ : N ≤ n), E n
+  have hFmono : Monotone F := by
+    intro N M hNM x hx
+    simp only [F, Set.mem_iInter] at hx ⊢
+    intro n hn
+    exact hx n (hNM.trans hn)
+  have hsub : {x | α < ballMaximalFunction a x} ⊆ ⋃ N, F N := by
+    intro x hx
+    have hev := eventually_ball_level_of_eLpNorm_tendsto
+      (memLp_one_iff_integrable.mpr ha) (fun n ↦ memLp_one_iff_integrable.mpr (hg n))
+      hconv hx
+    obtain ⟨N, hN⟩ := Filter.eventually_atTop.1 hev
+    refine Set.mem_iUnion.2 ⟨N, ?_⟩
+    simp only [F, Set.mem_iInter]
+    intro n hn
+    exact hN n hn
+  have hmass : Filter.Tendsto (fun n ↦ ∫⁻ y, ‖g n y‖ₑ)
+      Filter.atTop (nhds (∫⁻ y, ‖a y‖ₑ)) := by
+    simpa only [Measure.restrict_univ] using
+      tendsto_setLIntegral_enorm_of_eLpNorm_sub
+        (memLp_one_iff_integrable.mpr ha)
+        (fun n ↦ memLp_one_iff_integrable.mpr (hg n)) hconv Set.univ
+  have hright : Filter.Tendsto (fun n ↦ C * ∫⁻ y, ‖g n y‖ₑ)
+      Filter.atTop (nhds (C * ∫⁻ y, ‖a y‖ₑ)) :=
+    ENNReal.Tendsto.const_mul hmass (Or.inr hC)
+  have hFbound (N : ℕ) : α * volume (F N) ≤ C * ∫⁻ y, ‖a y‖ₑ := by
+    apply le_of_tendsto_of_tendsto tendsto_const_nhds hright
+    filter_upwards [Filter.eventually_ge_atTop N] with n hn
+    have hFn : F N ⊆ E n := by
+      intro x hx
+      simp only [F, Set.mem_iInter] at hx
+      exact hx n hn
+    exact (mul_le_mul_right (measure_mono hFn) α).trans (hbound n α)
+  calc
+    α * volume {x | α < ballMaximalFunction a x} ≤
+        α * volume (⋃ N, F N) := mul_le_mul_right (measure_mono hsub) α
+    _ = ⨆ N, α * volume (F N) := by rw [hFmono.measure_iUnion, ENNReal.mul_iSup]
+    _ ≤ C * ∫⁻ y, ‖a y‖ₑ := iSup_le hFbound
+
+/-- A weak type estimate for nonnegative smooth compactly supported inputs extends to every
+integrable real-valued input. -/
+theorem isBallWeakTypeBound_of_smooth_nonneg {C : ℝ≥0∞} (hC : C ≠ ⊤)
+    (hSmooth : IsSmoothBallWeakTypeBound d C) : IsBallWeakTypeBound d C := by
+  classical
+  intro f hf α
+  let a : EuclideanSpace ℝ (Fin d) → ℝ := fun x ↦ |f x|
+  have ha : Integrable a volume := hf.abs
+  let εn : ℕ → ℝ := fun n ↦ 1 / (n + 1 : ℝ)
+  have hεn (n : ℕ) : 0 < εn n := by
+    dsimp [εn]
+    positivity
+  have hApprox (n : ℕ) :
+      ∃ g : EuclideanSpace ℝ (Fin d) → ℝ,
+        HasCompactSupport g ∧ ContDiff ℝ ∞ g ∧ (∀ x, 0 ≤ g x) ∧
+          eLpNorm (a - g) 1 volume < ENNReal.ofReal (εn n) := by
+    exact exists_smooth_nonneg_approx hf (hεn n)
+  choose g hgcomp hgsmooth hgnn hgerr using hApprox
+  have hgInt (n : ℕ) : Integrable (g n) volume :=
+    (hgsmooth n).continuous.integrable_of_hasCompactSupport (hgcomp n)
+  have hεtend : Filter.Tendsto εn Filter.atTop (nhds 0) := by
+    simpa only [εn, one_div] using
+      (tendsto_one_div_add_atTop_nhds_zero_nat (𝕜 := ℝ))
+  have hεtend' : Filter.Tendsto (fun n ↦ ENNReal.ofReal (εn n))
+      Filter.atTop (nhds (0 : ℝ≥0∞)) := by
+    simpa using ENNReal.tendsto_ofReal hεtend
+  have herrtend : Filter.Tendsto (fun n ↦ eLpNorm (a - g n) 1 volume)
+      Filter.atTop (nhds 0) := by
+    have h := tendsto_of_tendsto_of_tendsto_of_le_of_le
+      (f := fun n ↦ eLpNorm (a - g n) 1 volume)
+      (g := fun _ ↦ (0 : ℝ≥0∞))
+      (h := fun n ↦ ENNReal.ofReal (εn n))
+      tendsto_const_nhds hεtend'
+      (fun _ ↦ zero_le) (fun n ↦ (hgerr n).le)
+    simpa only [ENNReal.ofReal_zero] using h
+  have hconv : Filter.Tendsto (fun n ↦ eLpNorm (g n - a) 1 volume)
+      Filter.atTop (nhds 0) := by
+    simpa only [eLpNorm_sub_comm] using herrtend
+  have hbound (n : ℕ) (β : ℝ≥0∞) :
+      β * volume {x | β < ballMaximalFunction (g n) x} ≤ C * ∫⁻ y, ‖g n y‖ₑ :=
+    hSmooth (g n) (hgcomp n) (hgsmooth n) (hgnn n) β
+  have hfinal := ball_level_bound_of_dense_sequence hC ha hgInt hconv hbound α
+  simpa only [a, ballMaximalFunction_abs, Real.enorm_abs] using hfinal
 
 end CenteredMaximal.Ball
