@@ -11,8 +11,8 @@ public import CenteredMaximal.Ball.ObstacleTransfer
 # The analytic certificate needed for the ball maximal bound
 
 This module packages the obstacle argument at the point where the PDE construction and the
-local Green identity enter. The certificate hypothesis is deliberately explicit: its contact-set
-mass bound and Green comparison are the two assertions that the obstacle solution must furnish.
+local Green identity enter. The certificate hypothesis is deliberately explicit: it gives a
+measurable contact set, a capped density, a total-mass bound, and local Green comparison.
 -/
 
 @[expose] public section
@@ -64,7 +64,10 @@ theorem isSmoothBallWeakTypeBound_of_obstacle_certificates
           ∀ (R r₀ : ℝ), 0 < r₀ → (∀ y, R ≤ ‖y‖ → f y = 0) →
             ∃ (Ω : Set (EuclideanSpace ℝ (Fin n)))
               (ν : EuclideanSpace ℝ (Fin n) → ℝ≥0∞),
-              κ * volume Ω ≤ ∫⁻ y, ‖f y‖ₑ ∧
+              MeasurableSet Ω ∧
+              (∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+                y ∈ Ω → ν y = κ) ∧
+              (∫⁻ y, ν y) ≤ ∫⁻ y, ‖f y‖ₑ ∧
               (∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))), ν y ≤ κ) ∧
               (∀ (x : EuclideanSpace ℝ (Fin n)) (r : ℝ),
                 x ∉ Ω → 0 < r → r < r₀ → ‖x‖ < R + r₀ →
@@ -79,8 +82,10 @@ theorem isSmoothBallWeakTypeBound_of_obstacle_certificates
   have hA₀ : 0 < C * κ := ENNReal.mul_pos hC₀.ne' hκ₀.ne'
   have hAtop : C * κ ≠ (∞ : ℝ≥0∞) := ENNReal.mul_ne_top hCtop hκtop
   obtain ⟨r₀, hr₀, hlarge⟩ := exists_large_radius_for_mass f hf (C * κ) hA₀ hAtop
-  obtain ⟨Ω, ν, hcontact, hν, hgreen⟩ :=
+  obtain ⟨Ω, ν, hΩ, hνcontact, hmass, hν, hgreen⟩ :=
     hcertificate f hfcomp hfsmooth hfnn κ hκ₀ hκtop R r₀ hr₀ hsupp
+  have hcontact : κ * volume Ω ≤ ∫⁻ y, ‖f y‖ₑ :=
+    (contact_measure_le_density_mass Ω hΩ ν κ hνcontact).trans hmass
   exact ball_level_bound_of_obstacle_certificate_ae
     K f C κ R r₀ hκtop hr₀ hsupp hlarge hKunit hKmass Ω ν hcontact hν hgreen
 
