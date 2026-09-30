@@ -105,6 +105,48 @@ theorem ball_average_le_of_large_radius
     _ = A := by
       rw [mul_left_comm, ENNReal.inv_mul_cancel hvol₀ hvol_top, mul_one]
 
+/-- An integrable function has a large enough ball whose volume, multiplied by any positive finite
+constant, exceeds its total mass. This supplies the cutoff radius in the three-radius argument. -/
+theorem exists_large_radius_for_mass
+    (f : EuclideanSpace ℝ (Fin n) → ℝ) (hf : Integrable f)
+    (A : ℝ≥0∞) (hA₀ : 0 < A) (hAtop : A ≠ ∞) :
+    ∃ r₀ : ℝ, 0 < r₀ ∧
+      (∫⁻ y, ‖f y‖ₑ) ≤ A * volume (ball (0 : EuclideanSpace ℝ (Fin n)) r₀) := by
+  let V := volume (ball (0 : EuclideanSpace ℝ (Fin n)) 1)
+  have hV₀ : V ≠ 0 := (measure_ball_pos volume 0 zero_lt_one).ne'
+  have hVtop : V ≠ ∞ := measure_ball_lt_top.ne
+  let D := A * V
+  have hD₀ : D ≠ 0 := mul_ne_zero hA₀.ne' hV₀
+  have hDtop : D ≠ ∞ := ENNReal.mul_ne_top hAtop hVtop
+  have hFtop : (∫⁻ y, ‖f y‖ₑ) ≠ ∞ :=
+    (hasFiniteIntegral_iff_enorm.1 hf.2).ne
+  obtain ⟨m, hm⟩ := ENNReal.exists_nat_gt (ENNReal.div_ne_top hFtop hD₀)
+  let r₀ : ℝ := (m + 1 : ℕ)
+  have hr₀ : 0 < r₀ := by dsimp [r₀]; positivity
+  have hn : n ≠ 0 := by
+    obtain ⟨i⟩ := ‹Nonempty (Fin n)›
+    exact Nat.ne_of_gt (lt_of_le_of_lt (Nat.zero_le i.val) i.isLt)
+  have hq : (∫⁻ y, ‖f y‖ₑ) / D ≤ (m + 1 : ℕ) :=
+    hm.le.trans (by exact_mod_cast Nat.le_succ m)
+  have hqpow : (∫⁻ y, ‖f y‖ₑ) / D ≤ ((m + 1 : ℕ) : ℝ≥0∞) ^ n :=
+    hq.trans (le_self_pow₀ (by simp) hn)
+  have hcast : ENNReal.ofReal r₀ = ((m + 1 : ℕ) : ℝ≥0∞) := by
+    simpa only [r₀] using ENNReal.ofReal_natCast (m + 1)
+  have hvol : volume (ball (0 : EuclideanSpace ℝ (Fin n)) r₀) =
+      ((m + 1 : ℕ) : ℝ≥0∞) ^ n * V := by
+    rw [EuclideanSpace.volume_ball, hcast]
+    simp [V, EuclideanSpace.volume_ball]
+  refine ⟨r₀, hr₀, ?_⟩
+  calc
+    (∫⁻ y, ‖f y‖ₑ) = ((∫⁻ y, ‖f y‖ₑ) / D) * D :=
+      (ENNReal.div_mul_cancel hD₀ hDtop).symm
+    _ ≤ (((m + 1 : ℕ) : ℝ≥0∞) ^ n) * D := by
+      simpa only [mul_comm] using (mul_le_mul_right hqpow D)
+    _ = A * volume (ball (0 : EuclideanSpace ℝ (Fin n)) r₀) := by
+      rw [hvol]
+      dsimp [D]
+      ac_rfl
+
 omit [Nonempty (Fin n)] in
 /-- If a small ball is centered sufficiently far from the support, its average vanishes. -/
 theorem ball_average_eq_zero_of_far
@@ -123,6 +165,23 @@ theorem ball_average_eq_zero_of_far
     exact hsupp y (by linarith)
   rw [setLIntegral_eq_zero measurableSet_ball (fun y hy ↦ by simp [hzero y hy])]
   simp
+
+omit [Nonempty (Fin n)] in
+/-- If the capped density equals its cap on the contact set, the density mass controls the
+measure of that set. -/
+theorem contact_measure_le_density_mass
+    (Ω : Set (EuclideanSpace ℝ (Fin n))) (hΩ : MeasurableSet Ω)
+    (ν : EuclideanSpace ℝ (Fin n) → ℝ≥0∞) (κ : ℝ≥0∞)
+    (hcontact : ∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      x ∈ Ω → ν x = κ) :
+    κ * volume Ω ≤ ∫⁻ y, ν y := by
+  calc
+    κ * volume Ω = ∫⁻ _ in Ω, κ := by rw [setLIntegral_const, mul_comm]
+    _ = ∫⁻ y in Ω, ν y := by
+      refine setLIntegral_congr_fun_ae hΩ ?_
+      filter_upwards [hcontact] with y hy hyΩ
+      exact (hy hyΩ).symm
+    _ ≤ ∫⁻ y, ν y := setLIntegral_le_lintegral _ _
 
 /-- The three-radius argument. The obstacle certificate supplies a contact set `Ω`, a density
 bounded by `κ`, a contact-set mass estimate, and Green comparison at zeros of the obstacle. The
