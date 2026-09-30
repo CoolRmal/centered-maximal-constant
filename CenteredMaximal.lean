@@ -15,6 +15,8 @@ public import CenteredMaximal.Ball.ObstacleCriterion
 public import CenteredMaximal.Ball.SmoothReduction
 public import CenteredMaximal.Ball.PairingComparison
 public import CenteredMaximal.Ball.GreenIdentity
+public import CenteredMaximal.Ball.ObstacleExistence
+public import CenteredMaximal.Ball.ChallengeReduction
 
 /-!
 # The weak type constant of the centred maximal operator over cubes

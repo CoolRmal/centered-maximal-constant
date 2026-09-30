@@ -47,10 +47,14 @@ root of the absolute value in `L²`, squares the approximant, and passes to leve
 lower-limit argument. `Ball/PairingComparison.lean` turns a signed Green pairing into the
 nonnegative-kernel inequality needed by the certificate. `Ball/GreenIdentity.lean` establishes
 the planar and Newtonian radial profile derivatives and their constant flux.
+`Ball/ObstacleExistence.lean` proves the abstract Hilbert-space minimizer and its variational
+inequality. `Ball/ChallengeReduction.lean` states the two requested bounds as consequences of
+the respective obstacle certificates, with all other reductions discharged.
 
-The remaining analytic work is to construct the obstacle solution, control its density and
-contact set, and prove the full weighted Laplacian Green identity. Only then can the two ball
-theorems be added to `Solution.lean` and the comparator check pass.
+The remaining analytic work is to instantiate the minimizer in the Dirichlet energy space,
+control its density and contact set, and prove the full weighted Laplacian Green identity. Once
+those pieces are proved, the two ball theorems can be added to `Solution.lean` and checked by the
+comparator.
 
 ## The statement
 
@@ -169,6 +173,8 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/SmoothReduction.lean` | nonnegative smooth approximation and transfer to all `L¹` inputs |
 | `CenteredMaximal/Ball/PairingComparison.lean` | signed Green pairing to kernel comparison |
 | `CenteredMaximal/Ball/GreenIdentity.lean` | radial Green profiles, derivatives and flux |
+| `CenteredMaximal/Ball/ObstacleExistence.lean` | abstract convex obstacle minimizer |
+| `CenteredMaximal/Ball/FinalReduction.lean`, `ChallengeReduction.lean` | conditional bounds for the optimal ball constant |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
 | `CenteredMaximal/Obstacle/` | the obstacle problem for the generator |
