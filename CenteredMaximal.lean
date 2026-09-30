@@ -25,6 +25,7 @@ public import CenteredMaximal.Ball.DirichletForm
 public import CenteredMaximal.Ball.DirichletPoincareOneDim
 public import CenteredMaximal.Ball.DirichletPoincareBounded
 public import CenteredMaximal.Ball.ContactTruncation
+public import CenteredMaximal.Ball.MonotoneSurjectivity
 
 /-!
 # The weak type constant of the centred maximal operator over cubes
