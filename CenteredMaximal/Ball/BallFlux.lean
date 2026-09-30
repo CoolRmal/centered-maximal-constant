@@ -228,5 +228,32 @@ theorem integral_laplacian_mul_smoothBallCutoff_eq_shell (n : ℕ) [NeZero n]
     _ = ∫ s in R..(R + δ), F s := by
       rw [intervalIntegral.integral_of_le (by linarith : R ≤ R + δ)]
 
+/-- The integral of the Laplacian over a ball equals the flux of the gradient through its
+boundary sphere, in every positive dimension. -/
+theorem integral_laplacian_ball_eq_sphere_flux (n : ℕ) [NeZero n]
+    (w : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hw : ContDiff ℝ 2 w) (hsw : HasCompactSupport w)
+    (x : EuclideanSpace ℝ (Fin n)) {R : ℝ} (hR : 0 < R) :
+    (∫ y in ball x R, Laplacian.laplacian w y) =
+      R ^ (n - 1) *
+        (∫ ω : sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          fderiv ℝ w (x + R • (ω : EuclideanSpace ℝ (Fin n)))
+            (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere)) := by
+  let H : ℝ → ℝ := fun s => s ^ (n - 1) *
+    (∫ ω : sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+      fderiv ℝ w (x + s • (ω : EuclideanSpace ℝ (Fin n)))
+        (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere))
+  have hH : Continuous H :=
+    (continuous_id.pow (n - 1)).mul (continuous_sphereFlux n w hw hsw x)
+  have hleft := integral_laplacian_mul_smoothBallCutoff_tendsto n w hw hsw x hR
+  have hright := radialBallCutoff_shell_tendsto hR H hH
+  have heq : (fun δ => ∫ y, Laplacian.laplacian w y *
+        smoothBallCutoff n x R δ y) =ᶠ[𝓝[>] (0 : ℝ)]
+      (fun δ => ∫ s in R..(R + δ),
+        -(deriv (radialBallCutoff R δ) s) * H s) := by
+    filter_upwards [self_mem_nhdsWithin] with δ hδ
+    exact integral_laplacian_mul_smoothBallCutoff_eq_shell n w hw hsw x hR hδ
+  exact tendsto_nhds_unique hleft (hright.congr' heq.symm)
+
 
 end CenteredMaximal.Ball
