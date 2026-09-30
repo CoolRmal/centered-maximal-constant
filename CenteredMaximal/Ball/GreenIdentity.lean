@@ -261,6 +261,21 @@ theorem hasDerivAt_sphereIntegral (n : ℕ) [NeZero n]
     (F' := fun t ω ↦ fderiv ℝ w (x + t • (ω : E)) (ω : E))
     (by simp) hF_meas hF_int hF'_meas hbound (integrable_const C) hdiff).2
 
+/-- For a smooth compactly supported function, the sphere integral can be differentiated with
+respect to radius without a separate bound on its gradient. -/
+theorem hasDerivAt_sphereIntegral_of_hasCompactSupport (n : ℕ) [NeZero n]
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin n)) (r : ℝ) :
+    HasDerivAt
+      (fun t : ℝ ↦ ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w (x + t • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere))
+      (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        fderiv ℝ w (x + r • (ω : EuclideanSpace ℝ (Fin n)))
+          (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere)) r := by
+  obtain ⟨C, hC⟩ := (hsupp.fderiv ℝ).exists_bound_of_continuous
+    (hw.continuous_fderiv (by norm_num))
+  exact hasDerivAt_sphereIntegral n w hw x r C hC
+
 /-- The untruncated radial logarithmic profile in dimension two. -/
 def planarGreenProfile (s : ℝ) : ℝ := 1 - 2 * Real.log s
 
