@@ -100,4 +100,57 @@ theorem exists_ballComplement_green_local_mollifiers
       hu hucomp hu0 hg hlocal B hBg
   exact ⟨B, w, hwsmooth, hwcomp, hw0, hwlim, hwcap, hwΔlim⟩
 
+/-- The planar Green pairing with the zero-extended weak Laplacian is nonnegative for almost
+every point outside the obstacle contact set. The exceptional set is independent of radius. -/
+theorem ae_planar_ballComplement_green_pairing_nonneg
+    (R r₀ : ℝ) (hr₀ : 0 < r₀)
+    (f : EuclideanSpace ℝ (Fin 2) → ℝ)
+    (hfcont : Continuous f) (hfcomp : HasCompactSupport f)
+    (κ : ℝ) (hκ : 0 ≤ κ)
+    (U : H01 (ball (0 : EuclideanSpace ℝ (Fin 2))
+      (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2)))
+    (ρlocal : L2D (ball (0 : EuclideanSpace ℝ (Fin 2))
+      (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2)))
+    (hU : 0 ≤ (U : H1amb (ball (0 : EuclideanSpace ℝ (Fin 2))
+      (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2))) 0)
+    (hρ : 0 ≤ ρlocal ∧ ρlocal ≤ κ • ballUnitL2 0
+      (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2))
+    (hweak : ∀ V : H01 (ball (0 : EuclideanSpace ℝ (Fin 2))
+      (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2)),
+      laplaceBilin (ball (0 : EuclideanSpace ℝ (Fin 2))
+        (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2)) U V =
+      l2Functional (ball (0 : EuclideanSpace ℝ (Fin 2))
+        (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2))
+        (ballSourceL2 0
+          (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2)
+          f hfcont hfcomp - ρlocal) V) :
+    ∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))),
+      x ∉ {y | y ∈ ball 0
+        (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2) ∧
+        0 < ((U : H1amb (ball (0 : EuclideanSpace ℝ (Fin 2))
+          (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2))) 0 y : ℝ)} →
+      ‖x‖ < R + r₀ → ∀ r : ℝ, 0 < r → r < r₀ →
+        0 ≤ (∫ y : EuclideanSpace ℝ (Fin 2),
+          ((volume (ball x r))⁻¹ * planarKernel (r⁻¹ • (x-y))).toReal *
+            ballComplementSourceExtension 0
+              (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2)
+              (ballSourceL2 0
+                (greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2)
+                f hfcont hfcomp) ρlocal y) := by
+  let S := greenCutoffInnerRadius R r₀ planarGreenRadius + 2 * r₀ + 2
+  let F := ballSourceL2 (0 : EuclideanSpace ℝ (Fin 2)) S f hfcont hfcomp
+  let u := ballPositiveRepresentative (0 : EuclideanSpace ℝ (Fin 2)) S U
+  let g := ballComplementSourceExtension (0 : EuclideanSpace ℝ (Fin 2)) S F ρlocal
+  let Ω : Set (EuclideanSpace ℝ (Fin 2)) :=
+    {y | y ∈ ball 0 S ∧ 0 < ((U : H1amb (ball 0 S)) 0 y : ℝ)}
+  obtain ⟨B, w, hwsmooth, hwcomp, hw0, hwlim, hwcap, hwΔlim⟩ :=
+    exists_ballComplement_green_local_mollifiers 1 R r₀ planarGreenRadius
+      f hfcont hfcomp κ hκ U ρlocal hU hρ hweak
+  have hzero : ∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))),
+      x ∉ Ω → u x = 0 :=
+    ae_of_all _ (fun x hx => ballPositiveRepresentative_eq_zero_of_not_contact
+      0 S U x hx)
+  exact ae_planar_green_pairing_nonneg_of_local_mollifiers R r₀ hr₀ Ω u g w
+    hwsmooth hwcomp hw0 hwlim hzero B hwcap hwΔlim
+
 end CenteredMaximal.Ball
