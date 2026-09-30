@@ -116,4 +116,21 @@ theorem contact_measure_le_of_variational_truncations [IsFiniteMeasure μ]
         exact mul_le_mul_of_nonneg_left (min_le_right _ _) (hf₀ x)
     _ = t * ∫ x, f x ∂μ := by rw [integral_mul_const]; ring
 
+/-- The form of the contact-set estimate used by ball obstacle certificates. -/
+theorem contact_measure_le_lintegral_of_variational_truncations [IsFiniteMeasure μ]
+    (u f : α → ℝ) (κ : ℝ≥0∞) (hκtop : κ ≠ ∞) (hu : Measurable u)
+    (hu₀ : ∀ x, 0 ≤ u x) (hf : Integrable f μ) (hf₀ : ∀ x, 0 ≤ f x)
+    (hvariation : ∀ t : ℝ, 0 < t →
+      κ.toReal * ∫ x, min (u x) t ∂μ ≤ ∫ x, f x * min (u x) t ∂μ) :
+    κ * μ {x | 0 < u x} ≤ ∫⁻ x, ‖f x‖ₑ ∂μ := by
+  have h := contact_measure_le_of_variational_truncations μ u f κ.toReal
+    ENNReal.toReal_nonneg hu hu₀ hf hf₀ hvariation
+  rw [ENNReal.ofReal_toReal hκtop] at h
+  convert h using 1
+  rw [← ofReal_integral_norm_eq_lintegral_enorm hf]
+  congr 1
+  apply integral_congr_ae
+  filter_upwards [] with x
+  exact (Real.norm_eq_abs (f x)).trans (abs_of_nonneg (hf₀ x))
+
 end CenteredMaximal.Ball
