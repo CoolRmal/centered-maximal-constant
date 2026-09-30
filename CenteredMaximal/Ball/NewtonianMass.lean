@@ -6,6 +6,7 @@ Authors: Yongxi Lin
 module
 
 public import CenteredMaximal.Ball.GreenKernel
+public import CenteredMaximal.Ball.KernelScaling
 public import Mathlib.MeasureTheory.Integral.Layercake
 public import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
 
@@ -218,5 +219,25 @@ theorem newtonianKernel_mass_eq_greenBound_mul_unitBall (n : ℕ) (hn : 3 ≤ n)
   rw [newtonianKernel_mass n hn]
   simpa only [mul_one] using volume_ball_greenRadius_mul n hn
     (0 : EuclideanSpace ℝ (Fin n)) 1
+
+/-- Every normalized dilate of the Newtonian kernel has mass `greenBound n`. -/
+theorem lintegral_normalized_newtonianKernel (n : ℕ) (hn : 3 ≤ n)
+    (x : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r) :
+    (∫⁻ y, (volume (ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))) =
+      ENNReal.ofReal (greenBound n) := by
+  rw [lintegral_normalized_kernel_eq_unit_mass n (by omega) (newtonianKernel n) x hr,
+    newtonianKernel_mass_eq_greenBound_mul_unitBall n hn]
+  have hvol0 : volume (ball (0 : EuclideanSpace ℝ (Fin n)) 1) ≠ 0 :=
+    (measure_ball_pos volume 0 (by norm_num)).ne'
+  have hvoltop : volume (ball (0 : EuclideanSpace ℝ (Fin n)) 1) ≠ ∞ :=
+    measure_ball_lt_top.ne
+  calc
+    (volume (ball (0 : EuclideanSpace ℝ (Fin n)) 1))⁻¹ *
+        (ENNReal.ofReal (greenBound n) *
+          volume (ball (0 : EuclideanSpace ℝ (Fin n)) 1)) =
+      ENNReal.ofReal (greenBound n) *
+        ((volume (ball (0 : EuclideanSpace ℝ (Fin n)) 1))⁻¹ *
+          volume (ball (0 : EuclideanSpace ℝ (Fin n)) 1)) := by ac_rfl
+    _ = _ := by rw [ENNReal.inv_mul_cancel hvol0 hvoltop, mul_one]
 
 end CenteredMaximal.Ball
