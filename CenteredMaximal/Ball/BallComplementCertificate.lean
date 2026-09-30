@@ -6,6 +6,7 @@ Authors: Yongxi Lin
 module
 
 public import CenteredMaximal.Ball.BallSmoothObstacle
+public import CenteredMaximal.Ball.LocalDistributionAdapter
 
 /-!
 # Complement density for the ball obstacle certificate
@@ -60,6 +61,46 @@ theorem ball_weak_equation_complement
   simp only [ballComplementDensity, l2Functional_apply, valueEmbedding_apply,
     inner_sub_left, real_inner_smul_left]
   ring
+
+/-- The corrected local distributional Laplacian is the complement density minus the source. -/
+theorem ballComplement_hasLocalDistributionalLaplacian
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R κ : ℝ)
+    (F νpen : L2D (ball center R)) (U : H01 (ball center R))
+    (hweak : ∀ V : H01 (ball center R),
+      laplaceBilin (ball center R) U V =
+        l2Functional (ball center R) F V -
+          κ * l2Functional (ball center R) (ballUnitL2 center R) V +
+          ⟪νpen, valueEmbedding (ball center R) V⟫_ℝ) :
+    HasLocalDistributionalLaplacian (n + 1) (ball center R)
+      (fun x ↦ ((U : H1amb (ball center R)) 0 x : ℝ))
+      (fun x ↦ -((F - ballComplementDensity center R κ νpen) x : ℝ)) := by
+  have h := ball_obstacle_hasLocalDistributionalLaplacian center R U F νpen κ hweak
+  have hl2 : F - κ • ballUnitL2 center R + νpen =
+      F - ballComplementDensity center R κ νpen := by
+    unfold ballComplementDensity
+    abel
+  simpa only [hl2] using h
+
+/-- The nonnegative representative of the obstacle obeys the corrected local equation. -/
+theorem ballComplement_positiveRepresentative_hasLocalDistributionalLaplacian
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R κ : ℝ)
+    (F νpen : L2D (ball center R)) (U : H01 (ball center R))
+    (hU : 0 ≤ (U : H1amb (ball center R)) 0)
+    (hweak : ∀ V : H01 (ball center R),
+      laplaceBilin (ball center R) U V =
+        l2Functional (ball center R) F V -
+          κ * l2Functional (ball center R) (ballUnitL2 center R) V +
+          ⟪νpen, valueEmbedding (ball center R) V⟫_ℝ) :
+    HasLocalDistributionalLaplacian (n + 1) (ball center R)
+      (ballPositiveRepresentative center R U)
+      (fun x ↦ -((F - ballComplementDensity center R κ νpen) x : ℝ)) := by
+  have h := ballPositiveRepresentative_hasLocalDistributionalLaplacian
+    center R U hU F νpen κ hweak
+  have hl2 : F - κ • ballUnitL2 center R + νpen =
+      F - ballComplementDensity center R κ νpen := by
+    unfold ballComplementDensity
+    abel
+  simpa only [hl2] using h
 
 /-- The obstacle and its capped complementary density, for a local `L²` source. -/
 theorem exists_ball_penalty_complement_certificate
