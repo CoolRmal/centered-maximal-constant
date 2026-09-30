@@ -25,6 +25,11 @@ These are the theorems `ballWeakTypeConstant_two_le_exp` and
 `Solution.lean`; the comparator gate for these two additions is pending. The proposed argument
 uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
 
+The development already checks the radius identities for these constants and proves a general
+comparison lemma: a weak type bound for the maximal operator of a normalized kernel that is at
+least one on the unit ball gives the same bound for `ballMaximalFunction`. Establishing that
+kernel's weak type bound through the obstacle problem is the remaining analytic step.
+
 ## The statement
 
 For `f : ℝᵈ → ℝ` let
@@ -131,6 +136,8 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `Solution.lean` | the compared theorems, from the development |
 | `CenteredMaximal/Statement.lean`, `Basic.lean` | the challenge definitions and their basic API |
 | `CenteredMaximal/Ball/Basic.lean` | the basic API for Euclidean ball averages |
+| `CenteredMaximal/Ball/Constants.lean` | the planar and higher-dimensional radius identities |
+| `CenteredMaximal/Ball/Comparison.lean` | reduction from a kernel maximal bound to ball averages |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
 | `CenteredMaximal/Obstacle/` | the obstacle problem for the generator |
