@@ -194,6 +194,86 @@ theorem tendsto_integral_mul_of_local_weak_test_convergence (n : ℕ)
       _ = K y * v y := by rw [hy]
   simpa only [hpair] using hlim
 
+/-- If bounded local densities converge almost everywhere in the interior,
+their pairings with any integrable kernel supported there converge directly by
+dominated convergence. This avoids an a priori pointwise bound on the obstacle. -/
+theorem tendsto_integral_mul_of_local_ae_convergence (n : ℕ)
+    (D : Set (EuclideanSpace ℝ (Fin n)))
+    (K : EuclideanSpace ℝ (Fin n) → ℝ) (hK : Integrable K)
+    (hKzero : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∉ D → K y = 0)
+    (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (gₖ : ℕ → EuclideanSpace ℝ (Fin n) → ℝ)
+    (hgₖ : ∀ k, AEStronglyMeasurable (gₖ k) volume)
+    (B : ℝ) (hBgₖ : ∀ k, ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∈ D → ‖gₖ k y‖ ≤ B)
+    (hlim : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∈ D → Tendsto (fun k ↦ gₖ k y) atTop (𝓝 (g y))) :
+    Tendsto (fun k ↦ ∫ y, K y * gₖ k y) atTop (𝓝 (∫ y, K y * g y)) := by
+  apply tendsto_integral_of_dominated_convergence (fun y ↦ B * ‖K y‖)
+  · intro k
+    exact hK.aestronglyMeasurable.mul (hgₖ k)
+  · exact hK.norm.const_mul B
+  · intro k
+    filter_upwards [hKzero, hBgₖ k] with y hKy hBy
+    by_cases hy : y ∈ D
+    · calc
+        ‖K y * gₖ k y‖ = ‖K y‖ * ‖gₖ k y‖ := norm_mul _ _
+        _ ≤ ‖K y‖ * B := mul_le_mul_of_nonneg_left (hBy hy) (norm_nonneg _)
+        _ = B * ‖K y‖ := mul_comm _ _
+    · simp [hKy hy]
+  · filter_upwards [hKzero, hlim] with y hKy hy
+    by_cases hyD : y ∈ D
+    · exact tendsto_const_nhds.mul (hy hyD)
+    · simp [hKy hyD]
+
+/-- A kernel unchanged by a cutoff supported in `D` vanishes almost everywhere
+outside `D`. -/
+theorem kernel_zero_outside_of_mul_cutoff_eq_self (n : ℕ)
+    (D : Set (EuclideanSpace ℝ (Fin n)))
+    (χ K : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hχD : tsupport χ ⊆ D)
+    (hKχ : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      K y * χ y = K y) :
+    ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∉ D → K y = 0 := by
+  filter_upwards [hKχ] with y hy
+  intro hyD
+  have hχzero : χ y = 0 := by
+    by_contra hχ
+    exact hyD (hχD (subset_tsupport χ (by simpa [Function.mem_support] using hχ)))
+  rw [hχzero, mul_zero] at hy
+  exact hy.symm
+
+/-- Direct a.e. convergence of locally bounded Laplacians gives the limiting
+nonnegative Green pairing at a center where the smooth obstacles tend to zero. -/
+theorem nonneg_green_pairing_of_local_ae_convergence (n : ℕ) [NeZero n]
+    (D : Set (EuclideanSpace ℝ (Fin n)))
+    (K : EuclideanSpace ℝ (Fin n) → ℝ) (hK : Integrable K)
+    (hKzero : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∉ D → K y = 0)
+    (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (wₖ gₖ : ℕ → EuclideanSpace ℝ (Fin n) → ℝ)
+    (hwₖ_nonneg : ∀ k y, 0 ≤ wₖ k y)
+    (hgₖ : ∀ k, AEStronglyMeasurable (gₖ k) volume)
+    (B : ℝ) (hBgₖ : ∀ k, ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∈ D → ‖gₖ k y‖ ≤ B)
+    (hlim : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∈ D → Tendsto (fun k ↦ gₖ k y) atTop (𝓝 (g y)))
+    (x : EuclideanSpace ℝ (Fin n))
+    (hcenter : Tendsto (fun k ↦ wₖ k x) atTop (𝓝 0))
+    (ρ c : ℝ) (hc : 0 ≤ c)
+    (hpair : ∀ k,
+      (∫ y, K y * gₖ k y) = c *
+        ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          wₖ k (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere)) -
+         (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          wₖ k x ∂(volume.toSphere)))) :
+    0 ≤ ∫ y, K y * g y := by
+  apply nonneg_green_pairing_of_integral_convergence n K g wₖ gₖ hwₖ_nonneg
+    (tendsto_integral_mul_of_local_ae_convergence n D K hK hKzero g gₖ
+      hgₖ B hBgₖ hlim) x hcenter ρ c hc hpair
+
 /-- Local boundedness and local weak convergence suffice for the Green comparison
 at a center where nonnegative smooth approximants tend to zero. -/
 theorem nonneg_green_pairing_of_local_weak_tests (n : ℕ) [NeZero n]
