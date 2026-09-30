@@ -21,18 +21,29 @@ $$c^{\mathrm{ball}}_2 \le e, \qquad
   c^{\mathrm{ball}}_n \le (n/2)^{n/(n-2)} \quad (n \ge 3).$$
 
 These are the theorems `ballWeakTypeConstant_two_le_exp` and
-`ballWeakTypeConstant_le_rpow` in `Challenge.lean`. The ball proof has not yet been formalized in
-`Solution.lean`; the comparator gate for these two additions is pending. The proposed argument
-uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
+`ballWeakTypeConstant_le_rpow` in `Challenge.lean`. Their proofs are still absent from
+`Solution.lean`, so the comparator does **not** yet pass for the ball additions. The proof target
+is the [disc maximal constant manuscript](https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a):
+it uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
 
-The development already checks the radius identities for these constants and proves a general
-comparison lemma: a weak type bound for the maximal operator of a normalized kernel that is at
-least one on the unit ball gives the same bound for `ballMaximalFunction`. Establishing that
-kernel's weak type bound through the obstacle problem is the remaining analytic step. The
-logarithmic and Newtonian kernels are defined and proved to dominate the unit ball; their support
-radii are checked. The logarithmic kernel's total mass is proved exactly:
+The Lean development now proves the kernel calculations needed by that argument. Both kernels
+dominate the unit ball, their support radii are checked, and their masses are exact:
 
-$$\int_{\mathbb R^2} K_2(x)\,dx = \pi e.$$
+$$\int_{\mathbb R^2} K_2(x)\,dx = \pi e, \qquad
+  \int_{\mathbb R^n} K_n(x)\,dx = C_n\,|B(0,1)| \quad(n\ge3),$$
+
+where the coefficient is
+
+$$C_n=(n/2)^{n/(n-2)}.$$
+
+The same normalized mass is proved at every centre and positive scale.
+`Ball/ObstacleTransfer.lean` formalizes the three-radius argument: an obstacle contact
+set, a capped density, and local Green comparison imply the level-set estimate. It also supplies
+the contact-set measure lemma, a radius cutoff from integrability, and an almost-everywhere
+density variant. `Ball/ObstacleCriterion.lean` packages these ingredients into the weak type
+estimate for smooth nonnegative compactly supported functions. The remaining analytic work is to
+construct that obstacle certificate and prove the Green identity used in its local comparison;
+the smooth-to-`L¹` transfer must then connect the result to the two challenge theorems.
 
 ## The statement
 
@@ -143,7 +154,11 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/Constants.lean` | the planar and higher-dimensional radius identities |
 | `CenteredMaximal/Ball/Comparison.lean` | reduction from a kernel maximal bound to ball averages |
 | `CenteredMaximal/Ball/GreenKernel.lean` | Green kernels and their pointwise bounds |
-| `CenteredMaximal/Ball/PlanarMass.lean` | exact mass of the planar logarithmic kernel |
+| `CenteredMaximal/Ball/PlanarMass.lean`, `PlanarNormalized.lean` | exact planar Green mass at every scale |
+| `CenteredMaximal/Ball/NewtonianMass.lean` | exact higher-dimensional Green mass at every scale |
+| `CenteredMaximal/Ball/KernelScaling.lean` | Euclidean scaling and translation of kernel mass |
+| `CenteredMaximal/Ball/ObstacleTransfer.lean` | three-radius level-set argument from an obstacle certificate |
+| `CenteredMaximal/Ball/ObstacleCriterion.lean` | smooth weak type estimate from obstacle certificates |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
 | `CenteredMaximal/Obstacle/` | the obstacle problem for the generator |

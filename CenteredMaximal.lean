@@ -9,11 +9,14 @@ public import CenteredMaximal.Numerics
 public import CenteredMaximal.UpperBound
 public import CenteredMaximal.Cauchy.Representation
 public import CenteredMaximal.Lattice.LowerBound
-public import CenteredMaximal.Ball.PlanarMass
+public import CenteredMaximal.Ball.PlanarNormalized
+public import CenteredMaximal.Ball.NewtonianMass
+public import CenteredMaximal.Ball.ObstacleCriterion
 
 /-!
 # The weak type constant of the centred maximal operator over cubes
 
 The root module exports the upper bounds `c_d ≤ 2ᵈ` and `c₂ ≤ 3.879`, and the lower bound
-`Φ ≤ c₂`.
+`Φ ≤ c₂`. The Euclidean ball extension currently exports exact Green-kernel masses and an
+obstacle-certificate criterion for the proposed ball bounds.
 -/
