@@ -31,7 +31,7 @@ nonnegative cone.
 noncomputable section
 
 open InnerProductSpace
-open scoped RealInnerProductSpace
+open scoped RealInnerProductSpace NNReal
 open scoped ENNReal
 
 namespace CenteredMaximal.Ball
@@ -123,6 +123,93 @@ theorem gradientStep_norm_le (A : H →L[ℝ] H) {α τ : ℝ}
     nlinarith [sq_nonneg (τ * α), sq_nonneg (‖d‖)]
   have htarget : 0 ≤ (1 - τ * α / 2) * ‖d‖ := mul_nonneg hq (norm_nonneg d)
   nlinarith [norm_nonneg (d - τ • A d)]
+
+omit [CompleteSpace H] in
+/-- A positive coercivity constant gives an explicit positive step size whose contraction
+constant is strictly below one. -/
+theorem exists_gradientStep_parameters (A : H →L[ℝ] H) {α : ℝ} (hα : 0 < α) :
+    ∃ τ : ℝ, 0 < τ ∧ τ * ‖A‖ ^ 2 ≤ α ∧ τ * α < 1 ∧
+      0 ≤ 1 - τ * α / 2 ∧ 1 - τ * α / 2 < 1 := by
+  let D : ℝ := 1 + α ^ 2 + ‖A‖ ^ 2
+  let τ : ℝ := α / D
+  have hD : 0 < D := by dsimp [D]; positivity
+  have hτ : 0 < τ := div_pos hα hD
+  have hτop : τ * ‖A‖ ^ 2 ≤ α := by
+    rw [show τ * ‖A‖ ^ 2 = α * ‖A‖ ^ 2 / D by simp [τ]; ring]
+    apply (div_le_iff₀ hD).2
+    dsimp [D]
+    nlinarith [mul_nonneg hα.le (show 0 ≤ 1 + α ^ 2 by positivity)]
+  have hτα : τ * α < 1 := by
+    rw [show τ * α = α ^ 2 / D by simp [τ]; ring]
+    apply (div_lt_iff₀ hD).2
+    dsimp [D]
+    nlinarith [sq_nonneg (‖A‖)]
+  refine ⟨τ, hτ, hτop, hτα, ?_, ?_⟩
+  · linarith
+  · nlinarith [mul_pos hτ hα]
+
+/-- The variational inequality for a strongly monotone bounded operator on a closed convex
+set has a solution. The proof takes a small projected gradient step and applies Banach's
+fixed-point theorem. -/
+theorem exists_obstacle_variational_of_strongMonotonicity
+    (A : H →L[ℝ] H) (g : H) {α : ℝ} (hα : 0 < α)
+    (hmono : ∀ d : H, α * ‖d‖ ^ 2 ≤ ⟪A d, d⟫_ℝ)
+    {K : Set H} (hK : IsClosed K) (hconv : Convex ℝ K) (hne : K.Nonempty) :
+    ∃ u ∈ K, ∀ v ∈ K, ⟪g - A u, v - u⟫_ℝ ≤ 0 := by
+  obtain ⟨τ, hτ, hτop, hτα, hq0, hq1⟩ := exists_gradientStep_parameters A hα
+  let q : ℝ := 1 - τ * α / 2
+  let qNN : ℝ≥0 := ⟨q, hq0⟩
+  let T : H → H := fun u => obstacleProjection K hK hconv hne (u - τ • (A u - g))
+  have hT : ContractingWith qNN T := by
+    refine ⟨(by exact_mod_cast hq1), LipschitzWith.of_dist_le_mul fun u v => ?_⟩
+    have hdiff : (u - τ • (A u - g)) - (v - τ • (A v - g)) =
+        (u - v) - τ • A (u - v) := by
+      simp only [map_sub, smul_sub]
+      module
+    have hnorm : ‖T u - T v‖ ≤ q * ‖u - v‖ := by
+      calc
+        ‖T u - T v‖
+            ≤ ‖(u - τ • (A u - g)) - (v - τ • (A v - g))‖ :=
+              obstacleProjection_norm_sub_le K hK hconv hne _ _
+        _ = ‖(u - v) - τ • A (u - v)‖ := by rw [hdiff]
+        _ ≤ q * ‖u - v‖ := gradientStep_norm_le A hτ hτop hτα hmono (u - v)
+    have hqcoe : (qNN : ℝ) = q := rfl
+    simpa only [dist_eq_norm, hqcoe] using hnorm
+  let u : H := hT.fixedPoint T
+  have hfixed : T u = u := hT.fixedPoint_isFixedPt
+  have hu : u ∈ K := by
+    rw [← hfixed]
+    exact (obstacleProjection_mem_and_variational K hK hconv hne _).1
+  refine ⟨u, hu, fun v hv => ?_⟩
+  have hproj := (obstacleProjection_mem_and_variational K hK hconv hne
+    (u - τ • (A u - g))).2 v hv
+  change ⟪(u - τ • (A u - g)) - T u, v - T u⟫_ℝ ≤ 0 at hproj
+  rw [hfixed] at hproj
+  have hvec : (u - τ • (A u - g)) - u = τ • (g - A u) := by module
+  rw [hvec, real_inner_smul_left] at hproj
+  exact nonpos_of_mul_nonpos_right hproj hτ
+
+/-- A bounded coercive bilinear form admits a solution of its obstacle variational inequality
+on every nonempty closed convex admissible set. No symmetry is needed for this existence step. -/
+theorem exists_obstacle_variational_of_coercive
+    (B : H →L[ℝ] H →L[ℝ] ℝ) (hB : IsCoercive B) (ℓ : H →L[ℝ] ℝ)
+    {K : Set H} (hK : IsClosed K) (hconv : Convex ℝ K) (hne : K.Nonempty) :
+    ∃ u ∈ K, ∀ v ∈ K, ℓ (v - u) ≤ B u (v - u) := by
+  obtain ⟨α, hα, hcoerc⟩ := hB
+  let A : H →L[ℝ] H := continuousLinearMapOfBilin B
+  let g : H := (toDual ℝ H).symm ℓ
+  have hmono : ∀ d : H, α * ‖d‖ ^ 2 ≤ ⟪A d, d⟫_ℝ := by
+    intro d
+    change α * ‖d‖ ^ 2 ≤ ⟪(continuousLinearMapOfBilin B) d, d⟫_ℝ
+    rw [continuousLinearMapOfBilin_apply]
+    nlinarith [hcoerc d]
+  obtain ⟨u, hu, hvi⟩ := exists_obstacle_variational_of_strongMonotonicity
+    A g hα hmono hK hconv hne
+  refine ⟨u, hu, fun v hv => ?_⟩
+  have h := hvi v hv
+  change ⟪(toDual ℝ H).symm ℓ - (continuousLinearMapOfBilin B) u, v - u⟫_ℝ ≤ 0 at h
+  rw [inner_sub_left, toDual_symm_apply, continuousLinearMapOfBilin_apply] at h
+  exact sub_nonpos.mp h
 
 /-- The Hilbert obstacle minimizer exists on every nonempty closed convex admissible set. Its
 variational inequality has the sign convention appropriate for `-Δu = f - ν`. -/
