@@ -27,11 +27,10 @@ open scoped ENNReal Topology
 namespace CenteredMaximal.Ball
 
 /-- The planar Green profile pairs with a smooth compactly supported Laplacian as twice the
-spherical obstacle value when the obstacle vanishes at its center. -/
-theorem integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux
+increment of the spherical integral above its center value. -/
+theorem integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux_general
     (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
     (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin 2))
-    (hx : w x = 0)
     (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) planarGreenRadius,
       (∫ y in Metric.ball x s, Laplacian.laplacian w y) =
         s * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
@@ -39,9 +38,11 @@ theorem integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux
             (ω : EuclideanSpace ℝ (Fin 2)) ∂(volume.toSphere))) :
     (∫ y : EuclideanSpace ℝ (Fin 2),
       max (planarGreenProfile ‖y - x‖) 0 * Laplacian.laplacian w y) =
-      2 * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+      2 * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
         w (x + planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2)))
-          ∂(volume.toSphere)) := by
+          ∂(volume.toSphere)) -
+        (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          w x ∂(volume.toSphere))) := by
   let g : EuclideanSpace ℝ (Fin 2) → ℝ := Laplacian.laplacian w
   let F : ℝ → ℝ := fun s ↦ ∫ y in Metric.ball x s, g y
   let m : ℝ → ℝ := fun s ↦
@@ -73,13 +74,18 @@ theorem integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux
   have hint : IntegrableOn (fun s ↦ planarGreenProfile s * q s)
       (Set.Ioo (0 : ℝ) planarGreenRadius) := by
     exact integrableOn_planarGreenProfile_mul_sphereIntegral x g hg B hB
-  have hm0 : Tendsto m (𝓝[>] (0 : ℝ)) (𝓝 0) :=
-    tendsto_sphereIntegral_zero 2 w hw.continuous x hx |>.mono_left nhdsWithin_le_nhds
+  have hm0 : Tendsto m (𝓝[>] (0 : ℝ))
+      (𝓝 (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+        w x ∂(volume.toSphere))) := by
+    have h := ((continuous_sphereIntegral 2 w hw.continuous x).continuousAt
+      (x := (0 : ℝ))).tendsto
+    simpa only [m, zero_smul, add_zero] using h.mono_left nhdsWithin_le_nhds
   have hboundary : Tendsto (fun s ↦ planarGreenProfile s * F s)
       (𝓝[>] (0 : ℝ)) (𝓝 0) :=
     tendsto_planarGreenProfile_mul_integral_ball_zero g x B hB
   have hradial := integral_planar_green_profile_of_center_limits
-    0 F m q dm hF hm hFflux hint hm0 hboundary
+    (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+      w x ∂(volume.toSphere)) F m q dm hF hm hFflux hint hm0 hboundary
   have hambient : Integrable (fun y : EuclideanSpace ℝ (Fin 2) ↦
       max (planarGreenProfile ‖y - x‖) 0 * g y) :=
     integrable_planarGreenProfile_posPart_mul_bdd x g
@@ -103,17 +109,38 @@ theorem integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux
       have hnonneg := planarGreenProfile_nonneg hs.1 hs.2.le
       simp only [max_eq_left hnonneg, q]
       ring
-    _ = 2 * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+    _ = 2 * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
         w (x + planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2)))
-          ∂(volume.toSphere)) := by simpa [m] using hradial
+          ∂(volume.toSphere)) -
+        (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          w x ∂(volume.toSphere))) := by simpa [m] using hradial
+
+/-- The planar Green profile pairs with a smooth compactly supported Laplacian as twice the
+spherical obstacle value when the obstacle vanishes at its center. -/
+theorem integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux
+    (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin 2))
+    (hx : w x = 0)
+    (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) planarGreenRadius,
+      (∫ y in Metric.ball x s, Laplacian.laplacian w y) =
+        s * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          fderiv ℝ w (x + s • (ω : EuclideanSpace ℝ (Fin 2)))
+            (ω : EuclideanSpace ℝ (Fin 2)) ∂(volume.toSphere))) :
+    (∫ y : EuclideanSpace ℝ (Fin 2),
+      max (planarGreenProfile ‖y - x‖) 0 * Laplacian.laplacian w y) =
+      2 * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+        w (x + planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2)))
+          ∂(volume.toSphere)) := by
+  simpa only [hx, integral_zero, sub_zero] using
+    integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux_general
+      w hw hsupp x hflux
 
 /-- The Newtonian Green profile pairs with a smooth compactly supported Laplacian as `n`
-times the spherical obstacle value when the obstacle vanishes at its center. -/
-theorem integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux
+times the increment of its spherical integral above the center value. -/
+theorem integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux_general
     (n : ℕ) (hn : 3 ≤ n)
     (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
     (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin n))
-    (hx : w x = 0)
     (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) (greenRadius n),
       (∫ y in Metric.ball x s, Laplacian.laplacian w y) =
         s ^ (n - 1) *
@@ -122,9 +149,11 @@ theorem integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux
               (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere))) :
     (∫ y : EuclideanSpace ℝ (Fin n),
       max (newtonianGreenProfile n ‖y - x‖) 0 * Laplacian.laplacian w y) =
-      (n : ℝ) * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+      (n : ℝ) * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
         w (x + greenRadius n • (ω : EuclideanSpace ℝ (Fin n)))
-          ∂(volume.toSphere)) := by
+          ∂(volume.toSphere)) -
+        (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          w x ∂(volume.toSphere))) := by
   letI : NeZero n := ⟨by omega⟩
   let g : EuclideanSpace ℝ (Fin n) → ℝ := Laplacian.laplacian w
   let F : ℝ → ℝ := fun s ↦ ∫ y in Metric.ball x s, g y
@@ -156,13 +185,18 @@ theorem integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux
   have hint : IntegrableOn (fun s ↦ newtonianGreenProfile n s * q s)
       (Set.Ioo (0 : ℝ) (greenRadius n)) := by
     exact integrableOn_newtonianGreenProfile_mul_sphereIntegral n hn x g hg B hB
-  have hm0 : Tendsto m (𝓝[>] (0 : ℝ)) (𝓝 0) :=
-    tendsto_sphereIntegral_zero n w hw.continuous x hx |>.mono_left nhdsWithin_le_nhds
+  have hm0 : Tendsto m (𝓝[>] (0 : ℝ))
+      (𝓝 (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w x ∂(volume.toSphere))) := by
+    have h := ((continuous_sphereIntegral n w hw.continuous x).continuousAt
+      (x := (0 : ℝ))).tendsto
+    simpa only [m, zero_smul, add_zero] using h.mono_left nhdsWithin_le_nhds
   have hboundary : Tendsto (fun s ↦ newtonianGreenProfile n s * F s)
       (𝓝[>] (0 : ℝ)) (𝓝 0) :=
     tendsto_newtonianGreenProfile_mul_integral_ball_zero n hn g x B hB
   have hradial := integral_newtonian_green_profile_of_center_limits
-    n hn 0 F m q dm hF hm hFflux hint hm0 hboundary
+    n hn (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+      w x ∂(volume.toSphere)) F m q dm hF hm hFflux hint hm0 hboundary
   have hambient : Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦
       max (newtonianGreenProfile n ‖y - x‖) 0 * g y) :=
     integrable_newtonianGreenProfile_posPart_mul_bdd n hn x g
@@ -187,8 +221,32 @@ theorem integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux
       simp only [max_eq_left hnonneg, q]
       ring
     _ = (n : ℝ) *
-        (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
           w (x + greenRadius n • (ω : EuclideanSpace ℝ (Fin n)))
-            ∂(volume.toSphere)) := by simpa [m] using hradial
+            ∂(volume.toSphere)) -
+         (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          w x ∂(volume.toSphere))) := by simpa [m] using hradial
+
+/-- The Newtonian Green profile pairs with a smooth compactly supported Laplacian as `n`
+times the spherical obstacle value when the obstacle vanishes at its center. -/
+theorem integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux
+    (n : ℕ) (hn : 3 ≤ n)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin n))
+    (hx : w x = 0)
+    (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) (greenRadius n),
+      (∫ y in Metric.ball x s, Laplacian.laplacian w y) =
+        s ^ (n - 1) *
+          (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+            fderiv ℝ w (x + s • (ω : EuclideanSpace ℝ (Fin n)))
+              (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere))) :
+    (∫ y : EuclideanSpace ℝ (Fin n),
+      max (newtonianGreenProfile n ‖y - x‖) 0 * Laplacian.laplacian w y) =
+      (n : ℝ) * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w (x + greenRadius n • (ω : EuclideanSpace ℝ (Fin n)))
+          ∂(volume.toSphere)) := by
+  simpa only [hx, integral_zero, sub_zero] using
+    integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux_general
+      n hn w hw hsupp x hflux
 
 end CenteredMaximal.Ball
