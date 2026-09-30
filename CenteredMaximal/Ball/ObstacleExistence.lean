@@ -10,6 +10,7 @@ public import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
 public import Mathlib.Geometry.Convex.Cone.Basic
 public import Mathlib.MeasureTheory.Function.L2Space
 public import Mathlib.MeasureTheory.Function.LpOrder
+public import CenteredMaximal.Ball.DirichletH01
 public import Mathlib.Tactic
 
 /-!
@@ -188,5 +189,41 @@ theorem exists_positiveLp_obstacle_upper_cap
     (isClosed_positiveLpCone J) (pointed_positiveLpCone J)
   exact ⟨u, (mem_positiveLpCone J u).1 hu,
     fun φ hφ => hcap φ ((mem_positiveLpCone J φ).2 hφ)⟩
+
+/-! ### The concrete Sobolev Dirichlet space -/
+
+namespace DirichletSobolev
+
+variable {d : ℕ}
+
+/-- Continuous coordinate-zero embedding of the concrete `H¹₀(D)` graph space into `L²(D)`. -/
+def valueEmbedding (D : Set (EuclideanSpace ℝ (Fin d))) : H01 D →L[ℝ] L2D D :=
+  (PiLp.proj (𝕜 := ℝ) 2 (fun _ : Fin (d + 1) => L2D D) (0 : Fin (d + 1))).comp
+    (H01 D).subtypeL
+
+@[simp]
+theorem valueEmbedding_apply (D : Set (EuclideanSpace ℝ (Fin d))) (U : H01 D) :
+    valueEmbedding D U = (U : H1amb D) 0 := by
+  simp only [valueEmbedding, ContinuousLinearMap.comp_apply, Submodule.subtypeL_apply,
+    PiLp.proj_apply]
+
+/-- The closed convex nonnegative cone in the concrete Sobolev Dirichlet space. -/
+def positiveH01Cone (D : Set (EuclideanSpace ℝ (Fin d))) : ConvexCone ℝ (H01 D) :=
+  positiveLpCone (valueEmbedding D)
+
+@[simp]
+theorem mem_positiveH01Cone (D : Set (EuclideanSpace ℝ (Fin d))) (U : H01 D) :
+    U ∈ positiveH01Cone D ↔ 0 ≤ (U : H1amb D) 0 := by
+  rw [positiveH01Cone, mem_positiveLpCone, valueEmbedding_apply]
+
+theorem isClosed_positiveH01Cone (D : Set (EuclideanSpace ℝ (Fin d))) :
+    IsClosed (positiveH01Cone D : Set (H01 D)) :=
+  isClosed_positiveLpCone (valueEmbedding D)
+
+theorem pointed_positiveH01Cone (D : Set (EuclideanSpace ℝ (Fin d))) :
+    (positiveH01Cone D).Pointed :=
+  pointed_positiveLpCone (valueEmbedding D)
+
+end DirichletSobolev
 
 end CenteredMaximal.Ball
