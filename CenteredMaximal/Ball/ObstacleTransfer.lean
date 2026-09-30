@@ -60,21 +60,31 @@ theorem ball_average_le_kernel_integral
       setLIntegral_le_lintegral _ _
 
 omit [Nonempty (Fin n)] in
-/-- A bound for a density transfers through a nonnegative normalized kernel. -/
-theorem kernel_integral_le_of_density_le
+/-- An almost-everywhere bound for a density transfers through a nonnegative normalized kernel. -/
+theorem kernel_integral_le_of_density_le_ae
     (K ν : EuclideanSpace ℝ (Fin n) → ℝ≥0∞) (x : EuclideanSpace ℝ (Fin n))
-    (r : ℝ) (κ C : ℝ≥0∞) (hκfin : κ ≠ ∞) (hν : ∀ y, ν y ≤ κ)
+    (r : ℝ) (κ C : ℝ≥0∞) (hκfin : κ ≠ ∞)
+    (hν : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))), ν y ≤ κ)
     (hKmass : (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y))) = C) :
     (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * ν y) ≤ C * κ := by
   calc
     (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * ν y)
         ≤ ∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * κ :=
-          lintegral_mono fun y ↦ by
+          lintegral_mono_ae <| hν.mono fun y hy ↦ by
             simpa only [mul_comm] using
-              (mul_le_mul_left (hν y) ((volume (ball x r))⁻¹ * K (r⁻¹ • (x - y))))
+              (mul_le_mul_left hy ((volume (ball x r))⁻¹ * K (r⁻¹ • (x - y))))
     _ = (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y))) * κ := by
       rw [lintegral_mul_const' _ _ hκfin]
     _ = C * κ := by rw [hKmass]
+
+omit [Nonempty (Fin n)] in
+/-- Pointwise form of `kernel_integral_le_of_density_le_ae`. -/
+theorem kernel_integral_le_of_density_le
+    (K ν : EuclideanSpace ℝ (Fin n) → ℝ≥0∞) (x : EuclideanSpace ℝ (Fin n))
+    (r : ℝ) (κ C : ℝ≥0∞) (hκfin : κ ≠ ∞) (hν : ∀ y, ν y ≤ κ)
+    (hKmass : (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y))) = C) :
+    (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * ν y) ≤ C * κ :=
+  kernel_integral_le_of_density_le_ae K ν x r κ C hκfin (ae_of_all _ hν) hKmass
 
 /-- A sufficiently large radius has a small average, using only the total mass of `f`. -/
 theorem ball_average_le_of_large_radius
@@ -186,7 +196,7 @@ theorem contact_measure_le_density_mass
 /-- The three-radius argument. The obstacle certificate supplies a contact set `Ω`, a density
 bounded by `κ`, a contact-set mass estimate, and Green comparison at zeros of the obstacle. The
 radius `r₀` is chosen so that the total mass already controls all larger ball averages. -/
-theorem ball_level_bound_of_obstacle_certificate
+theorem ball_level_bound_of_obstacle_certificate_ae
     (K : EuclideanSpace ℝ (Fin n) → ℝ≥0∞)
     (f : EuclideanSpace ℝ (Fin n) → ℝ) (C κ : ℝ≥0∞) (R r₀ : ℝ)
     (hκfin : κ ≠ ∞)
@@ -199,7 +209,7 @@ theorem ball_level_bound_of_obstacle_certificate
     (Ω : Set (EuclideanSpace ℝ (Fin n)))
     (ν : EuclideanSpace ℝ (Fin n) → ℝ≥0∞)
     (hcontact : κ * volume Ω ≤ ∫⁻ y, ‖f y‖ₑ)
-    (hν : ∀ y, ν y ≤ κ)
+    (hν : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))), ν y ≤ κ)
     (hgreen : ∀ (x : EuclideanSpace ℝ (Fin n)) (r : ℝ), x ∉ Ω → 0 < r →
       r < r₀ → ‖x‖ < R + r₀ →
       (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * ‖f y‖ₑ) ≤
@@ -223,7 +233,7 @@ theorem ball_level_bound_of_obstacle_certificate
         _ ≤ ∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * ν y :=
           hgreen x r hxΩ hr (lt_of_not_ge hbig) (lt_of_not_ge hfar)
         _ ≤ C * κ :=
-          kernel_integral_le_of_density_le K ν x r κ C hκfin hν (hKmass x r hr)
+          kernel_integral_le_of_density_le_ae K ν x r κ C hκfin hν (hKmass x r hr)
     exact (not_lt_of_ge hbound) hx
   calc
     (C * κ) * volume {x | C * κ < ballMaximalFunction f x}
@@ -232,6 +242,30 @@ theorem ball_level_bound_of_obstacle_certificate
     _ = C * (κ * volume Ω) := by ac_rfl
     _ ≤ C * ∫⁻ y, ‖f y‖ₑ := by
       simpa only [mul_comm] using (mul_le_mul_left hcontact C)
+
+/-- Pointwise-density form of `ball_level_bound_of_obstacle_certificate_ae`. -/
+theorem ball_level_bound_of_obstacle_certificate
+    (K : EuclideanSpace ℝ (Fin n) → ℝ≥0∞)
+    (f : EuclideanSpace ℝ (Fin n) → ℝ) (C κ : ℝ≥0∞) (R r₀ : ℝ)
+    (hκfin : κ ≠ ∞)
+    (hr₀ : 0 < r₀) (hsupp : ∀ y, R ≤ ‖y‖ → f y = 0)
+    (hlarge : (∫⁻ y, ‖f y‖ₑ) ≤
+      (C * κ) * volume (ball (0 : EuclideanSpace ℝ (Fin n)) r₀))
+    (hKunit : ∀ z ∈ ball (0 : EuclideanSpace ℝ (Fin n)) 1, 1 ≤ K z)
+    (hKmass : ∀ (x : EuclideanSpace ℝ (Fin n)) (r : ℝ), 0 < r →
+      (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y))) = C)
+    (Ω : Set (EuclideanSpace ℝ (Fin n)))
+    (ν : EuclideanSpace ℝ (Fin n) → ℝ≥0∞)
+    (hcontact : κ * volume Ω ≤ ∫⁻ y, ‖f y‖ₑ)
+    (hν : ∀ y, ν y ≤ κ)
+    (hgreen : ∀ (x : EuclideanSpace ℝ (Fin n)) (r : ℝ), x ∉ Ω → 0 < r →
+      r < r₀ → ‖x‖ < R + r₀ →
+      (∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * ‖f y‖ₑ) ≤
+        ∫⁻ y, (volume (ball x r))⁻¹ * K (r⁻¹ • (x - y)) * ν y) :
+    (C * κ) * volume {x | C * κ < ballMaximalFunction f x} ≤
+      C * ∫⁻ y, ‖f y‖ₑ :=
+  ball_level_bound_of_obstacle_certificate_ae K f C κ R r₀ hκfin hr₀ hsupp hlarge
+    hKunit hKmass Ω ν hcontact (ae_of_all _ hν) hgreen
 
 omit [Nonempty (Fin n)] in
 /-- Reparameterize a family of estimates at levels `C * κ` as a weak type bound at every
