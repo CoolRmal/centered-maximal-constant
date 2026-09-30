@@ -41,6 +41,7 @@ public import CenteredMaximal.Ball.KernelComparisonOnSupport
 public import CenteredMaximal.Ball.AEChallengeReduction
 public import CenteredMaximal.Ball.BallComplementSourceBound
 public import CenteredMaximal.Ball.AERealCertificate
+public import CenteredMaximal.Ball.BallGreenCertificates
 
 /-!
 # The weak type constant of the centred maximal operator over cubes
