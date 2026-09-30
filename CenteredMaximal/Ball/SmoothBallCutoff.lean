@@ -312,4 +312,59 @@ theorem radialBallCutoff_deriv_eq_zero_outer {R δ s : ℝ}
   rw [heq.deriv_eq, deriv_const]
 
 
+/-- The smooth transition has zero derivative after reaching one. -/
+theorem transition_deriv_zero_of_one_le {t : ℝ} (ht : 1 ≤ t) :
+    deriv Real.smoothTransition t = 0 := by
+  rcases ht.eq_or_lt with heq | hgt
+  · subst t
+    have hmax : IsLocalMax Real.smoothTransition 1 := by
+      change ∀ᶠ s in 𝓝 (1 : ℝ), Real.smoothTransition s ≤ Real.smoothTransition 1
+      filter_upwards with s
+      simpa only [Real.smoothTransition.one] using Real.smoothTransition.le_one s
+    exact hmax.deriv_eq_zero
+  · have heq : Real.smoothTransition =ᶠ[𝓝 t] (fun _ => 1) := by
+      filter_upwards [isOpen_Ioi.mem_nhds (show t ∈ Ioi (1:ℝ) from hgt)] with s hs
+      exact Real.smoothTransition.one_of_one_le hs.le
+    rw [heq.deriv_eq, deriv_const]
+
+/-- The smooth transition has zero derivative before leaving zero. -/
+theorem transition_deriv_zero_of_le_zero {t : ℝ} (ht : t ≤ 0) :
+    deriv Real.smoothTransition t = 0 := by
+  rcases ht.eq_or_lt with heq | hlt
+  · subst t
+    have hmin : IsLocalMin Real.smoothTransition 0 := by
+      change ∀ᶠ s in 𝓝 (0 : ℝ), Real.smoothTransition 0 ≤ Real.smoothTransition s
+      filter_upwards with s
+      simpa only [Real.smoothTransition.zero] using Real.smoothTransition.nonneg s
+    exact hmin.deriv_eq_zero
+  · have heq : Real.smoothTransition =ᶠ[𝓝 t] (fun _ => 0) := by
+      filter_upwards [isOpen_Iio.mem_nhds (show t ∈ Iio (0:ℝ) from hlt)] with s hs
+      exact Real.smoothTransition.zero_of_nonpos hs.le
+    rw [heq.deriv_eq, deriv_const]
+
+
+/-- The radial cutoff derivative vanishes through the inner boundary. -/
+theorem radialBallCutoff_deriv_eq_zero_inner_closed {R δ s : ℝ}
+    (hR : 0 < R) (hδ : 0 < δ) (hs0 : 0 ≤ s) (hsR : s ≤ R) :
+    deriv (radialBallCutoff R δ) s = 0 := by
+  have hsq : s^2 ≤ R^2 := (sq_le_sq₀ hs0 hR.le).mpr hsR
+  have hq : 1 ≤ ((R+δ)^2-s^2)/((R+δ)^2-R^2) := by
+    apply (one_le_div (smoothBallCutoff_gap_pos hR hδ)).mpr
+    nlinarith
+  rw [radialBallCutoff_deriv, transition_deriv_zero_of_one_le hq]
+  ring
+
+/-- The radial cutoff derivative vanishes from the outer boundary onward. -/
+theorem radialBallCutoff_deriv_eq_zero_outer_closed {R δ s : ℝ}
+    (hR : 0 < R) (hδ : 0 < δ) (hs : R + δ ≤ s) :
+    deriv (radialBallCutoff R δ) s = 0 := by
+  have houter : 0 ≤ R + δ := by linarith
+  have hsq : (R+δ)^2 ≤ s^2 := (sq_le_sq₀ houter (by linarith)).mpr hs
+  have hq : ((R+δ)^2-s^2)/((R+δ)^2-R^2) ≤ 0 :=
+    div_nonpos_of_nonpos_of_nonneg (by linarith)
+      (smoothBallCutoff_gap_pos hR hδ).le
+  rw [radialBallCutoff_deriv, transition_deriv_zero_of_le_zero hq]
+  ring
+
+
 end CenteredMaximal.Ball
