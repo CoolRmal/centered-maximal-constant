@@ -5,7 +5,8 @@ Authors: Yongxi Lin
 -/
 module
 
-public import CenteredMaximal.Ball.GreenKernel
+public import CenteredMaximal.Ball.PlanarNormalized
+public import CenteredMaximal.Ball.NewtonianMass
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
 
@@ -20,7 +21,52 @@ have constant flux, the scalar identity behind the Green pairing with the Laplac
 
 noncomputable section
 
+open MeasureTheory Metric
+open scoped ENNReal
+
 namespace CenteredMaximal.Ball
+
+/-- A finite-mass extended kernel has an integrable real representative almost everywhere. -/
+theorem real_representative_of_finite_lintegral {E : Type*} [MeasurableSpace E]
+    (μ : Measure E) (Q : E → ℝ≥0∞) (hQ : AEMeasurable Q μ)
+    (hfin : (∫⁻ y, Q y ∂μ) ≠ ∞) :
+    Integrable (fun y ↦ (Q y).toReal) μ ∧
+      ∀ᵐ y ∂μ, Q y = ENNReal.ofReal ((Q y).toReal) := by
+  refine ⟨integrable_toReal_of_lintegral_ne_top hQ hfin, ?_⟩
+  filter_upwards [ae_lt_top' hQ hfin] with y hy
+  exact (ENNReal.ofReal_toReal hy.ne).symm
+
+/-- The normalized planar kernel has an integrable real representative at every positive scale. -/
+theorem normalized_planarKernel_real_representative
+    (x : EuclideanSpace ℝ (Fin 2)) {r : ℝ} (hr : 0 < r) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin 2) ↦
+      ((MeasureTheory.volume (Metric.ball x r))⁻¹ *
+        planarKernel (r⁻¹ • (x - y))).toReal) ∧
+    ∀ᵐ y ∂(MeasureTheory.volume : Measure (EuclideanSpace ℝ (Fin 2))),
+      (MeasureTheory.volume (Metric.ball x r))⁻¹ *
+        planarKernel (r⁻¹ • (x - y)) =
+      ENNReal.ofReal (((MeasureTheory.volume (Metric.ball x r))⁻¹ *
+        planarKernel (r⁻¹ • (x - y))).toReal) := by
+  apply real_representative_of_finite_lintegral volume
+  · exact (measurable_planarKernel.comp (by fun_prop)).const_mul _ |>.aemeasurable
+  · rw [planarKernel_normalized_mass x hr]
+    exact ENNReal.ofReal_ne_top
+
+/-- The normalized Newtonian kernel has an integrable real representative in dimension `n ≥ 3`. -/
+theorem normalized_newtonianKernel_real_representative (n : ℕ) (hn : 3 ≤ n)
+    (x : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦
+      ((MeasureTheory.volume (Metric.ball x r))⁻¹ *
+        newtonianKernel n (r⁻¹ • (x - y))).toReal) ∧
+    ∀ᵐ y ∂(MeasureTheory.volume : Measure (EuclideanSpace ℝ (Fin n))),
+      (MeasureTheory.volume (Metric.ball x r))⁻¹ *
+        newtonianKernel n (r⁻¹ • (x - y)) =
+      ENNReal.ofReal (((MeasureTheory.volume (Metric.ball x r))⁻¹ *
+        newtonianKernel n (r⁻¹ • (x - y))).toReal) := by
+  apply real_representative_of_finite_lintegral volume
+  · exact (measurable_newtonianKernel n |>.comp (by fun_prop)).const_mul _ |>.aemeasurable
+  · rw [lintegral_normalized_newtonianKernel n hn x hr]
+    exact ENNReal.ofReal_ne_top
 
 /-- The untruncated radial logarithmic profile in dimension two. -/
 def planarGreenProfile (s : ℝ) : ℝ := 1 - 2 * Real.log s
