@@ -106,7 +106,8 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
     refine (hgm i).of_le hm ?_
     filter_upwards with x
     rw [Real.norm_eq_abs, Real.norm_eq_abs, abs_mul]
-    simpa only [Real.norm_eq_abs, one_mul] using mul_le_mul_of_nonneg_right (hderiv (v x)) (abs_nonneg _)
+    simpa only [Real.norm_eq_abs, one_mul] using
+      mul_le_mul_of_nonneg_right (hderiv (v x)) (abs_nonneg _)
   let w : H1amb Ω := WithLp.toLp 2 (Fin.cons w0 fun i => (hwm i).toLp _)
   have hw0' : ((w 0 : L2D Ω) : EuclideanSpace ℝ (Fin d) → ℝ)
       =ᵐ[volume.restrict Ω] fun x => F (v x) := by simpa [w] using hw0

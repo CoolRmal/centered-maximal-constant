@@ -131,7 +131,8 @@ theorem slice_bound_euclBox (a b : Fin (n + 1) → ℝ) (hab : ∀ k, a k ≤ b 
     rw [← hbox]
     exact hmp.setIntegral_image_emb hme g P
   -- Whole-space integrability of the relevant squares (continuous, compact support).
-  have hφ2 : Integrable (fun z => (φ z) ^ 2) (volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))) := by
+  have hφ2 : Integrable (fun z => (φ z) ^ 2)
+      (volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))) := by
     exact (h.continuous.memLp_of_hasCompactSupport h.2.1).integrable_sq
   have hpd2 : Integrable (fun z => (partialD i φ z) ^ 2)
       (volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))) := by

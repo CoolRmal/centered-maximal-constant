@@ -118,7 +118,8 @@ theorem laplacian_normed_bump_convolution_eq_of_local_distribution
   exact reflected_kernel_support_inside_ball center x R φ.rOut (φ.normed volume)
     (by rw [φ.tsupport_normed_eq]) hx
 
-/-- The Laplacians of normalized bump mollifications converge almost everywhere on interior balls. -/
+/-- The Laplacians of normalized bump mollifications converge almost everywhere on interior
+balls. -/
 theorem ae_tendsto_laplacian_mollification_on_ball
     (center : EuclideanSpace ℝ (Fin n)) (R r : ℝ) (hr : r < R)
     (u g : EuclideanSpace ℝ (Fin n) → ℝ)

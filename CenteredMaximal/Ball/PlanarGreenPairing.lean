@@ -77,7 +77,8 @@ private theorem measurableSet_unitSphereCone (V : Type*)
     (A : Set (Metric.sphere (0 : V) 1)) (hA : MeasurableSet A) :
     MeasurableSet (Set.Ioo (0 : ℝ) 1 • (Subtype.val '' A) : Set V) := by
   rw [unitSphereCone_eq]
-  apply (MeasurableEmbedding.subtype_coe (measurableSet_singleton (0 : V)).compl).measurableSet_image'
+  apply (MeasurableEmbedding.subtype_coe
+    (measurableSet_singleton (0 : V)).compl).measurableSet_image'
   apply (Homeomorph.measurableEmbedding (homeomorphUnitSphereProd V).symm).measurableSet_image'
   exact hA.prod measurableSet_Iio
 
