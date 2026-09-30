@@ -10,6 +10,7 @@ public import CenteredMaximal.Ball.NewtonianMass
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
 public import Mathlib.Analysis.Calculus.ParametricIntegral
+public import Mathlib.Analysis.InnerProductSpace.Laplacian
 public import Mathlib.MeasureTheory.Constructions.HaarToSphere
 
 /-!
@@ -275,6 +276,62 @@ theorem hasDerivAt_sphereIntegral_of_hasCompactSupport (n : ℕ) [NeZero n]
   obtain ⟨C, hC⟩ := (hsupp.fderiv ℝ).exists_bound_of_continuous
     (hw.continuous_fderiv (by norm_num))
   exact hasDerivAt_sphereIntegral n w hw x r C hC
+
+/-- The Laplacian does not enlarge the support of a function. -/
+theorem hasCompactSupport_laplacian (n : ℕ)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hsupp : HasCompactSupport w) :
+    HasCompactSupport (Laplacian.laplacian w) := by
+  apply hsupp.mono'
+  intro x hx
+  by_contra hxt
+  have hzero : w =ᶠ[𝓝 x] (0 : EuclideanSpace ℝ (Fin n) → ℝ) :=
+    notMem_tsupport_iff_eventuallyEq.mp hxt
+  have hΔzero := (InnerProductSpace.laplacian_congr_nhds hzero).eq_of_nhds
+  have hΔx : Laplacian.laplacian w x = 0 := by simpa [Pi.zero_def] using hΔzero
+  exact hx hΔx
+
+/-- A twice continuously differentiable function has a continuous Laplacian. -/
+theorem continuous_laplacian (n : ℕ)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w) :
+    Continuous (Laplacian.laplacian w) := by
+  have hiter : Continuous (iteratedFDeriv ℝ 2 w) :=
+    hw.continuous_iteratedFDeriv (by norm_num)
+  rw [InnerProductSpace.laplacian_eq_iteratedFDeriv_stdOrthonormalBasis]
+  fun_prop
+
+/-- A smooth compactly supported function has a globally bounded Laplacian. -/
+theorem exists_bound_laplacian (n : ℕ)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) :
+    ∃ C : ℝ, ∀ y, ‖Laplacian.laplacian w y‖ ≤ C :=
+  (hasCompactSupport_laplacian n w hsupp).exists_bound_of_continuous
+    (continuous_laplacian n w hw)
+
+/-- The normalized planar Green weight has an integrable pairing with the Laplacian of a smooth,
+compactly supported test function. -/
+theorem integrable_normalized_planarKernel_mul_laplacian
+    (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin 2))
+    {r : ℝ} (hr : 0 < r) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin 2) ↦
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) := by
+  obtain ⟨C, hC⟩ := exists_bound_laplacian 2 w hw hsupp
+  exact integrable_normalized_planarKernel_mul_bdd x hr (Laplacian.laplacian w)
+    (continuous_laplacian 2 w hw).aestronglyMeasurable (Filter.Eventually.of_forall hC)
+
+/-- The normalized Newtonian Green weight has an integrable pairing with the Laplacian of a smooth,
+compactly supported test function. -/
+theorem integrable_normalized_newtonianKernel_mul_laplacian
+    (n : ℕ) (hn : 3 ≤ n) (w : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hw : ContDiff ℝ 2 w) (hsupp : HasCompactSupport w)
+    (x : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) := by
+  obtain ⟨C, hC⟩ := exists_bound_laplacian n w hw hsupp
+  exact integrable_normalized_newtonianKernel_mul_bdd n hn x hr (Laplacian.laplacian w)
+    (continuous_laplacian n w hw).aestronglyMeasurable (Filter.Eventually.of_forall hC)
 
 /-- The untruncated radial logarithmic profile in dimension two. -/
 def planarGreenProfile (s : ℝ) : ℝ := 1 - 2 * Real.log s
