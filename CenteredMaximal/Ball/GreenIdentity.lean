@@ -350,6 +350,57 @@ theorem newtonianKernel_eq_profile (n : ℕ) (z : EuclideanSpace ℝ (Fin n)) (h
     newtonianKernel n z = ENNReal.ofReal (newtonianGreenProfile n ‖z‖) := by
   simp [newtonianKernel, newtonianGreenProfile, hz]
 
+/-- Away from its singular point, the normalized planar Green weight is a radial profile. -/
+theorem normalized_planarKernel_toReal_eq_profile
+    (x y : EuclideanSpace ℝ (Fin 2)) {r : ℝ} (hr : 0 < r) (hy : y ≠ x) :
+    ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal =
+      (volume (Metric.ball x r))⁻¹.toReal *
+        max (planarGreenProfile (‖y - x‖ / r)) 0 := by
+  have hz : r⁻¹ • (x - y) ≠ 0 := by
+    simp [hr.ne', sub_ne_zero.mpr hy.symm]
+  rw [planarKernel_eq_profile _ hz, ENNReal.toReal_mul, ENNReal.toReal_ofReal']
+  congr 1
+  congr 1
+  rw [norm_smul, Real.norm_eq_abs, abs_of_pos (inv_pos.mpr hr)]
+  rw [norm_sub_rev]
+  ring_nf
+
+/-- Away from its singular point, the normalized Newtonian Green weight is a radial profile. -/
+theorem normalized_newtonianKernel_toReal_eq_profile (n : ℕ)
+    (x y : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r) (hy : y ≠ x) :
+    ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal =
+      (volume (Metric.ball x r))⁻¹.toReal *
+        max (newtonianGreenProfile n (‖y - x‖ / r)) 0 := by
+  have hz : r⁻¹ • (x - y) ≠ 0 := by
+    simp [hr.ne', sub_ne_zero.mpr hy.symm]
+  rw [newtonianKernel_eq_profile n _ hz, ENNReal.toReal_mul, ENNReal.toReal_ofReal']
+  congr 1
+  congr 1
+  rw [norm_smul, Real.norm_eq_abs, abs_of_pos (inv_pos.mpr hr)]
+  rw [norm_sub_rev]
+  ring_nf
+
+/-- The normalized planar Green weight agrees with its radial real profile almost everywhere. -/
+theorem normalized_planarKernel_toReal_ae_eq_profile
+    (x : EuclideanSpace ℝ (Fin 2)) {r : ℝ} (hr : 0 < r) :
+    ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))),
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal =
+        (volume (Metric.ball x r))⁻¹.toReal *
+          max (planarGreenProfile (‖y - x‖ / r)) 0 := by
+  filter_upwards [(volume : Measure (EuclideanSpace ℝ (Fin 2))).ae_ne x] with y hy
+  exact normalized_planarKernel_toReal_eq_profile x y hr hy
+
+/-- The normalized Newtonian Green weight agrees with its radial real profile almost everywhere. -/
+theorem normalized_newtonianKernel_toReal_ae_eq_profile (n : ℕ) (hn : 3 ≤ n)
+    (x : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r) :
+    ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal =
+        (volume (Metric.ball x r))⁻¹.toReal *
+          max (newtonianGreenProfile n (‖y - x‖ / r)) 0 := by
+  letI : NeZero n := ⟨by omega⟩
+  filter_upwards [(volume : Measure (EuclideanSpace ℝ (Fin n))).ae_ne x] with y hy
+  exact normalized_newtonianKernel_toReal_eq_profile n x y hr hy
+
 /-- The logarithmic profile vanishes at its support radius. -/
 theorem planarGreenProfile_at_radius : planarGreenProfile planarGreenRadius = 0 := by
   have hlog : Real.log planarGreenRadius = 1 / 2 := by
