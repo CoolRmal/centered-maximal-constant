@@ -85,10 +85,50 @@ theorem weak_test_convergence_of_distributional_laplacian (n : ℕ)
       ring
   simpa only [hsym, (hdistribution φ hφsupp hφsmooth).symm] using hlim
 
-/-- Positivity of the Green pairing at a center only needs convergence of the
-approximating obstacles *at that center*. The spherical averages are nonnegative
-at every stage and need not converge. Thus a common almost-everywhere center set
-can support the comparison for every radius. -/
+/-- Positivity of the limiting Green pairing only requires convergence of the
+pairings and convergence of the approximating obstacles at the center. The
+spherical averages stay nonnegative and need not converge. -/
+theorem nonneg_green_pairing_of_integral_convergence (n : ℕ) [NeZero n]
+    (K : EuclideanSpace ℝ (Fin n) → ℝ)
+    (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (wₖ gₖ : ℕ → EuclideanSpace ℝ (Fin n) → ℝ)
+    (hwₖ_nonneg : ∀ k y, 0 ≤ wₖ k y)
+    (hlimK : Tendsto (fun k ↦ ∫ y, K y * gₖ k y) atTop
+      (𝓝 (∫ y, K y * g y)))
+    (x : EuclideanSpace ℝ (Fin n))
+    (hcenter : Tendsto (fun k ↦ wₖ k x) atTop (𝓝 0))
+    (ρ c : ℝ) (hc : 0 ≤ c)
+    (hpair : ∀ k,
+      (∫ y, K y * gₖ k y) = c *
+        ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          wₖ k (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere)) -
+         (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          wₖ k x ∂(volume.toSphere)))) :
+    0 ≤ ∫ y, K y * g y := by
+  have hcenterInt : Tendsto
+      (fun k ↦ ∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        wₖ k x ∂(volume.toSphere)) atTop (𝓝 0) := by
+    simp only [integral_const, smul_eq_mul]
+    convert (tendsto_const_nhds.mul hcenter) using 1
+    simp
+  have hleft : Tendsto (fun k ↦
+      -(c * ∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        wₖ k x ∂(volume.toSphere))) atTop (𝓝 0) := by
+    simpa using (hcenterInt.const_mul c).neg
+  apply le_of_tendsto_of_tendsto hleft hlimK
+  apply Filter.Eventually.of_forall
+  intro k
+  have hsphere : 0 ≤
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        wₖ k (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere) :=
+    integral_nonneg fun ω ↦ hwₖ_nonneg k _
+  dsimp only
+  rw [hpair k]
+  nlinarith [mul_nonneg hc hsphere]
+
+/-- Weak convergence of bounded densities supplies the pairing convergence in
+`nonneg_green_pairing_of_integral_convergence`. The same center set works for
+every radius. -/
 theorem nonneg_green_pairing_of_weak_test_convergence (n : ℕ) [NeZero n]
     (K : EuclideanSpace ℝ (Fin n) → ℝ) (hK : Integrable K)
     (g : EuclideanSpace ℝ (Fin n) → ℝ)
@@ -113,28 +153,9 @@ theorem nonneg_green_pairing_of_weak_test_convergence (n : ℕ) [NeZero n]
          (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
           wₖ k x ∂(volume.toSphere)))) :
     0 ≤ ∫ y, K y * g y := by
-  have hlimK := tendsto_integral_mul_of_weak_test_convergence n g gₖ
-    hg hgₖ B hB₀ hBg hBgₖ hweak K hK
-  have hcenterInt : Tendsto
-      (fun k ↦ ∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
-        wₖ k x ∂(volume.toSphere)) atTop (𝓝 0) := by
-    simp only [integral_const, smul_eq_mul]
-    convert (tendsto_const_nhds.mul hcenter) using 1
-    simp
-  have hleft : Tendsto (fun k ↦
-      -(c * ∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
-        wₖ k x ∂(volume.toSphere))) atTop (𝓝 0) := by
-    simpa using (hcenterInt.const_mul c).neg
-  apply le_of_tendsto_of_tendsto hleft hlimK
-  apply Filter.Eventually.of_forall
-  intro k
-  have hsphere : 0 ≤
-      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
-        wₖ k (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere) :=
-    integral_nonneg fun ω ↦ hwₖ_nonneg k _
-  dsimp only
-  rw [hpair k]
-  nlinarith [mul_nonneg hc hsphere]
+  apply nonneg_green_pairing_of_integral_convergence n K g wₖ gₖ hwₖ_nonneg
+    (tendsto_integral_mul_of_weak_test_convergence n g gₖ
+      hg hgₖ B hB₀ hBg hBgₖ hweak K hK) x hcenter ρ c hc hpair
 
 /-- The planar normalized Green pairing is nonnegative at every center where
 nonnegative smooth approximants converge to zero. No spherical trace of the
