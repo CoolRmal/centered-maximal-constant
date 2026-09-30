@@ -42,6 +42,19 @@ theorem ballComplementSourceExtension_aestronglyMeasurable
       (volume.restrict (ball center R)) := Lp.aestronglyMeasurable (ρ - F)
   exact (aestronglyMeasurable_indicator_iff measurableSet_ball).2 hlocal
 
+/-- The zero-extended density is integrable because `ρ-F` lies in `L²` on a finite-volume
+ball. -/
+theorem ballComplementSourceExtension_integrable
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (F ρ : L2D (ball center R)) :
+    Integrable (ballComplementSourceExtension center R F ρ) := by
+  letI : IsFiniteMeasure (volume.restrict (ball center R)) :=
+    isFiniteMeasure_restrict.mpr measure_ball_ne_top
+  have hlocal : Integrable (fun x => ((ρ - F) x : ℝ))
+      (volume.restrict (ball center R)) :=
+    (Lp.memLp (ρ - F)).integrable (by norm_num)
+  exact MeasureTheory.IntegrableOn.integrable_indicator hlocal measurableSet_ball
+
 /-- The zero extension agrees with the local `L²` density almost everywhere on the ball. -/
 theorem ballComplementSourceExtension_ae_eq_local
     (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
