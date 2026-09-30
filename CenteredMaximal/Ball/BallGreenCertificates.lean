@@ -62,4 +62,48 @@ theorem hasRealAEDirectObstacleCertificates_planarKernel :
       f hfcont hfcomp hfnn κ hκ.le ρlocal hρcap x hxR hr hrr₀
       (hx hxΩ' hxR r hr hrr₀))
 
+/-- The Newtonian kernel admits direct obstacle certificates in dimensions at least three. -/
+theorem hasRealAEDirectObstacleCertificates_newtonianKernel_succ
+    (n : ℕ) (hn : 3 ≤ n + 1) :
+    HasRealAEDirectObstacleCertificates (newtonianKernel (n + 1)) := by
+  intro f hfcomp hfsmooth hfnn κ hκ R r₀ hr₀ _hsupp
+  let S : ℝ := greenCutoffInnerRadius R r₀ (greenRadius (n + 1)) + 2 * r₀ + 2
+  have hfcont : Continuous f := hfsmooth.continuous
+  obtain ⟨U, _νpen, ρlocal, Ω, ν, _hρdef, hΩ, hνext,
+    hcontact, hρcap, hνcap, hU, hweak⟩ :=
+      exists_ball_smooth_complement_certificate
+        (0 : EuclideanSpace ℝ (Fin (n + 1))) S f hfcont hfcomp hfnn κ hκ.le
+  have hU' : 0 ≤ (U : H1amb (ball (0 : EuclideanSpace ℝ (Fin (n + 1))) S)) 0 := by
+    simpa only [valueEmbedding_apply] using hU
+  have hweak' := ball_weak_equation_sub
+    (0 : EuclideanSpace ℝ (Fin (n + 1))) S U
+    (ballSourceL2 0 S f hfcont hfcomp) ρlocal hweak
+  have hpair := ae_newtonian_ballComplement_green_pairing_nonneg
+    n hn R r₀ hr₀ f hfcont hfcomp κ hκ.le U ρlocal hU' hρcap hweak'
+  have hcontain : greenCutoffDomain (n + 1) R r₀ (greenRadius (n + 1)) ⊆
+      ball (0 : EuclideanSpace ℝ (Fin (n + 1))) S := by
+    intro y hy
+    exact closure_greenCutoffDomain_subset_greenObstacleDomain (n + 1) R r₀
+      (greenRadius (n + 1)) (subset_closure hy)
+  refine ⟨Ω, ν, hcontact, hνcap, ?_⟩
+  filter_upwards [hpair] with x hx
+  intro r hxΩ hr hrr₀ hxR
+  have hxΩ' : x ∉ {y | y ∈ ball (0 : EuclideanSpace ℝ (Fin (n + 1))) S ∧
+      0 < ((U : H1amb (ball (0 : EuclideanSpace ℝ (Fin (n + 1))) S)) 0 y : ℝ)} := by
+    simpa only [hΩ] using hxΩ
+  simpa only [hνext] using
+    (normalized_newtonianKernel_comparison_of_ballComplement n hn hr₀ hcontain
+      f hfcont hfcomp hfnn κ hκ.le ρlocal hρcap x hxR hr hrr₀
+      (hx hxΩ' hxR r hr hrr₀))
+
+/-- Newtonian direct obstacle certificates in every original dimension `n ≥ 3`. -/
+theorem hasRealAEDirectObstacleCertificates_newtonianKernel
+    (n : ℕ) (hn : 3 ≤ n) :
+    HasRealAEDirectObstacleCertificates (newtonianKernel n) := by
+  have hsub : n - 1 + 1 = n := Nat.sub_add_cancel (by omega : 1 ≤ n)
+  have h := hasRealAEDirectObstacleCertificates_newtonianKernel_succ (n - 1)
+    (by omega : 3 ≤ n - 1 + 1)
+  rw [hsub] at h
+  exact h
+
 end CenteredMaximal.Ball
