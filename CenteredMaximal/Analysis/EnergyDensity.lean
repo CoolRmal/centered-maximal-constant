@@ -90,9 +90,10 @@ theorem tendsto_eLpNorm_comp_sub_sub {p : ℝ≥0∞} (hp : 1 ≤ p) (hp' : p �
 end Translation
 
 /-- The squared `L²` norm as a Lebesgue integral. -/
-theorem lintegral_enorm_sq {X : Type*} [MeasurableSpace X] {μ : Measure X} (f : X → ℝ) :
+theorem lintegral_enorm_sq {X : Type*} [MeasurableSpace X] {μ : Measure X} (f : X → ℝ)
+    (hf : AEStronglyMeasurable f μ) :
     ∫⁻ x, ‖f x‖ₑ ^ 2 ∂μ = eLpNorm f 2 μ ^ 2 := by
-  rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top,
+  rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top hf,
     ← ENNReal.rpow_natCast, ← ENNReal.rpow_mul]
   norm_num [ENNReal.rpow_two]
 
@@ -302,7 +303,12 @@ theorem tendsto_eLpNorm_sub_cutoff_mul {p : ℝ≥0∞} (hp : p ≠ 0) (hp' : p 
     {u : (Fin 2 → ℝ) → ℝ} (hu : Measurable u) (hu' : MemLp u p volume) :
     Tendsto (fun R : ℝ => eLpNorm (fun x => u x - cutoff R x * u x) p volume) atTop (𝓝 0) := by
   have hp0 : 0 < p.toReal := ENNReal.toReal_pos hp hp'
-  simp_rw [eLpNorm_eq_lintegral_rpow_enorm_toReal hp hp']
+  have heq (R : ℝ) :
+      eLpNorm (fun x => u x - cutoff R x * u x) p volume =
+        (∫⁻ x, ‖u x - cutoff R x * u x‖ₑ ^ p.toReal) ^ (1 / p.toReal) :=
+    eLpNorm_eq_lintegral_rpow_enorm_toReal hp hp'
+      (hu.sub ((measurable_cutoff R).mul hu)).aestronglyMeasurable
+  simp_rw [heq]
   have key : Tendsto (fun R : ℝ => ∫⁻ x, ‖u x - cutoff R x * u x‖ₑ ^ p.toReal) atTop (𝓝 0) := by
     have h := tendsto_lintegral_filter_of_dominated_convergence (μ := volume) (l := atTop)
       (F := fun R x => ‖u x - cutoff R x * u x‖ₑ ^ p.toReal) (f := fun _ => 0)
@@ -316,7 +322,7 @@ theorem tendsto_eLpNorm_sub_cutoff_mul {p : ℝ≥0∞} (hp : p ≠ 0) (hp' : p 
       refine mul_le_of_le_one_left' ?_
       rw [Real.enorm_eq_ofReal (by linarith [cutoff_le_one R x]), ENNReal.ofReal_le_one]
       linarith [cutoff_nonneg R x]
-    · exact (lintegral_rpow_enorm_lt_top_of_eLpNorm_lt_top hp hp' hu'.2).ne
+    · exact (lintegral_rpow_enorm_lt_top_of_eLpNorm_lt_top hp hp' hu').ne
     · refine Eventually.of_forall fun x => tendsto_const_nhds.congr' ?_
       filter_upwards [eventually_ge_atTop ‖x‖, eventually_ge_atTop 1] with R hR hR1
       rw [cutoff_eq_one (by linarith) hR, one_mul, sub_self, enorm_zero,
@@ -333,7 +339,7 @@ theorem tendsto_jumpEnergy_sub_cutoff_mul {α : ℝ} (hα : 0 < α) (hα' : α <
     (hE : jumpEnergy α u ≠ ⊤) :
     Tendsto (fun R : ℝ => jumpEnergy α (fun x => u x - cutoff R x * u x)) atTop (𝓝 0) := by
   have hu_sq : ∫⁻ x, ENNReal.ofReal (u x ^ 2) < ⊤ := by
-    have := lintegral_rpow_enorm_lt_top_of_eLpNorm_lt_top two_ne_zero ENNReal.ofNat_ne_top hu₂.2
+    have := lintegral_rpow_enorm_lt_top_of_eLpNorm_lt_top two_ne_zero ENNReal.ofNat_ne_top hu₂
     refine lt_of_eq_of_lt (lintegral_congr fun x => ?_) this
     rw [ENNReal.toReal_ofNat, ENNReal.rpow_two, Real.enorm_eq_ofReal_abs,
       ← ENNReal.ofReal_pow (abs_nonneg _), sq_abs]
@@ -471,8 +477,8 @@ theorem weightedJump_sub (α : ℝ) (u v : (Fin 2 → ℝ) → ℝ) (j : Fin 2) 
 /-- A function of finite energy has square-integrable weighted increments. -/
 theorem memLp_weightedJump {α : ℝ} {u : (Fin 2 → ℝ) → ℝ} (hu : Measurable u)
     (hE : jumpEnergy α u ≠ ⊤) (j : Fin 2) : MemLp (weightedJump α u j) 2 volume := by
-  refine ⟨(measurable_weightedJump α hu j).aestronglyMeasurable, ?_⟩
-  rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top]
+  rw [memLp_iff, eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero
+    ENNReal.ofNat_ne_top (measurable_weightedJump α hu j).aestronglyMeasurable]
   refine ENNReal.rpow_lt_top_of_nonneg (by positivity) ?_
   simp only [ENNReal.toReal_ofNat, ENNReal.rpow_two, enorm_weightedJump_sq]
   exact (lintegral_jumpIntegrand_lt_top hE j).ne
@@ -603,7 +609,12 @@ theorem exists_contDiff_hasCompactSupport_approx_of_hasCompactSupport {α : ℝ}
       ∫⁻ x, ‖v (x - h) - v x‖ₑ ≤ ENNReal.ofReal (ε / 2) := by
     have := tendsto_eLpNorm_comp_sub_sub le_rfl ENNReal.one_ne_top
       (memLp_one_iff_integrable.2 hv₁)
-    simp_rw [eLpNorm_one_eq_lintegral_enorm] at this
+    have hnorm (h : Fin 2 → ℝ) :
+        eLpNorm (fun x => v (x - h) - v x) 1 volume =
+          ∫⁻ x, ‖v (x - h) - v x‖ₑ :=
+      eLpNorm_one_eq_lintegral_enorm
+        ((hv.comp (measurable_id.sub measurable_const)).sub hv).aestronglyMeasurable
+    simp_rw [hnorm] at this
     exact ENNReal.tendsto_nhds_zero.1 this _ hε2
   have ev₂ : ∀ᶠ h in 𝓝 (0 : Fin 2 → ℝ),
       ∫⁻ x, ‖v (x - h) - v x‖ₑ ^ 2 ≤ ENNReal.ofReal (ε / 2) ^ 2 := by
@@ -611,7 +622,12 @@ theorem exists_contDiff_hasCompactSupport_approx_of_hasCompactSupport {α : ℝ}
       (tendsto_eLpNorm_comp_sub_sub one_le_two ENNReal.ofNat_ne_top hv₂)
     rw [zero_pow two_ne_zero] at this
     have := ENNReal.tendsto_nhds_zero.1 this _ (ENNReal.pow_pos hε2 2)
-    simpa [Function.comp_def, lintegral_enorm_sq] using this
+    have hnorm (h : Fin 2 → ℝ) :
+        ∫⁻ x, ‖v (x - h) - v x‖ₑ ^ 2 =
+          eLpNorm (fun x => v (x - h) - v x) 2 volume ^ 2 :=
+      lintegral_enorm_sq _
+        ((hv.comp (measurable_id.sub measurable_const)).sub hv).aestronglyMeasurable
+    simpa only [Function.comp_def, hnorm] using this
   have ev₃ : ∀ᶠ h in 𝓝 (0 : Fin 2 → ℝ), ∀ j : Fin 2,
       ∫⁻ p, ‖weightedJump α v j (p - (h, 0)) - weightedJump α v j p‖ₑ ^ 2 ≤
         ENNReal.ofReal (ε / 4) := by
@@ -623,13 +639,23 @@ theorem exists_contDiff_hasCompactSupport_approx_of_hasCompactSupport {α : ℝ}
         (memLp_weightedJump hv hE j)).comp h0)
     rw [zero_pow two_ne_zero] at this
     have := ENNReal.tendsto_nhds_zero.1 this _ hε4
-    simpa [Function.comp_def, lintegral_enorm_sq] using this
+    have hnorm (h : Fin 2 → ℝ) :
+        ∫⁻ p, ‖weightedJump α v j (p - (h, 0)) - weightedJump α v j p‖ₑ ^ 2 =
+          eLpNorm (fun p => weightedJump α v j (p - (h, 0)) - weightedJump α v j p)
+            2 volume ^ 2 :=
+      lintegral_enorm_sq _ (((measurable_weightedJump α hv j).comp
+        (measurable_id.sub measurable_const)).sub
+        (measurable_weightedJump α hv j)).aestronglyMeasurable
+    simpa only [Function.comp_def, hnorm] using this
   obtain ⟨δ, hδ, hδ'⟩ := exists_norm_lt_imp_of_eventually_nhds_zero ((ev₁.and ev₂).and ev₃)
   -- the bump of radius `δ`
   let b : ContDiffBump (0 : Fin 2 → ℝ) := ⟨δ / 2, δ, by positivity, by linarith⟩
-  refine ⟨b.normed volume ⋆ v, ?_, ?_, ?_, ?_, ?_⟩
-  · exact b.hasCompactSupport_normed.contDiff_convolution_left _ b.contDiff_normed
+  have hsmooth : ContDiff ℝ (⊤ : ℕ∞) (b.normed volume ⋆ v) :=
+    b.hasCompactSupport_normed.contDiff_convolution_left _ b.contDiff_normed
       hv₁.locallyIntegrable
+  have hconv : Measurable (b.normed volume ⋆ v) := hsmooth.continuous.measurable
+  refine ⟨b.normed volume ⋆ v, ?_, ?_, ?_, ?_, ?_⟩
+  · exact hsmooth
   · exact b.hasCompactSupport_normed.convolution _ hvc
   · rw [← jumpEnergy_neg, neg_sub, jumpEnergy_eq_sum_lintegral_enorm_sq]
     calc ∑ j : Fin 2, ∫⁻ p, ‖weightedJump α (b.normed volume ⋆ v - v) j p‖ₑ ^ 2
@@ -648,7 +674,7 @@ theorem exists_contDiff_hasCompactSupport_approx_of_hasCompactSupport {α : ℝ}
       _ ≤ ENNReal.ofReal (ε / 2) := lintegral_enorm_normed_mul_le b fun h hh => (hδ' h hh).1.1
       _ < ENNReal.ofReal ε := hlt
   · have h1 : eLpNorm (v - b.normed volume ⋆ v) 2 volume ^ 2 ≤ ENNReal.ofReal (ε / 2) ^ 2 := by
-      rw [← lintegral_enorm_sq]
+      rw [← lintegral_enorm_sq _ (hv.sub hconv).aestronglyMeasurable]
       calc ∫⁻ x, ‖(v - b.normed volume ⋆ v) x‖ₑ ^ 2
           = ∫⁻ x, ‖(b.normed volume ⋆ v) x - v x‖ₑ ^ 2 :=
             lintegral_congr fun x => by rw [Pi.sub_apply, enorm_sub_rev]
@@ -720,8 +746,9 @@ theorem exists_contDiff_hasCompactSupport_approx {α : ℝ} (hα : 0 < α) (hα'
           congr 1
           ring
   · have hR₁' : ∫⁻ x, ‖u x - v x‖ₑ < ENNReal.ofReal (ε / 2) := by
-      rw [← eLpNorm_one_eq_lintegral_enorm]
-      exact hR₁
+      change eLpNorm (u - v) 1 volume < ENNReal.ofReal (ε / 2) at hR₁
+      rw [eLpNorm_one_eq_lintegral_enorm (hu.sub hv).aestronglyMeasurable] at hR₁
+      simpa only [Pi.sub_apply] using hR₁
     calc ∫⁻ x, ‖u x - φ x‖ₑ ≤ (∫⁻ x, ‖u x - v x‖ₑ) + ∫⁻ x, ‖v x - φ x‖ₑ := by
           rw [← lintegral_add_left (f := fun x => ‖u x - v x‖ₑ) (hu.sub hv).enorm]
           exact lintegral_mono fun x => by
@@ -732,8 +759,7 @@ theorem exists_contDiff_hasCompactSupport_approx {α : ℝ} (hα : 0 < α) (hα'
           exact ENNReal.ofReal_le_ofReal (by linarith)
   · calc eLpNorm (u - φ) 2 volume ≤ eLpNorm (u - v) 2 volume + eLpNorm (v - φ) 2 volume := by
           rw [← sub_add_sub_cancel u v φ]
-          exact eLpNorm_add_le (hu.sub hv).aestronglyMeasurable
-            (hv.sub hφm).aestronglyMeasurable one_le_two
+          exact eLpNorm_add_le one_le_two
       _ < ENNReal.ofReal (ε / 2) + ENNReal.ofReal (ε / 4) := ENNReal.add_lt_add hR₂ hφ₂
       _ ≤ ENNReal.ofReal ε := by
           rw [← ENNReal.ofReal_add (by positivity) (by positivity)]
