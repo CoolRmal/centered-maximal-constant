@@ -17,11 +17,14 @@ public import CenteredMaximal.Ball.PairingComparison
 public import CenteredMaximal.Ball.GreenIdentity
 public import CenteredMaximal.Ball.ObstacleExistence
 public import CenteredMaximal.Ball.ChallengeReduction
+public import CenteredMaximal.Ball.PlanarGreenPairing
+public import CenteredMaximal.Ball.DirichletForm
+public import CenteredMaximal.Ball.DirichletPoincareOneDim
 
 /-!
 # The weak type constant of the centred maximal operator over cubes
 
 The root module exports the upper bounds `c_d ≤ 2ᵈ` and `c₂ ≤ 3.879`, and the lower bound
-`Φ ≤ c₂`. The Euclidean ball extension currently exports exact Green-kernel masses and an
-obstacle-certificate criterion for the proposed ball bounds.
+`Φ ≤ c₂`. The Euclidean ball extension currently exports exact Green-kernel masses,
+an obstacle-certificate criterion, and preparatory Dirichlet and Green-pairing results.
 -/

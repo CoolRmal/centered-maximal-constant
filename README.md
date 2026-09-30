@@ -46,15 +46,24 @@ proves that any such estimate extends to every integrable function: it approxima
 root of the absolute value in `L²`, squares the approximant, and passes to level sets by a
 lower-limit argument. `Ball/PairingComparison.lean` turns a signed Green pairing into the
 nonnegative-kernel inequality needed by the certificate. `Ball/GreenIdentity.lean` establishes
-the planar and Newtonian radial profile derivatives and their constant flux.
-`Ball/ObstacleExistence.lean` proves the abstract Hilbert-space minimizer and its variational
-inequality. `Ball/ChallengeReduction.lean` states the two requested bounds as consequences of
-the respective obstacle certificates, with all other reductions discharged.
+the planar and Newtonian radial profile derivatives, their constant flux, and a general polar
+integration formula for Euclidean balls.
+`Ball/PlanarGreenPairing.lean` proves differentiation of a circle average with respect to its
+radius and a planar polar formula for disk integrals. `Ball/ObstacleExistence.lean` proves an
+abstract Hilbert-space minimizer and its
+variational inequality, and connects a positive cone to the concrete `H¹₀` space in
+`Ball/DirichletH01.lean`. The latter is adapted, with its original attribution and Apache 2.0
+license, from [EllipticPDE](https://github.com/alejandro-soto-franco/EllipticPDE) at the
+revision documented in the file. `Ball/ChallengeReduction.lean` states the two requested bounds
+as consequences of the respective obstacle certificates, with all other reductions discharged.
+`Ball/DirichletPoincareDensity.lean` and `Ball/DirichletPoincareOneDim.lean` provide the density
+extension and a one dimensional base for the Poincaré inequality; `Ball/DirichletForm.lean`
+defines the pure gradient form and proves its coercivity assuming the domain Poincaré bound.
 
 The remaining analytic work is to instantiate the minimizer in the Dirichlet energy space,
-control its density and contact set, and prove the full weighted Laplacian Green identity. Once
-those pieces are proved, the two ball theorems can be added to `Solution.lean` and checked by the
-comparator.
+prove coercivity of its pure-gradient form, control its density and contact set, and prove the
+full weighted Laplacian Green identity. Once those pieces are proved, the two ball theorems can
+be added to `Solution.lean` and checked by the comparator.
 
 ## The statement
 
@@ -172,7 +181,11 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/ObstacleCriterion.lean` | smooth weak type estimate from obstacle certificates |
 | `CenteredMaximal/Ball/SmoothReduction.lean` | nonnegative smooth approximation and transfer to all `L¹` inputs |
 | `CenteredMaximal/Ball/PairingComparison.lean` | signed Green pairing to kernel comparison |
-| `CenteredMaximal/Ball/GreenIdentity.lean` | radial Green profiles, derivatives and flux |
+| `CenteredMaximal/Ball/GreenIdentity.lean` | radial Green profiles, flux, and polar integration |
+| `CenteredMaximal/Ball/PlanarGreenPairing.lean` | radius derivative of circle averages |
+| `CenteredMaximal/Ball/DirichletH01.lean` | adapted Hilbert space of weak derivatives with zero trace |
+| `CenteredMaximal/Ball/DirichletPoincareDensity.lean`, `DirichletPoincareOneDim.lean` | Poincaré steps |
+| `CenteredMaximal/Ball/DirichletForm.lean` | pure gradient form and conditional coercivity |
 | `CenteredMaximal/Ball/ObstacleExistence.lean` | abstract convex obstacle minimizer |
 | `CenteredMaximal/Ball/FinalReduction.lean`, `ChallengeReduction.lean` | conditional bounds for the optimal ball constant |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
