@@ -80,4 +80,42 @@ theorem laplacian_convolution_eq_of_local_distribution
     _ = (φ ⋆[lsmul ℝ ℝ, volume] g) x := by
       rw [convolution_lsmul_swap]
       simp only [smul_eq_mul]
+/-- A reflected kernel supported in a small ball stays inside a larger ball. -/
+theorem reflected_kernel_support_inside_ball
+    (center x : EuclideanSpace ℝ (Fin n)) (R ε : ℝ)
+    (φ : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hφ : tsupport φ ⊆ closedBall 0 ε)
+    (hx : x ∈ ball center (R - ε)) :
+    tsupport (fun y => φ (x-y)) ⊆ ball center R := by
+  have hcomp : tsupport (fun y => φ (x-y)) =
+      (fun y => x-y) ⁻¹' tsupport φ := by
+    simpa [Function.comp_def, Homeomorph.subLeft, Equiv.subLeft] using
+      (tsupport_comp_eq_preimage φ (Homeomorph.subLeft x))
+  intro y hy
+  rw [hcomp] at hy
+  have hxy : dist y x ≤ ε := by
+    have hs := hφ hy
+    simpa [mem_closedBall, dist_eq_norm, norm_sub_rev] using hs
+  have hxc : dist x center < R-ε := by simpa only [mem_ball] using hx
+  have htri := dist_triangle y x center
+  have hsum : dist y x + dist x center < ε + (R-ε) :=
+    add_lt_add_of_le_of_lt hxy hxc
+  have hR : ε + (R-ε) = R := by ring
+  exact mem_ball.mpr (lt_of_le_of_lt htri (hR ▸ hsum))
+/-- A normalized bump mollification satisfies the classical Laplace equation at interior points. -/
+theorem laplacian_normed_bump_convolution_eq_of_local_distribution
+    (center : EuclideanSpace ℝ (Fin n)) (R : ℝ)
+    (u g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hu : Integrable u)
+    (hlocal : HasLocalDistributionalLaplacian n (ball center R) u g)
+    (φ : ContDiffBump (0 : EuclideanSpace ℝ (Fin n)))
+    (x : EuclideanSpace ℝ (Fin n))
+    (hx : x ∈ ball center (R - φ.rOut)) :
+    Laplacian.laplacian (φ.normed volume ⋆[lsmul ℝ ℝ, volume] u) x =
+      (φ.normed volume ⋆[lsmul ℝ ℝ, volume] g) x := by
+  apply laplacian_convolution_eq_of_local_distribution (ball center R) u g
+    (φ.normed volume) hu hlocal φ.hasCompactSupport_normed φ.contDiff_normed x
+  exact reflected_kernel_support_inside_ball center x R φ.rOut (φ.normed volume)
+    (by rw [φ.tsupport_normed_eq]) hx
+
 end CenteredMaximal.Ball
