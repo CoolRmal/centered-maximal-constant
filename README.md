@@ -54,6 +54,9 @@ both Green profiles from the cumulative Laplacian mass and spherical-mean flux r
 density's mass inside a ball is its spherical integral times the polar Jacobian.
 `Ball/CenterLimits.lean` controls the inner boundary terms, and `Ball/RadialGreenLimit.lean`
 passes the planar and Newtonian identities to the full interval from the center.
+`Ball/DirectCertificate.lean` accepts a direct bound on the contact-set measure. It removes
+the need to prove a total-mass estimate for the capped density; the obstacle variational
+inequality can instead be tested with a truncation.
 `Ball/PlanarGreenPairing.lean` proves differentiation of a circle average with respect to its
 radius and a planar polar formula for disk integrals. `Ball/ObstacleExistence.lean` proves an
 abstract Hilbert-space minimizer and its
@@ -67,9 +70,9 @@ the Poincaré inequality on arbitrary bounded domains by one dimensional slices,
 box transport, and density. `Ball/DirichletForm.lean` defines the pure gradient form,
 and the bounded-domain result now proves its coercivity on a ball.
 
-The remaining analytic work is to instantiate the constrained minimizer in the Dirichlet
-energy space, control its density and contact set, and prove the full ball flux and weighted
-Laplacian Green identities. Once those pieces are proved, the two ball theorems can
+The remaining analytic work is to derive a capped density and its contact behavior from the
+constructed Dirichlet obstacle, prove the direct contact-set bound, and complete the ball flux
+and weighted Laplacian Green identities. Once those pieces are proved, the two ball theorems can
 be added to `Solution.lean` and checked by the comparator.
 
 ## The statement
