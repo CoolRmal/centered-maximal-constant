@@ -30,6 +30,8 @@ public import CenteredMaximal.Ball.L2Penalty
 public import CenteredMaximal.Ball.BallPenalized
 public import CenteredMaximal.Ball.BallSourceL2
 public import CenteredMaximal.Ball.PenaltyCapSource
+public import CenteredMaximal.Ball.L2PenaltyCap
+public import CenteredMaximal.Ball.BallPenaltyCap
 
 /-!
 # The weak type constant of the centred maximal operator over cubes

@@ -74,15 +74,17 @@ and the bounded-domain result now proves its coercivity on a ball.
 `Ball/MonotoneSurjectivity.lean` proves solvability of strongly monotone Lipschitz Hilbert
 equations. `Ball/L2Penalty.lean` applies this to the negative-part penalty, and
 `Ball/BallPenalized.lean` constructs a solution of the penalized weak Dirichlet equation on a
-ball. The Green pairing has also been proved at arbitrary radii for smooth compact test
+ball. `Ball/BallPenaltyCap.lean` proves its negative-part density is uniformly capped by
+the obstacle level, using a shifted Sobolev positive-part test.
+`Ball/BallFlux.lean` proves the exact ball flux identity needed by the Green calculation.
+The Green pairing has also been proved at arbitrary radii for smooth compact test
 functions, with a stability theorem under pointwise obstacle and almost-everywhere Laplacian
 convergence.
 
-The remaining analytic work is to derive a capped density and its contact behavior from the
-constructed Dirichlet obstacle, verify its variational truncation inequality, complete the ball
-flux identity, and supply the smooth approximation needed to apply the Green pairing to the
-weak obstacle. Once those pieces are proved, the two ball theorems can be added to
-`Solution.lean` and checked by the comparator.
+The remaining analytic work is to pass from the capped penalized solutions to a weak obstacle
+with a capped density and suitable contact behavior, verify its variational truncation
+inequality, and apply the Green pairing at the obstacle's regularity. Once those pieces are
+proved, the two ball theorems can be added to `Solution.lean` and checked by the comparator.
 
 ## The statement
 
@@ -208,6 +210,8 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/ObstacleExistence.lean` | abstract convex obstacle minimizer |
 | `CenteredMaximal/Ball/ContactTruncation.lean` | direct contact mass from variational truncations |
 | `CenteredMaximal/Ball/MonotoneSurjectivity.lean`, `L2Penalty.lean`, `BallPenalized.lean` | penalized weak equation on a ball |
+| `CenteredMaximal/Ball/L2PenaltyCap.lean`, `BallPenaltyCap.lean` | uniform cap for penalized density |
+| `CenteredMaximal/Ball/BallFlux.lean` | exact ball divergence identity |
 | `CenteredMaximal/Ball/FinalReduction.lean`, `ChallengeReduction.lean` | conditional bounds for the optimal ball constant |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
