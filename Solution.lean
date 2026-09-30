@@ -8,7 +8,7 @@ module
 public import CenteredMaximal
 
 /-!
-# Solution: the weak type constant of the centred maximal operator over cubes
+# Solution: weak type constants for centred maximal operators
 
 The statements of `Challenge.lean`, proved from the development in `CenteredMaximal`.
 -/
@@ -42,5 +42,20 @@ theorem weakTypeConstant_two_le_upper : weakTypeConstant 2 ≤ ENNReal.ofReal (3
 `c₂ ≥ 3/4 - √2/4 + √6/2 = 1.62119…` (Aldaz, 2000, Proposition 1.4 with `n = 2`). -/
 theorem ofReal_phi_le_weakTypeConstant_two : ENNReal.ofReal phi ≤ weakTypeConstant 2 :=
   le_weakTypeConstant fun _ hC => Lattice.ofReal_phi_le hC
+
+/-- **Planar disc bound.** The optimal weak type constant for centred Euclidean discs is at
+most `e = exp 1`. -/
+theorem ballWeakTypeConstant_two_le_exp :
+    ballWeakTypeConstant 2 ≤ ENNReal.ofReal (Real.exp 1) :=
+  Ball.ballWeakTypeConstant_two_le_exp_of_ae_direct_certificates
+    Ball.hasRealAEDirectObstacleCertificates_planarKernel.toENNReal
+
+/-- **Higher dimensional ball bound.** For `n ≥ 3`, the optimal weak type constant for centred
+Euclidean balls is at most `(n / 2) ^ (n / (n - 2))`. -/
+theorem ballWeakTypeConstant_le_rpow (n : ℕ) (hn : 3 ≤ n) :
+    ballWeakTypeConstant n ≤
+      ENNReal.ofReal (((n : ℝ) / 2) ^ ((n : ℝ) / ((n : ℝ) - 2))) :=
+  Ball.ballWeakTypeConstant_le_rpow_of_ae_direct_certificates n hn
+    (Ball.hasRealAEDirectObstacleCertificates_newtonianKernel n hn).toENNReal
 
 end CenteredMaximal
