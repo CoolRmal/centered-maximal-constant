@@ -9,6 +9,7 @@ public import CenteredMaximal.Ball.PlanarNormalized
 public import CenteredMaximal.Ball.NewtonianMass
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
+public import Mathlib.MeasureTheory.Constructions.HaarToSphere
 
 /-!
 # Radial identities for the Green comparison kernels
@@ -21,7 +22,7 @@ have constant flux, the scalar identity behind the Green pairing with the Laplac
 
 noncomputable section
 
-open MeasureTheory Metric
+open MeasureTheory Metric Set
 open scoped ENNReal
 
 namespace CenteredMaximal.Ball
@@ -67,6 +68,122 @@ theorem normalized_newtonianKernel_real_representative (n : ℕ) (hn : 3 ≤ n)
   · exact (measurable_newtonianKernel n |>.comp (by fun_prop)).const_mul _ |>.aemeasurable
   · rw [lintegral_normalized_newtonianKernel n hn x hr]
     exact ENNReal.ofReal_ne_top
+
+/-- Polar integration for an arbitrary integrable test function, with the natural sphere measure.
+This is the integral identity underlying the Green-kernel pairing. -/
+private theorem integral_polar_ball_aux (n : ℕ) [NeZero n]
+    (F : EuclideanSpace ℝ (Fin n) → ℝ) (hF : Integrable F) :
+    (∫ z, F z) =
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        ∫ s : Set.Ioi (0 : ℝ), F ((s : ℝ) • (ω : EuclideanSpace ℝ (Fin n)))
+          ∂Measure.volumeIoiPow (n - 1)
+        ∂(volume.toSphere) := by
+  let E := EuclideanSpace ℝ (Fin n)
+  let μ : Measure E := volume
+  let P := homeomorphUnitSphereProd E
+  have hcomp : Integrable (fun z : ({0}ᶜ : Set E) ↦ F z.1) (μ.comap Subtype.val) := by
+    exact (integrableOn_iff_comap_subtypeVal
+      (measurableSet_singleton (0 : E)).compl).mp hF.integrableOn
+  have hprod : Integrable (fun p : Metric.sphere (0 : E) 1 × Set.Ioi (0 : ℝ) ↦
+      F ((P.symm p).1)) (μ.toSphere.prod (Measure.volumeIoiPow (Module.finrank ℝ E - 1))) := by
+    have h := μ.measurePreserving_homeomorphUnitSphereProd.integrable_comp_emb
+      (Homeomorph.measurableEmbedding P)
+      (g := fun p : Metric.sphere (0 : E) 1 × Set.Ioi (0 : ℝ) ↦ F ((P.symm p).1))
+    apply h.mp
+    convert hcomp using 1
+    funext z
+    change F ((P.symm (P z)).1) = F z.1
+    simp
+  calc
+    (∫ z, F z) = ∫ z : ({0}ᶜ : Set E), F z.1 ∂(μ.comap Subtype.val) := by
+      rw [integral_subtype_comap (measurableSet_singleton (0 : E)).compl F,
+        restrict_compl_singleton]
+    _ = ∫ p, F ((P.symm p).1) ∂(μ.toSphere.prod
+          (Measure.volumeIoiPow (Module.finrank ℝ E - 1))) := by
+      simpa [P] using μ.measurePreserving_homeomorphUnitSphereProd.integral_comp
+        (Homeomorph.measurableEmbedding P)
+        (fun p : Metric.sphere (0 : E) 1 × Set.Ioi (0 : ℝ) ↦ F ((P.symm p).1))
+    _ = ∫ ω : Metric.sphere (0 : E) 1,
+        ∫ s : Set.Ioi (0 : ℝ), F ((s : ℝ) • (ω : E))
+          ∂Measure.volumeIoiPow (Module.finrank ℝ E - 1)
+        ∂μ.toSphere := by
+      rw [integral_prod _ hprod]
+      simp only [P, homeomorphUnitSphereProd_symm_apply_coe]
+    _ = _ := by simp only [E, μ, finrank_euclideanSpace_fin]
+
+private theorem integral_polar_ball_center_aux (n : ℕ) [NeZero n]
+    (x : EuclideanSpace ℝ (Fin n))
+    (F : EuclideanSpace ℝ (Fin n) → ℝ) (hF : Integrable F) :
+    (∫ y, F y) =
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        ∫ s : Set.Ioi (0 : ℝ),
+          F (x + (s : ℝ) • (ω : EuclideanSpace ℝ (Fin n)))
+          ∂Measure.volumeIoiPow (n - 1)
+        ∂(volume.toSphere) := by
+  have h := integral_polar_ball_aux n (fun z ↦ F (x + z)) (hF.comp_add_left x)
+  rw [integral_add_left_eq_self F x] at h
+  exact h
+
+/-- Convert integration against the radial density into an ordinary real integral. -/
+private theorem integral_volumeIoiPow (k : ℕ) (g : ℝ → ℝ) :
+    (∫ s : Set.Ioi (0 : ℝ), g (s : ℝ) ∂Measure.volumeIoiPow k) =
+      ∫ s in Set.Ioi (0 : ℝ), s ^ k * g s := by
+  rw [Measure.volumeIoiPow]
+  change (∫ s : Set.Ioi (0 : ℝ), g (s : ℝ) ∂
+    (Measure.comap Subtype.val volume).withDensity
+      (fun r ↦ ((Real.toNNReal ((r : ℝ) ^ k) : NNReal) : ENNReal))) = _
+  rw [integral_withDensity_eq_integral_smul]
+  · rw [integral_subtype_comap (hs := measurableSet_Ioi)
+      (f := fun s : ℝ ↦ (s ^ k).toNNReal • g s)]
+    apply setIntegral_congr_fun measurableSet_Ioi
+    intro s hs
+    change (s ^ k).toNNReal • g s = s ^ k * g s
+    rw [NNReal.smul_def, Real.coe_toNNReal (s ^ k) (pow_nonneg hs.out.le _),
+      smul_eq_mul]
+  · exact (measurable_subtype_coe.pow_const _).real_toNNReal
+
+/-- Polar integration about `x` for every integrable real test function. It converts a Green
+pairing into radial integrals of spherical Laplacian means. -/
+theorem integral_polar_ball (n : ℕ) [NeZero n]
+    (x : EuclideanSpace ℝ (Fin n))
+    (F : EuclideanSpace ℝ (Fin n) → ℝ) (hF : Integrable F) :
+    (∫ y, F y) =
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        ∫ s in Set.Ioi (0 : ℝ),
+          s ^ (n - 1) * F (x + s • (ω : EuclideanSpace ℝ (Fin n))) ∂volume
+        ∂(volume.toSphere) := by
+  rw [integral_polar_ball_center_aux n x F hF]
+  apply integral_congr_ae
+  filter_upwards with ω
+  exact integral_volumeIoiPow (n - 1)
+    (fun s ↦ F (x + s • (ω : EuclideanSpace ℝ (Fin n))))
+
+/-- Polar integration of a radial weight against an integrable test function. This is the form
+used when the weight is a real Green kernel and the test function is an obstacle Laplacian. -/
+theorem integral_radial_mul_polar (n : ℕ) [NeZero n]
+    (x : EuclideanSpace ℝ (Fin n)) (φ : ℝ → ℝ)
+    (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hg : Integrable (fun y ↦ φ ‖y - x‖ * g y)) :
+    (∫ y, φ ‖y - x‖ * g y) =
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        ∫ s in Set.Ioi (0 : ℝ),
+          s ^ (n - 1) * φ s * g (x + s • (ω : EuclideanSpace ℝ (Fin n))) ∂volume
+        ∂(volume.toSphere) := by
+  rw [integral_polar_ball n x _ hg]
+  apply integral_congr_ae
+  filter_upwards with ω
+  apply setIntegral_congr_fun measurableSet_Ioi
+  intro s hs
+  have hnorm : ‖x + s • (ω : EuclideanSpace ℝ (Fin n)) - x‖ = s := by
+    rw [add_sub_cancel_left, norm_smul, Real.norm_eq_abs, abs_of_pos hs.out]
+    have hω : ‖(ω : EuclideanSpace ℝ (Fin n))‖ = 1 := by
+      have h := ω.property
+      simpa only [Metric.mem_sphere, dist_zero_right] using h
+    simp [hω]
+  change s ^ (n - 1) * (φ ‖x + s • (ω : EuclideanSpace ℝ (Fin n)) - x‖ *
+    g (x + s • (ω : EuclideanSpace ℝ (Fin n)))) = _
+  rw [hnorm]
+  ring
 
 /-- The untruncated radial logarithmic profile in dimension two. -/
 def planarGreenProfile (s : ℝ) : ℝ := 1 - 2 * Real.log s
