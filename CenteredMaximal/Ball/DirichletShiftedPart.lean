@@ -280,4 +280,20 @@ theorem laplaceBilin_shiftedNegativePart_identity (U P : H01 Ω) (t : ℝ)
   rw [hp]
   split_ifs <;> simp [pow_two]
 
+/-- Testing an obstacle variational inequality with `(u-t)⁺` makes the source
+nonnegative on `min(u,t)`. This is the Hilbert-space step in the contact mass bound. -/
+theorem source_nonneg_of_upperTruncation_variational
+    (ℓ : H01 Ω →L[ℝ] ℝ) (U M : H01 Ω) (t : ℝ)
+    (hMi : ∀ i : Fin d, ((M : H1amb Ω) i.succ : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x =>
+        if t < ((U : H1amb Ω) 0 x : ℝ) then 0
+        else ((U : H1amb Ω) i.succ x : ℝ))
+    (hVI : ℓ ((U - M) - U) ≤ laplaceBilin Ω U ((U - M) - U)) :
+    0 ≤ ℓ M := by
+  have hB := laplaceBilin_nonneg_of_upperTruncationGraph U M t hMi
+  have hVeq : (U - M) - U = -M := by abel
+  rw [hVeq] at hVI
+  simp only [map_neg] at hVI
+  linarith
+
 end CenteredMaximal.Ball.DirichletSobolev
