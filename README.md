@@ -10,6 +10,21 @@ The previously published lower bound is `3/4 - √2/4 + √6/2 = 1.62119…` (Al
 It also proves an upper bound below the classical one, `c₂ ≤ 3.879 < 4`, by comparing the maximal
 operator with an explicit kernel, and the classical covering bound `c_d ≤ 2ᵈ` in every dimension.
 
+## Euclidean ball extension (in progress)
+
+The separate definitions `ballMaximalFunction`, `IsBallWeakTypeBound`, and
+`ballWeakTypeConstant` use `EuclideanSpace ℝ (Fin n)` and its Euclidean norm. Thus their averaging
+sets are Euclidean balls, whereas the original `weakTypeConstant` continues to describe cubes.
+The new challenge asks for the bounds
+
+$$c^{\mathrm{ball}}_2 \le e, \qquad
+  c^{\mathrm{ball}}_n \le (n/2)^{n/(n-2)} \quad (n \ge 3).$$
+
+These are the theorems `ballWeakTypeConstant_two_le_exp` and
+`ballWeakTypeConstant_le_rpow` in `Challenge.lean`. The ball proof has not yet been formalized in
+`Solution.lean`; the comparator gate for these two additions is pending. The proposed argument
+uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
+
 ## The statement
 
 For `f : ℝᵈ → ℝ` let
@@ -115,6 +130,7 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `Challenge.lean` | definitions and statements (Mathlib imports only) |
 | `Solution.lean` | the compared theorems, from the development |
 | `CenteredMaximal/Statement.lean`, `Basic.lean` | the challenge definitions and their basic API |
+| `CenteredMaximal/Ball/Basic.lean` | the basic API for Euclidean ball averages |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
 | `CenteredMaximal/Obstacle/` | the obstacle problem for the generator |

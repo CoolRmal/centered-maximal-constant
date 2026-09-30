@@ -6,8 +6,10 @@ Authors: Yongxi Lin
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Sqrt
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 public import Mathlib.MeasureTheory.Function.L1Space.Integrable
 public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+public import Mathlib.MeasureTheory.Measure.Lebesgue.VolumeOfBalls
 
 /-!
 # Challenge: the weak type constant of the centred maximal operator over cubes
@@ -27,6 +29,10 @@ This file states:
   explicit kernel for the Cauchy generator;
 * `lt_phi` and `phi_lt`: `1.685 < Φ < 1.686`, so that the size of the explicit constant `Φ` is
   part of the statement.
+* `ballWeakTypeConstant_two_le_exp`: the centred weak type constant for Euclidean discs is at
+  most `e`;
+* `ballWeakTypeConstant_le_rpow`: in dimension `n ≥ 3`, the centred weak type constant for
+  Euclidean balls is at most `(n / 2) ^ (n / (n - 2))`.
 
 The type `Fin d → ℝ` carries the sup norm in Mathlib, so `Metric.closedBall x r` is exactly the cube
 `Q(x, r)`, and `volume` is Lebesgue measure.
@@ -59,6 +65,23 @@ def IsWeakTypeBound (d : ℕ) (C : ℝ≥0∞) : Prop :=
 axis-parallel cubes in `ℝᵈ`: the least weak type bound. -/
 def weakTypeConstant (d : ℕ) : ℝ≥0∞ :=
   sInf {C | IsWeakTypeBound d C}
+
+/-- The centred Hardy–Littlewood maximal function over **Euclidean balls**. The ambient space
+`EuclideanSpace ℝ (Fin d)` has the Euclidean norm, unlike `Fin d → ℝ` above, whose sup norm
+gives cubes. Open and closed balls yield the same averages for integrable functions. -/
+def ballMaximalFunction {d : ℕ} (f : EuclideanSpace ℝ (Fin d) → ℝ)
+    (x : EuclideanSpace ℝ (Fin d)) : ℝ≥0∞ :=
+  ⨆ (r : ℝ) (_ : 0 < r),
+    (volume (ball x r))⁻¹ * ∫⁻ y in ball x r, ‖f y‖ₑ
+
+/-- `C` bounds the centred weak type `(1, 1)` maximal inequality over Euclidean balls. -/
+def IsBallWeakTypeBound (d : ℕ) (C : ℝ≥0∞) : Prop :=
+  ∀ f : EuclideanSpace ℝ (Fin d) → ℝ, Integrable f → ∀ α : ℝ≥0∞,
+    α * volume {x | α < ballMaximalFunction f x} ≤ C * ∫⁻ x, ‖f x‖ₑ
+
+/-- The optimal centred weak type `(1, 1)` constant for Euclidean balls in `ℝᵈ`. -/
+def ballWeakTypeConstant (d : ℕ) : ℝ≥0∞ :=
+  sInf {C | IsBallWeakTypeBound d C}
 
 /-- The constant `Φ = 1.68550999335552518…`, an algebraic number of degree 16:
 `Φ = ((77 + 16√22)/2 - (8 + √22 - √(70 + 8√22)) (11 + √22 - 2√2 - 2√11 - √(17 + 4√22)))
@@ -94,6 +117,19 @@ theorem weakTypeConstant_two_le_upper : weakTypeConstant 2 ≤ ENNReal.ofReal (3
 /-- **Lower bound.** `Φ ≤ c₂`. The previously published lower bound was
 `c₂ ≥ 3/4 - √2/4 + √6/2 = 1.62119…` (Aldaz, 2000, Proposition 1.4 with `n = 2`). -/
 theorem ofReal_phi_le_weakTypeConstant_two : ENNReal.ofReal phi ≤ weakTypeConstant 2 := by
+  sorry
+
+/-- **Planar disc bound.** The optimal weak type constant for centred Euclidean discs is at
+most `e = exp 1`. -/
+theorem ballWeakTypeConstant_two_le_exp :
+    ballWeakTypeConstant 2 ≤ ENNReal.ofReal (Real.exp 1) := by
+  sorry
+
+/-- **Higher dimensional ball bound.** For `n ≥ 3`, the optimal weak type constant for centred
+Euclidean balls is at most `(n / 2) ^ (n / (n - 2))`. -/
+theorem ballWeakTypeConstant_le_rpow (n : ℕ) (hn : 3 ≤ n) :
+    ballWeakTypeConstant n ≤
+      ENNReal.ofReal (((n : ℝ) / 2) ^ ((n : ℝ) / ((n : ℝ) - 2))) := by
   sorry
 
 end CenteredMaximal

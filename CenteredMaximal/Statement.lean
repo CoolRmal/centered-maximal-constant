@@ -6,8 +6,10 @@ Authors: Yongxi Lin
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Sqrt
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 public import Mathlib.MeasureTheory.Function.L1Space.Integrable
 public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+public import Mathlib.MeasureTheory.Measure.Lebesgue.VolumeOfBalls
 
 /-!
 # Definitions in the public statement
@@ -43,6 +45,23 @@ def IsWeakTypeBound (d : ℕ) (C : ℝ≥0∞) : Prop :=
 axis-parallel cubes in `ℝᵈ`: the least weak type bound. -/
 def weakTypeConstant (d : ℕ) : ℝ≥0∞ :=
   sInf {C | IsWeakTypeBound d C}
+
+/-- The centred Hardy–Littlewood maximal function over **Euclidean balls**. The ambient space
+`EuclideanSpace ℝ (Fin d)` has the Euclidean norm, unlike `Fin d → ℝ` above, whose sup norm
+gives cubes. Open and closed balls yield the same averages for integrable functions. -/
+def ballMaximalFunction {d : ℕ} (f : EuclideanSpace ℝ (Fin d) → ℝ)
+    (x : EuclideanSpace ℝ (Fin d)) : ℝ≥0∞ :=
+  ⨆ (r : ℝ) (_ : 0 < r),
+    (volume (ball x r))⁻¹ * ∫⁻ y in ball x r, ‖f y‖ₑ
+
+/-- `C` bounds the centred weak type `(1, 1)` maximal inequality over Euclidean balls. -/
+def IsBallWeakTypeBound (d : ℕ) (C : ℝ≥0∞) : Prop :=
+  ∀ f : EuclideanSpace ℝ (Fin d) → ℝ, Integrable f → ∀ α : ℝ≥0∞,
+    α * volume {x | α < ballMaximalFunction f x} ≤ C * ∫⁻ x, ‖f x‖ₑ
+
+/-- The optimal centred weak type `(1, 1)` constant for Euclidean balls in `ℝᵈ`. -/
+def ballWeakTypeConstant (d : ℕ) : ℝ≥0∞ :=
+  sInf {C | IsBallWeakTypeBound d C}
 
 /-- The constant `Φ = 1.68550999335552518…`, an algebraic number of degree 16:
 `Φ = ((77 + 16√22)/2 - (8 + √22 - √(70 + 8√22)) (11 + √22 - 2√2 - 2√11 - √(17 + 4√22)))
