@@ -425,6 +425,40 @@ theorem newtonianGreenProfile_at_radius (n : ℕ) (hn : 3 ≤ n) :
     ring
   simp [newtonianGreenProfile, hpow, hnum]
 
+/-- The planar Green profile is nonnegative inside its support radius. -/
+theorem planarGreenProfile_nonneg {s : ℝ} (hs : 0 < s)
+    (hle : s ≤ planarGreenRadius) : 0 ≤ planarGreenProfile s := by
+  have hlog : Real.log s ≤ Real.log planarGreenRadius := Real.log_le_log hs hle
+  have hlogR : Real.log planarGreenRadius = 1 / 2 := by
+    simp [planarGreenRadius, Real.log_sqrt (Real.exp_pos 1).le]
+  unfold planarGreenProfile
+  rw [hlogR] at hlog
+  linarith
+
+/-- The Newtonian Green profile is nonnegative inside its support radius. -/
+theorem newtonianGreenProfile_nonneg (n : ℕ) (hn : 3 ≤ n)
+    {s : ℝ} (hs : 0 < s) (hle : s ≤ greenRadius n) :
+    0 ≤ newtonianGreenProfile n s := by
+  have hn' : (3 : ℝ) ≤ n := by exact_mod_cast hn
+  have hn0 : (n : ℝ) ≠ 0 := by linarith
+  have hexp : (2 : ℝ) - (n : ℝ) ≤ 0 := by linarith
+  have hR : 0 < greenRadius n := greenRadius_pos n hn
+  have hRpow : greenRadius n ^ ((2 : ℝ) - (n : ℝ)) = 2 / (n : ℝ) := by
+    calc
+      _ = (greenRadius n ^ ((n : ℝ) - 2))⁻¹ := by
+        rw [show (2 : ℝ) - (n : ℝ) = -((n : ℝ) - 2) by ring]
+        exact Real.rpow_neg hR.le _
+      _ = ((n : ℝ) / 2)⁻¹ := by rw [greenRadius_rpow_sub_two n hn]
+      _ = 2 / (n : ℝ) := by field_simp
+  have hpow : 2 / (n : ℝ) ≤ s ^ ((2 : ℝ) - (n : ℝ)) :=
+    hRpow ▸ Real.rpow_le_rpow_of_nonpos hs hle hexp
+  have hprod : 2 ≤ (n : ℝ) * s ^ ((2 : ℝ) - (n : ℝ)) := by
+    calc
+      2 = (n : ℝ) * (2 / (n : ℝ)) := by field_simp
+      _ ≤ _ := mul_le_mul_of_nonneg_left hpow (by linarith)
+  unfold newtonianGreenProfile
+  exact div_nonneg (by linarith) (by linarith)
+
 /-- The radial derivative of the planar logarithmic Green profile. -/
 theorem hasDerivAt_planarGreenProfile {s : ℝ} (hs : 0 < s) :
     HasDerivAt planarGreenProfile (-2 / s) s := by
