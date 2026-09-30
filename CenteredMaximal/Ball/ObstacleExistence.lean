@@ -12,6 +12,7 @@ public import Mathlib.MeasureTheory.Function.L2Space
 public import Mathlib.MeasureTheory.Function.LpOrder
 public import CenteredMaximal.Ball.DirichletH01
 public import CenteredMaximal.Ball.DirichletPoincareBounded
+public import Mathlib.Topology.MetricSpace.Contracting
 public import Mathlib.Tactic
 
 /-!
@@ -92,6 +93,36 @@ theorem obstacleProjection_norm_sub_le (K : Set H) (hK : IsClosed K)
   · simp [hz]
   · have hpqpos : 0 < ‖p - q‖ := lt_of_le_of_ne (norm_nonneg _) (Ne.symm hz)
     nlinarith
+
+/-! ### Projected gradient for a coercive Dirichlet form -/
+
+omit [CompleteSpace H] in
+/-- A small gradient step for a strongly positive bounded operator is strictly contracting.
+This is the quantitative input for applying Banach's fixed-point theorem to the metric
+projection onto the obstacle cone. -/
+theorem gradientStep_norm_le (A : H →L[ℝ] H) {α τ : ℝ}
+    (hτ : 0 < τ) (hτop : τ * ‖A‖ ^ 2 ≤ α) (hτα : τ * α < 1)
+    (hmono : ∀ d : H, α * ‖d‖ ^ 2 ≤ ⟪A d, d⟫_ℝ) (d : H) :
+    ‖d - τ • A d‖ ≤ (1 - τ * α / 2) * ‖d‖ := by
+  have hq : 0 ≤ 1 - τ * α / 2 := by linarith
+  have hA := A.le_opNorm d
+  have hAsq : ‖A d‖ ^ 2 ≤ ‖A‖ ^ 2 * ‖d‖ ^ 2 := by
+    nlinarith [pow_le_pow_left₀ (norm_nonneg _) hA 2]
+  have hstepsq : ‖d - τ • A d‖ ^ 2 =
+      ‖d‖ ^ 2 - 2 * τ * ⟪A d, d⟫_ℝ + τ ^ 2 * ‖A d‖ ^ 2 := by
+    rw [norm_sub_sq_real, inner_smul_right, real_inner_comm d (A d), norm_smul]
+    rw [Real.norm_eq_abs, abs_of_pos hτ]
+    ring
+  have h₁ := mul_le_mul_of_nonneg_left (hmono d) (by positivity : 0 ≤ 2 * τ)
+  have h₂ := mul_le_mul_of_nonneg_left hAsq (sq_nonneg τ)
+  have h₃ : τ ^ 2 * ‖A‖ ^ 2 ≤ τ * α := by
+    nlinarith [mul_le_mul_of_nonneg_left hτop hτ.le]
+  have h₄ := mul_le_mul_of_nonneg_right h₃ (sq_nonneg (‖d‖))
+  have hbound : ‖d - τ • A d‖ ^ 2 ≤ ((1 - τ * α / 2) * ‖d‖) ^ 2 := by
+    rw [hstepsq]
+    nlinarith [sq_nonneg (τ * α), sq_nonneg (‖d‖)]
+  have htarget : 0 ≤ (1 - τ * α / 2) * ‖d‖ := mul_nonneg hq (norm_nonneg d)
+  nlinarith [norm_nonneg (d - τ • A d)]
 
 /-- The Hilbert obstacle minimizer exists on every nonempty closed convex admissible set. Its
 variational inequality has the sign convention appropriate for `-Δu = f - ν`. -/
