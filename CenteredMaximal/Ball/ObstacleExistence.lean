@@ -404,6 +404,25 @@ def ballUnitL2 (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ) :
     isFiniteMeasure_restrict.mpr measure_ball_ne_top
   exact Lp.const 2 (volume.restrict (Metric.ball center R)) (1 : ℝ)
 
+theorem ballUnitL2_coeFn (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ) :
+    ⇑(ballUnitL2 center R) =ᵐ[volume.restrict (Metric.ball center R)]
+      (fun _ => (1 : ℝ)) := by
+  letI : IsFiniteMeasure (volume.restrict (Metric.ball center R)) :=
+    isFiniteMeasure_restrict.mpr measure_ball_ne_top
+  simpa only [ballUnitL2, Function.const_def] using
+    (Lp.coeFn_const (p := 2) (μ := volume.restrict (Metric.ball center R)) (c := (1 : ℝ)))
+
+/-- The `L²` cap functional is ordinary integration of the value coordinate on the ball. -/
+theorem ballMassFunctional_apply
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (U : H01 (Metric.ball center R)) :
+    l2Functional (Metric.ball center R) (ballUnitL2 center R) U =
+      ∫ x in Metric.ball center R, ((U : H1amb (Metric.ball center R)) 0 x : ℝ) := by
+  rw [l2Functional_eq_integral]
+  refine integral_congr_ae ?_
+  filter_upwards [ballUnitL2_coeFn center R] with x hx
+  simp only [hx, one_mul]
+
 /-- A nonnegative `H¹₀` solution of the obstacle variational inequality with the pure
 Dirichlet gradient form exists on every ball. The source is an `L²` density and the cap term
 is the constant-one `L²` functional. -/
