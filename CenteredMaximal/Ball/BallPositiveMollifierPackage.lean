@@ -8,6 +8,8 @@ module
 public import CenteredMaximal.Ball.LocalMollifierDistribution
 public import CenteredMaximal.Ball.BallKernelSupport
 public import CenteredMaximal.Ball.BoundedConvolution
+public import CenteredMaximal.Ball.ComplementDistributionAdapter
+public import CenteredMaximal.Ball.BallComplementSourceBound
 public import Mathlib.Analysis.SpecificLimits.Basic
 
 /-!
@@ -194,5 +196,60 @@ theorem exists_green_local_mollifiers
   · intro k
     filter_upwards with y
     exact hcap k y
+
+
+/-- Apply the mollifier package to the positive representative of a weak Dirichlet obstacle.
+The whole-space source is the zero extension of `ρ-F`. -/
+theorem exists_ballPositiveRepresentative_green_local_mollifiers
+    (n : ℕ) (R r₀ G : ℝ)
+    (U : DirichletSobolev.H01 (greenObstacleDomain (n + 1) R r₀ G))
+    (F ρ : DirichletSobolev.L2D (greenObstacleDomain (n + 1) R r₀ G))
+    (hU : 0 ≤ (U : DirichletSobolev.H1amb
+      (greenObstacleDomain (n + 1) R r₀ G)) 0)
+    (heq : ∀ V : DirichletSobolev.H01 (greenObstacleDomain (n + 1) R r₀ G),
+      DirichletSobolev.laplaceBilin (greenObstacleDomain (n + 1) R r₀ G) U V =
+        DirichletSobolev.l2Functional (greenObstacleDomain (n + 1) R r₀ G) (F - ρ) V)
+    (B : ℝ)
+    (hBg : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
+      ‖DirichletSobolev.ballComplementSourceExtension 0
+        (greenCutoffInnerRadius R r₀ G + 2 * r₀ + 2) F ρ y‖ ≤ B) :
+    ∃ w : ℕ → EuclideanSpace ℝ (Fin (n + 1)) → ℝ,
+      (∀ k, ContDiff ℝ 2 (w k)) ∧
+      (∀ k, HasCompactSupport (w k)) ∧
+      (∀ k y, 0 ≤ w k y) ∧
+      (∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
+        Tendsto (fun k => w k y) atTop
+          (𝓝 (DirichletSobolev.ballPositiveRepresentative 0
+            (greenCutoffInnerRadius R r₀ G + 2 * r₀ + 2) U y))) ∧
+      (∀ k, ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
+        y ∈ greenCutoffDomain (n + 1) R r₀ G →
+          ‖Laplacian.laplacian (w k) y‖ ≤ B) ∧
+      (∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
+        y ∈ greenCutoffDomain (n + 1) R r₀ G →
+          Tendsto (fun k => Laplacian.laplacian (w k) y) atTop
+            (𝓝 (DirichletSobolev.ballComplementSourceExtension 0
+              (greenCutoffInnerRadius R r₀ G + 2 * r₀ + 2) F ρ y))) := by
+  let S : ℝ := greenCutoffInnerRadius R r₀ G + 2 * r₀ + 2
+  let u := DirichletSobolev.ballPositiveRepresentative 0 S U
+  let g := DirichletSobolev.ballComplementSourceExtension 0 S F ρ
+  have hu_int : Integrable u :=
+    DirichletSobolev.ballPositiveRepresentative_integrable 0 S U hU
+  have hu_comp : HasCompactSupport u :=
+    DirichletSobolev.ballPositiveRepresentative_hasCompactSupport 0 S U
+  have hu_nonneg : ∀ y, 0 ≤ u y :=
+    DirichletSobolev.ballPositiveRepresentative_nonneg 0 S U
+  have hg_int : Integrable g :=
+    DirichletSobolev.ballComplementSourceExtension_integrable 0 S F ρ
+  have hraw : HasLocalDistributionalLaplacian (n + 1)
+      (greenObstacleDomain (n + 1) R r₀ G) u
+      (fun y => ((ρ - F) y : ℝ)) :=
+    DirichletSobolev.ballPositiveRepresentative_hasLocalDistributionalLaplacian_of_complement
+      0 S U F ρ hU heq
+  have hlocal : HasLocalDistributionalLaplacian (n + 1)
+      (greenObstacleDomain (n + 1) R r₀ G) u g :=
+    hraw.congr_ae_restrict _ measurableSet_ball _ _ _
+      (DirichletSobolev.ballComplementSourceExtension_ae_eq_local 0 S F ρ).symm
+  exact exists_green_local_mollifiers (n + 1) R r₀ G u g hu_int hu_comp hu_nonneg
+    hg_int hlocal B hBg
 
 end CenteredMaximal.Ball
