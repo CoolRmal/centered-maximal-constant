@@ -35,6 +35,7 @@ public import CenteredMaximal.Ball.BallPenaltyCap
 public import CenteredMaximal.Ball.PenaltyEnergyBound
 public import CenteredMaximal.Ball.BallPenaltyLimit
 public import CenteredMaximal.Ball.AEObstacleTransfer
+public import CenteredMaximal.Ball.BallWeakDistribution
 
 /-!
 # The weak type constant of the centred maximal operator over cubes
