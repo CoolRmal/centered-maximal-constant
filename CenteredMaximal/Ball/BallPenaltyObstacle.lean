@@ -100,4 +100,49 @@ theorem exists_ball_penalty_wholeSpace_density
     ae_ballDensityExtension_le_cap center R νlocal κ hνlocal.2
   exact ⟨U, νlocal, Ω, ν, rfl, rfl, hcontactGlobal, hcapGlobal, hweak⟩
 
+/-- The global contact-mass bound can use an ordinary whole-space source whose restriction
+agrees almost everywhere with the local `L²` source. -/
+theorem exists_ball_penalty_wholeSpace_density_of_ae_eq
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (f : EuclideanSpace ℝ (Fin (n + 1)) → ℝ)
+    (F : L2D (ball center R))
+    (hF : (F : EuclideanSpace ℝ (Fin (n + 1)) → ℝ)
+      =ᵐ[volume.restrict (ball center R)] f)
+    (κ : ℝ) (hκ : 0 ≤ κ) (hF0 : 0 ≤ F) :
+    ∃ U : H01 (ball center R), ∃ νlocal : L2D (ball center R),
+      ∃ Ω : Set (EuclideanSpace ℝ (Fin (n + 1))),
+      ∃ ν : EuclideanSpace ℝ (Fin (n + 1)) → ℝ≥0∞,
+        Ω = {x | x ∈ ball center R ∧
+          0 < ((U : H1amb (ball center R)) 0 x : ℝ)} ∧
+        ν = extendRestrictedDensity (ball center R) νlocal ∧
+        ENNReal.ofReal κ * volume Ω ≤ ∫⁻ x, ‖f x‖ₑ ∧
+        (∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
+          ν x ≤ ENNReal.ofReal κ) ∧
+        (∀ V : H01 (ball center R),
+          laplaceBilin (ball center R) U V =
+            l2Functional (ball center R) F V -
+              κ * l2Functional (ball center R) (ballUnitL2 center R) V +
+              ⟪νlocal, valueEmbedding (ball center R) V⟫_ℝ) := by
+  obtain ⟨U, νlocal, -, hνlocal, hweak, -, hcontact⟩ :=
+    exists_ball_penalty_obstacle_with_density center R F κ hκ hF0
+  let D := ball center R
+  let Ω : Set (EuclideanSpace ℝ (Fin (n + 1))) :=
+    {x | x ∈ D ∧ 0 < ((U : H1amb D) 0 x : ℝ)}
+  let ν := extendRestrictedDensity D νlocal
+  have hcontact' : ENNReal.ofReal κ * (volume.restrict D)
+      {x | 0 < ((U : H1amb D) 0 x : ℝ)} ≤
+      ∫⁻ x in D, ‖f x‖ₑ := by
+    convert hcontact using 1
+    apply lintegral_congr_ae
+    filter_upwards [hF] with x hx
+    rw [hx]
+  have hcontactGlobal : ENNReal.ofReal κ * volume Ω ≤ ∫⁻ x, ‖f x‖ₑ :=
+    global_contact_bound_of_restricted volume D measurableSet_ball
+      (fun x => ((U : H1amb D) 0 x : ℝ))
+      (fun x => ‖f x‖ₑ) (ENNReal.ofReal κ) hcontact'
+  have hcapGlobal : ∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
+      ν x ≤ ENNReal.ofReal κ :=
+    ae_ballDensityExtension_le_cap center R νlocal κ hνlocal.2
+  exact ⟨U, νlocal, Ω, ν, rfl, rfl, hcontactGlobal, hcapGlobal, hweak⟩
+
 end CenteredMaximal.Ball.DirichletSobolev
