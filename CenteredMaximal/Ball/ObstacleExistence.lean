@@ -11,6 +11,7 @@ public import Mathlib.Geometry.Convex.Cone.Basic
 public import Mathlib.MeasureTheory.Function.L2Space
 public import Mathlib.MeasureTheory.Function.LpOrder
 public import CenteredMaximal.Ball.DirichletH01
+public import CenteredMaximal.Ball.DirichletPoincareBounded
 public import Mathlib.Tactic
 
 /-!
@@ -48,6 +49,49 @@ theorem obstacleEnergy_eq_distance_sq (ℓ : H →L[ℝ] ℝ) (u : H) :
   rw [norm_sub_sq_real, toDual_symm_apply]
   unfold obstacleEnergy
   ring
+
+/-! ### Projection onto a closed convex admissible set -/
+
+/-- The metric projection onto a nonempty closed convex set of a real Hilbert space. -/
+def obstacleProjection (K : Set H) (hK : IsClosed K) (hconv : Convex ℝ K)
+    (hne : K.Nonempty) (x : H) : H :=
+  Classical.choose (exists_norm_eq_iInf_of_complete_convex hne hK.isComplete hconv x)
+
+theorem obstacleProjection_mem_and_variational (K : Set H) (hK : IsClosed K)
+    (hconv : Convex ℝ K) (hne : K.Nonempty) (x : H) :
+    obstacleProjection K hK hconv hne x ∈ K ∧
+      ∀ v ∈ K, ⟪x - obstacleProjection K hK hconv hne x,
+        v - obstacleProjection K hK hconv hne x⟫_ℝ ≤ 0 := by
+  obtain ⟨hmem, hmin⟩ :=
+    Classical.choose_spec (exists_norm_eq_iInf_of_complete_convex hne hK.isComplete hconv x)
+  exact ⟨hmem, (norm_eq_iInf_iff_real_inner_le_zero hconv hmem).1 hmin⟩
+
+/-- Metric projection onto a closed convex set is nonexpansive. -/
+theorem obstacleProjection_norm_sub_le (K : Set H) (hK : IsClosed K)
+    (hconv : Convex ℝ K) (hne : K.Nonempty) (x y : H) :
+    ‖obstacleProjection K hK hconv hne x - obstacleProjection K hK hconv hne y‖ ≤ ‖x - y‖ := by
+  let p := obstacleProjection K hK hconv hne x
+  let q := obstacleProjection K hK hconv hne y
+  obtain ⟨hp, hpVI⟩ := obstacleProjection_mem_and_variational K hK hconv hne x
+  obtain ⟨hq, hqVI⟩ := obstacleProjection_mem_and_variational K hK hconv hne y
+  have h₁ : 0 ≤ ⟪x - p, p - q⟫_ℝ := by
+    have h := hpVI q hq
+    have hneg : q - p = -(p - q) := by abel
+    rw [hneg, inner_neg_right] at h
+    linarith
+  have h₂ : ⟪y - q, p - q⟫_ℝ ≤ 0 := hqVI p hp
+  have hidentity : ⟪x - p, p - q⟫_ℝ - ⟪y - q, p - q⟫_ℝ =
+      ⟪x - y, p - q⟫_ℝ - ‖p - q‖ ^ 2 := by
+    rw [← inner_sub_left]
+    have hvec : (x - p) - (y - q) = (x - y) - (p - q) := by abel
+    rw [hvec, inner_sub_left, real_inner_self_eq_norm_sq]
+  have hsq : ‖p - q‖ ^ 2 ≤ ⟪x - y, p - q⟫_ℝ := by linarith
+  have hcauchy := real_inner_le_norm (x - y) (p - q)
+  change ‖p - q‖ ≤ ‖x - y‖
+  by_cases hz : ‖p - q‖ = 0
+  · simp [hz]
+  · have hpqpos : 0 < ‖p - q‖ := lt_of_le_of_ne (norm_nonneg _) (Ne.symm hz)
+    nlinarith
 
 /-- The Hilbert obstacle minimizer exists on every nonempty closed convex admissible set. Its
 variational inequality has the sign convention appropriate for `-Δu = f - ν`. -/
