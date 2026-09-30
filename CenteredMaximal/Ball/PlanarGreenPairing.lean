@@ -6,6 +6,8 @@ Authors: Yongxi Lin
 module
 
 public import CenteredMaximal.Ball.GreenIdentity
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.MeasureTheory.Measure.Haar.InnerProductSpace
 public import Mathlib.MeasureTheory.Integral.CircleAverage
 public import Mathlib.Analysis.Calculus.ParametricIntervalIntegral
 
@@ -22,9 +24,115 @@ integral theorem and applies to any circle integrand with a uniformly bounded ra
 noncomputable section
 
 open Complex MeasureTheory Metric Set Filter
-open scoped Real Interval Topology
+open scoped Real Interval Topology Pointwise
 
 namespace CenteredMaximal.Ball
+
+/-- The standard real-linear isometry from the Euclidean plane to the complex plane. -/
+noncomputable def planarComplexIsometry : EuclideanSpace ℝ (Fin 2) ≃ₗᵢ[ℝ] ℂ :=
+  Complex.orthonormalBasisOneI.repr.symm
+
+/-- The isometry identifies the Euclidean and complex unit circles as topological spaces. -/
+noncomputable def planarSphereEquiv :
+    Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1 ≃ₜ
+      Metric.sphere (0 : ℂ) 1 :=
+  planarComplexIsometry.toHomeomorph.subtype (by
+    intro z
+    simp [planarComplexIsometry.norm_map])
+
+@[simp] theorem planarSphereEquiv_coe
+    (ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1) :
+    ((planarSphereEquiv ω : Metric.sphere (0 : ℂ) 1) : ℂ) =
+      planarComplexIsometry (ω : EuclideanSpace ℝ (Fin 2)) := rfl
+
+/-- The same plane-to-complex isometry preserves Lebesgue measure. -/
+theorem planarComplexIsometry_measurePreserving :
+    MeasurePreserving planarComplexIsometry
+      (volume : Measure (EuclideanSpace ℝ (Fin 2)))
+      (volume : Measure ℂ) :=
+  planarComplexIsometry.measurePreserving
+
+private theorem unitSphereCone_eq (V : Type*) [NormedAddCommGroup V] [NormedSpace ℝ V]
+    (A : Set (Metric.sphere (0 : V) 1)) :
+    (Set.Ioo (0 : ℝ) 1 • (Subtype.val '' A) : Set V) =
+      Subtype.val '' ((homeomorphUnitSphereProd V).symm ''
+        (A ×ˢ Set.Iio (⟨1, by simp⟩ : Set.Ioi (0 : ℝ)))) := by
+  ext y
+  rw [← Set.image2_smul]
+  simp only [Set.mem_image, Set.mem_prod, Set.mem_image2, Set.mem_Ioo, Set.mem_Iio]
+  constructor
+  · rintro ⟨r, ⟨hr0, hr1⟩, z, ⟨ω, hω, rfl⟩, hEq⟩
+    let rp : Set.Ioi (0 : ℝ) := ⟨r, hr0⟩
+    let p : Metric.sphere (0 : V) 1 × Set.Ioi (0 : ℝ) := (ω, rp)
+    refine ⟨(homeomorphUnitSphereProd V).symm p,
+      ⟨p, ⟨hω, hr1⟩, rfl⟩, ?_⟩
+    simpa [p, rp, homeomorphUnitSphereProd_symm_apply_coe] using hEq
+  · rintro ⟨q, ⟨p, ⟨hpA, hpr⟩, rfl⟩, rfl⟩
+    refine ⟨(p.2 : ℝ), ⟨p.2.property, hpr⟩, (p.1 : V),
+      ⟨p.1, hpA, rfl⟩, ?_⟩
+    exact (homeomorphUnitSphereProd_symm_apply_coe V p).symm
+
+private theorem measurableSet_unitSphereCone (V : Type*)
+    [NormedAddCommGroup V] [NormedSpace ℝ V] [MeasurableSpace V] [BorelSpace V]
+    (A : Set (Metric.sphere (0 : V) 1)) (hA : MeasurableSet A) :
+    MeasurableSet (Set.Ioo (0 : ℝ) 1 • (Subtype.val '' A) : Set V) := by
+  rw [unitSphereCone_eq]
+  apply (MeasurableEmbedding.subtype_coe (measurableSet_singleton (0 : V)).compl).measurableSet_image'
+  apply (Homeomorph.measurableEmbedding (homeomorphUnitSphereProd V).symm).measurableSet_image'
+  exact hA.prod measurableSet_Iio
+
+/-- The plane-to-complex isometry also preserves the angular measure appearing in polar
+integration. -/
+theorem planarSphereEquiv_measurePreserving :
+    MeasurePreserving planarSphereEquiv
+      (volume.toSphere : Measure (Metric.sphere
+        (0 : EuclideanSpace ℝ (Fin 2)) 1))
+      (volume.toSphere : Measure (Metric.sphere (0 : ℂ) 1)) := by
+  refine ⟨planarSphereEquiv.continuous.measurable, ?_⟩
+  ext A hA
+  rw [Measure.map_apply planarSphereEquiv.continuous.measurable hA,
+    Measure.toSphere_apply' _ (planarSphereEquiv.continuous.measurable hA),
+    Measure.toSphere_apply' _ hA]
+  have hgeom : planarComplexIsometry ⁻¹'
+      (Set.Ioo (0 : ℝ) 1 • (Subtype.val '' A) : Set ℂ) =
+      (Set.Ioo (0 : ℝ) 1 • (Subtype.val '' (planarSphereEquiv ⁻¹' A)) :
+        Set (EuclideanSpace ℝ (Fin 2))) := by
+    ext z
+    simp only [Set.mem_preimage, ← Set.image2_smul, Set.mem_image2,
+      Set.mem_image, Set.mem_Ioo]
+    constructor
+    · rintro ⟨r, hr, v, ⟨ω, hω, rfl⟩, hz⟩
+      let η := planarSphereEquiv.symm ω
+      refine ⟨r, hr, (η : EuclideanSpace ℝ (Fin 2)), ⟨η, ?_, rfl⟩, ?_⟩
+      · exact show planarSphereEquiv η ∈ A by simpa [η] using hω
+      · apply planarComplexIsometry.injective
+        rw [map_smul]
+        have hη : planarComplexIsometry (η : EuclideanSpace ℝ (Fin 2)) =
+            (ω : ℂ) := by simpa [η] using (planarSphereEquiv_coe η).symm
+        rw [hη]
+        exact hz
+    · rintro ⟨r, hr, v, ⟨ω, hω, rfl⟩, hz⟩
+      refine ⟨r, hr, ((planarSphereEquiv ω : Metric.sphere (0 : ℂ) 1) : ℂ),
+        ⟨planarSphereEquiv ω, hω, rfl⟩, ?_⟩
+      simpa [map_smul, planarSphereEquiv_coe] using congrArg planarComplexIsometry hz
+  have hmeas : (volume : Measure (EuclideanSpace ℝ (Fin 2)))
+      (Set.Ioo (0 : ℝ) 1 • (Subtype.val '' (planarSphereEquiv ⁻¹' A))) =
+      (volume : Measure ℂ) (Set.Ioo (0 : ℝ) 1 • (Subtype.val '' A)) := by
+    rw [← hgeom]
+    exact (planarComplexIsometry_measurePreserving.measure_preimage
+      (measurableSet_unitSphereCone ℂ A hA).nullMeasurableSet)
+  rw [hmeas]
+  congr 1
+  norm_num
+
+/-- Transport a planar sphere integral to the complex unit circle without changing its
+angular measure. -/
+theorem integral_planarSphereEquiv (g : Metric.sphere (0 : ℂ) 1 → ℝ) :
+    (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+        g (planarSphereEquiv ω) ∂(volume.toSphere)) =
+      ∫ ζ : Metric.sphere (0 : ℂ) 1, g ζ ∂(volume.toSphere) :=
+  planarSphereEquiv_measurePreserving.integral_comp
+    planarSphereEquiv.measurableEmbedding g
 
 /-- The angular measure obtained by polar decomposition of planar Lebesgue measure has total
 mass `2π`. -/
