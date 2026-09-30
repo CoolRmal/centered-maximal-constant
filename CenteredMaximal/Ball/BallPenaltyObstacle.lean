@@ -79,12 +79,13 @@ theorem exists_ball_penalty_wholeSpace_density
         ENNReal.ofReal κ * volume Ω ≤ ∫⁻ x, ‖(f x : ℝ)‖ₑ ∧
         (∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
           ν x ≤ ENNReal.ofReal κ) ∧
+        0 ≤ valueEmbedding (ball center R) U ∧
         (∀ V : H01 (ball center R),
           laplaceBilin (ball center R) U V =
             l2Functional (ball center R) f V -
               κ * l2Functional (ball center R) (ballUnitL2 center R) V +
               ⟪νlocal, valueEmbedding (ball center R) V⟫_ℝ) := by
-  obtain ⟨U, νlocal, -, hνlocal, hweak, -, hcontact⟩ :=
+  obtain ⟨U, νlocal, hU, hνlocal, hweak, -, hcontact⟩ :=
     exists_ball_penalty_obstacle_with_density center R f κ hκ hf
   let D := ball center R
   let Ω : Set (EuclideanSpace ℝ (Fin (n + 1))) :=
@@ -98,7 +99,7 @@ theorem exists_ball_penalty_wholeSpace_density
   have hcapGlobal : ∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
       ν x ≤ ENNReal.ofReal κ :=
     ae_ballDensityExtension_le_cap center R νlocal κ hνlocal.2
-  exact ⟨U, νlocal, Ω, ν, rfl, rfl, hcontactGlobal, hcapGlobal, hweak⟩
+  exact ⟨U, νlocal, Ω, ν, rfl, rfl, hcontactGlobal, hcapGlobal, hU, hweak⟩
 
 /-- The global contact-mass bound can use an ordinary whole-space source whose restriction
 agrees almost everywhere with the local `L²` source. -/
@@ -118,12 +119,13 @@ theorem exists_ball_penalty_wholeSpace_density_of_ae_eq
         ENNReal.ofReal κ * volume Ω ≤ ∫⁻ x, ‖f x‖ₑ ∧
         (∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
           ν x ≤ ENNReal.ofReal κ) ∧
+        0 ≤ valueEmbedding (ball center R) U ∧
         (∀ V : H01 (ball center R),
           laplaceBilin (ball center R) U V =
             l2Functional (ball center R) F V -
               κ * l2Functional (ball center R) (ballUnitL2 center R) V +
               ⟪νlocal, valueEmbedding (ball center R) V⟫_ℝ) := by
-  obtain ⟨U, νlocal, -, hνlocal, hweak, -, hcontact⟩ :=
+  obtain ⟨U, νlocal, hU, hνlocal, hweak, -, hcontact⟩ :=
     exists_ball_penalty_obstacle_with_density center R F κ hκ hF0
   let D := ball center R
   let Ω : Set (EuclideanSpace ℝ (Fin (n + 1))) :=
@@ -143,6 +145,6 @@ theorem exists_ball_penalty_wholeSpace_density_of_ae_eq
   have hcapGlobal : ∀ᵐ x ∂(volume : Measure (EuclideanSpace ℝ (Fin (n + 1)))),
       ν x ≤ ENNReal.ofReal κ :=
     ae_ballDensityExtension_le_cap center R νlocal κ hνlocal.2
-  exact ⟨U, νlocal, Ω, ν, rfl, rfl, hcontactGlobal, hcapGlobal, hweak⟩
+  exact ⟨U, νlocal, Ω, ν, rfl, rfl, hcontactGlobal, hcapGlobal, hU, hweak⟩
 
 end CenteredMaximal.Ball.DirichletSobolev
