@@ -356,6 +356,8 @@ theorem exists_positiveLp_obstacle_upper_cap
 
 namespace DirichletSobolev
 
+open MeasureTheory
+
 variable {d : ℕ}
 
 /-- Continuous coordinate-zero embedding of the concrete `H¹₀(D)` graph space into `L²(D)`. -/
@@ -385,6 +387,70 @@ theorem isClosed_positiveH01Cone (D : Set (EuclideanSpace ℝ (Fin d))) :
 theorem pointed_positiveH01Cone (D : Set (EuclideanSpace ℝ (Fin d))) :
     (positiveH01Cone D).Pointed :=
   pointed_positiveLpCone (valueEmbedding D)
+
+/-! ### Concrete obstacle variation on a ball -/
+
+variable {n : ℕ}
+
+/-- The pure-gradient Dirichlet form is coercive on every Euclidean ball. -/
+theorem laplaceBilin_coercive_ball (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ) :
+    IsCoercive (laplaceBilin (Metric.ball center R)) :=
+  laplaceBilin_coercive_of_bounded Metric.isBounded_ball
+
+/-- The constant-one element of `L²` on a finite-volume ball, used as the mass functional. -/
+def ballUnitL2 (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ) :
+    L2D (Metric.ball center R) := by
+  letI : IsFiniteMeasure (volume.restrict (Metric.ball center R)) :=
+    isFiniteMeasure_restrict.mpr measure_ball_ne_top
+  exact Lp.const 2 (volume.restrict (Metric.ball center R)) (1 : ℝ)
+
+/-- A nonnegative `H¹₀` solution of the obstacle variational inequality with the pure
+Dirichlet gradient form exists on every ball. The source is an `L²` density and the cap term
+is the constant-one `L²` functional. -/
+theorem exists_ball_obstacle_variational
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (f : L2D (Metric.ball center R)) (κ : ℝ) :
+    ∃ U : H01 (Metric.ball center R),
+      0 ≤ (U : H1amb (Metric.ball center R)) 0 ∧
+      ∀ V : H01 (Metric.ball center R),
+        0 ≤ (V : H1amb (Metric.ball center R)) 0 →
+          (l2Functional (Metric.ball center R) f -
+            κ • l2Functional (Metric.ball center R) (ballUnitL2 center R)) (V - U) ≤
+            laplaceBilin (Metric.ball center R) U (V - U) := by
+  let D := Metric.ball center R
+  let ℓ := l2Functional D f - κ • l2Functional D (ballUnitL2 center R)
+  obtain ⟨U, hU, hVI⟩ := exists_obstacle_variational_of_coercive
+    (laplaceBilin D) (laplaceBilin_coercive_ball center R) ℓ
+    (isClosed_positiveH01Cone D) (positiveH01Cone D).convex
+    ⟨0, pointed_positiveH01Cone D⟩
+  exact ⟨U, (mem_positiveH01Cone D U).1 hU,
+    fun V hV => hVI V ((mem_positiveH01Cone D V).2 hV)⟩
+
+/-- Positive variations of the pure-gradient obstacle solution give the distributional
+upper bound on the capped density. -/
+theorem exists_ball_obstacle_upper_cap
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (f : L2D (Metric.ball center R)) (κ : ℝ) :
+    ∃ U : H01 (Metric.ball center R),
+      0 ≤ (U : H1amb (Metric.ball center R)) 0 ∧
+      ∀ Φ : H01 (Metric.ball center R),
+        0 ≤ (Φ : H1amb (Metric.ball center R)) 0 →
+          l2Functional (Metric.ball center R) f Φ -
+            laplaceBilin (Metric.ball center R) U Φ ≤
+            κ * l2Functional (Metric.ball center R) (ballUnitL2 center R) Φ := by
+  let D := Metric.ball center R
+  obtain ⟨U, hU, hVI⟩ := exists_ball_obstacle_variational center R f κ
+  refine ⟨U, hU, fun Φ hΦ => ?_⟩
+  have hUcone : U ∈ positiveH01Cone D := (mem_positiveH01Cone D U).2 hU
+  have hΦcone : Φ ∈ positiveH01Cone D := (mem_positiveH01Cone D Φ).2 hΦ
+  have hV : 0 ≤ ((U + Φ : H01 D) : H1amb D) 0 :=
+    (mem_positiveH01Cone D (U + Φ)).1 ((positiveH01Cone D).add_mem hUcone hΦcone)
+  have h := hVI (U + Φ) hV
+  have hsub : U + Φ - U = Φ := by abel
+  rw [hsub] at h
+  change l2Functional D f Φ - κ * l2Functional D (ballUnitL2 center R) Φ ≤
+    laplaceBilin D U Φ at h
+  linarith
 
 end DirichletSobolev
 
