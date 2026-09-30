@@ -218,4 +218,50 @@ theorem integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux
         ring
     _ = _ := by rw [integral_const_mul, hprofile]; ring
 
+/-- A nonnegative obstacle vanishing at the center has nonnegative planar
+Green pairing at every scale. -/
+theorem integral_normalized_planarKernel_mul_laplacian_nonneg_of_ball_flux
+    (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (hw₀ : ∀ y, 0 ≤ w y)
+    (x : EuclideanSpace ℝ (Fin 2)) (hx : w x = 0)
+    {r : ℝ} (hr : 0 < r)
+    (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) planarGreenRadius,
+      (∫ y in Metric.ball (0 : EuclideanSpace ℝ (Fin 2)) s,
+        Laplacian.laplacian (fun z ↦ w (x + r • z)) y) =
+        s * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          fderiv ℝ (fun z ↦ w (x + r • z))
+            (s • (ω : EuclideanSpace ℝ (Fin 2)))
+            (ω : EuclideanSpace ℝ (Fin 2)) ∂(volume.toSphere))) :
+    0 ≤ (∫ y : EuclideanSpace ℝ (Fin 2),
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) := by
+  rw [integral_normalized_planarKernel_mul_laplacian_of_ball_flux
+    w hw hsupp x hx hr hflux]
+  exact mul_nonneg ENNReal.toReal_nonneg
+    (mul_nonneg (by norm_num) (integral_nonneg fun ω ↦ hw₀ _))
+
+/-- A nonnegative obstacle vanishing at the center has nonnegative Newtonian
+Green pairing at every scale. -/
+theorem integral_normalized_newtonianKernel_mul_laplacian_nonneg_of_ball_flux
+    (n : ℕ) (hn : 3 ≤ n)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (hw₀ : ∀ y, 0 ≤ w y)
+    (x : EuclideanSpace ℝ (Fin n)) (hx : w x = 0)
+    {r : ℝ} (hr : 0 < r)
+    (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) (greenRadius n),
+      (∫ y in Metric.ball (0 : EuclideanSpace ℝ (Fin n)) s,
+        Laplacian.laplacian (fun z ↦ w (x + r • z)) y) =
+        s ^ (n - 1) *
+          (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+            fderiv ℝ (fun z ↦ w (x + r • z))
+              (s • (ω : EuclideanSpace ℝ (Fin n)))
+              (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere))) :
+    0 ≤ (∫ y : EuclideanSpace ℝ (Fin n),
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) := by
+  rw [integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux
+    n hn w hw hsupp x hx hr hflux]
+  exact mul_nonneg (mul_nonneg ENNReal.toReal_nonneg (pow_nonneg hr.le _))
+    (mul_nonneg (Nat.cast_nonneg _) (integral_nonneg fun ω ↦ hw₀ _))
+
 end CenteredMaximal.Ball
