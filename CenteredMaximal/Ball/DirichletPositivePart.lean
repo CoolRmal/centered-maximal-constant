@@ -219,11 +219,10 @@ theorem exists_isPositivePartGraph (U : H01 Ω) :
   have hgradmeas (i : Fin d) : AEStronglyMeasurable
       (fun x => if 0 < v x then g i x else 0) (volume.restrict Ω) := by
     have hs : NullMeasurableSet {x | 0 < v x} (volume.restrict Ω) :=
-      stronglyMeasurable_const.aestronglyMeasurable.nullMeasurableSet_lt hvm.1
-    convert (hgm i).1.indicator₀ hs using 1
+      stronglyMeasurable_const.aestronglyMeasurable.nullMeasurableSet_lt
+        hvm.aestronglyMeasurable
+    convert (hgm i).aestronglyMeasurable.indicator₀ hs using 1
     · rfl
-    · funext x
-      by_cases hx : 0 < v x <;> simp [Set.indicator, hx]
   have hgradMem (i : Fin d) : MemLp
       (fun x => if 0 < v x then g i x else 0) 2 (volume.restrict Ω) := by
     refine (hgm i).of_le (hgradmeas i) (Eventually.of_forall fun x => ?_)
@@ -245,7 +244,9 @@ theorem exists_isPositivePartGraph (U : H01 Ω) :
       fun n x => smoothPositive (ε n) (v x) - max (v x) 0
     have hFm : ∀ n, AEStronglyMeasurable (F n) (volume.restrict Ω) := fun n =>
       ((smoothPositive_contDiff (hεpos n)).continuous.comp_aestronglyMeasurable
-        hvm.1).sub (((continuous_id.max continuous_const).comp_aestronglyMeasurable hvm.1))
+        hvm.aestronglyMeasurable).sub
+          (((continuous_id.max continuous_const).comp_aestronglyMeasurable
+            hvm.aestronglyMeasurable))
     have hFb : ∀ n x, ‖F n x‖ ≤ ‖(2 : ℝ) * v x‖ := by
       intro n x
       have hFbound : ‖smoothPositive (ε n) (v x)‖ ≤ ‖v x‖ := by
@@ -277,7 +278,8 @@ theorem exists_isPositivePartGraph (U : H01 Ω) :
     have hderivcont : ∀ n, Continuous (deriv (smoothPositive (ε n))) := fun n =>
       (smoothPositive_contDiff (hεpos n)).continuous_deriv (by simp)
     have hFm : ∀ n, AEStronglyMeasurable (F n) (volume.restrict Ω) := fun n =>
-      ((hderivcont n).comp_aestronglyMeasurable hvm.1).mul (hgm i).1 |>.sub (hgradmeas i)
+      ((hderivcont n).comp_aestronglyMeasurable hvm.aestronglyMeasurable).mul
+        (hgm i).aestronglyMeasurable |>.sub (hgradmeas i)
     have hFb : ∀ n x, ‖F n x‖ ≤ ‖(2 : ℝ) * g i x‖ := by
       intro n x
       have hpart : ‖(if 0 < v x then g i x else 0)‖ ≤ ‖g i x‖ := by

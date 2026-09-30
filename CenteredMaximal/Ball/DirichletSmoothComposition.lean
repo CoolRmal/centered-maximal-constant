@@ -76,8 +76,7 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
       rw [e]
       filter_upwards [(hφ n).mem_lp.coeFn_toLp] with x hx
       simp only [IsTestFn.testCls, Pi.sub_apply, hvdef, hx]
-    exact tendstoInMeasure_of_tendsto_eLpNorm two_ne_zero
-      (fun n => (hφ n).continuous.aestronglyMeasurable) hvm.1 hX0'
+    exact tendstoInMeasure_of_tendsto_eLpNorm two_ne_zero hX0'
   obtain ⟨ns, hns, hae⟩ := hmeas.exists_seq_tendsto_ae
   let ψ : ℕ → EuclideanSpace ℝ (Fin d) → ℝ := fun j => φ (ns j)
   have hψ : ∀ j, IsTestFn Ω (ψ j) := fun j => hφ (ns j)
@@ -102,7 +101,8 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
     intro i
     have hm : AEStronglyMeasurable (fun x => deriv F (v x) * g i x)
         (volume.restrict Ω) :=
-      (hderivcont.comp_aestronglyMeasurable hvm.1).mul (hgm i).1
+      (hderivcont.comp_aestronglyMeasurable hvm.aestronglyMeasurable).mul
+        (hgm i).aestronglyMeasurable
     refine (hgm i).of_le hm ?_
     filter_upwards with x
     rw [Real.norm_eq_abs, Real.norm_eq_abs, abs_mul]
@@ -143,14 +143,16 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
       ring
     have hAm : ∀ j, AEStronglyMeasurable (A j) (volume.restrict Ω) := fun j =>
       (hderivcont.comp (hψ j).continuous).aestronglyMeasurable.mul
-        (((hψ j).continuous_partialD i).aestronglyMeasurable.sub (hgm i).1)
+        (((hψ j).continuous_partialD i).aestronglyMeasurable.sub
+          (hgm i).aestronglyMeasurable)
     have hBm : ∀ j, AEStronglyMeasurable (B j) (volume.restrict Ω) := fun j =>
       ((hderivcont.comp (hψ j).continuous).aestronglyMeasurable.sub
-        (hderivcont.comp_aestronglyMeasurable hvm.1)).mul (hgm i).1
+        (hderivcont.comp_aestronglyMeasurable hvm.aestronglyMeasurable)).mul
+          (hgm i).aestronglyMeasurable
     have hAt : Tendsto (fun j => eLpNorm (A j) 2 (volume.restrict Ω)) atTop (𝓝 0) := by
       refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds
         ((hXi i).comp hns.tendsto_atTop) (fun _ => zero_le) fun j => ?_
-      refine eLpNorm_mono fun x => ?_
+      refine eLpNorm_mono (hAm j) fun x => ?_
       simp only [A, Pi.sub_apply, ψ, Real.norm_eq_abs, abs_mul]
       calc
         |deriv F (φ (ns j) x)| * |partialD i (φ (ns j)) x - g i x|
@@ -175,7 +177,8 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
       have hrepr : ∀ j, eLpNorm (B j) 2 (volume.restrict Ω) =
           (∫⁻ x, ‖B j x‖ₑ ^ (2 : ℝ) ∂(volume.restrict Ω)) ^ (1 / (2 : ℝ)) := by
         intro j
-        rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top,
+        rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top
+          (hBm j),
           ENNReal.toReal_ofNat]
       simp only [hrepr]
       have hlim : Tendsto
@@ -190,7 +193,7 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
             ← NNReal.coe_le_coe, coe_nnnorm, coe_nnnorm]
           exact hBbound j x
         · exact (lintegral_rpow_enorm_lt_top_of_eLpNorm_lt_top two_ne_zero
-            ENNReal.ofNat_ne_top hBoundMem.2).ne
+            ENNReal.ofNat_ne_top hBoundMem).ne
         · filter_upwards [hae] with x hx
           have hderivpoint : Tendsto (fun j => deriv F (ψ j x)) atTop
               (𝓝 (deriv F (v x))) := (hderivcont.tendsto (v x)).comp hx
@@ -215,7 +218,7 @@ theorem exists_mem_H01_smooth_comp {V : H1amb Ω} (hV : V ∈ H01 Ω)
     refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hsum
       (fun _ => zero_le) fun j => ?_
     rw [hsplit j]
-    exact eLpNorm_add_le (hAm j) (hBm j) one_le_two
+    exact eLpNorm_add_le one_le_two
   have hwmem : w ∈ H01 Ω := by
     refine (Submodule.isClosed_topologicalClosure _).mem_of_tendsto (b := atTop) ?_
       (Eventually.of_forall fun j => by
@@ -243,7 +246,8 @@ theorem tendsto_eLpNorm_two_zero_of_dominated {α : Type*} [MeasurableSpace α]
     Tendsto (fun n => eLpNorm (F n) 2 μ) atTop (𝓝 0) := by
   have hrepr : ∀ n, eLpNorm (F n) 2 μ =
       (∫⁻ x, ‖F n x‖ₑ ^ (2 : ℝ) ∂μ) ^ (1 / (2 : ℝ)) := fun n => by
-    rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top,
+    rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top
+      (hFmeas n),
       ENNReal.toReal_ofNat]
   simp only [hrepr]
   have hlim : Tendsto (fun n => ∫⁻ x, ‖F n x‖ₑ ^ (2 : ℝ) ∂μ) atTop
@@ -257,7 +261,7 @@ theorem tendsto_eLpNorm_two_zero_of_dominated {α : Type*} [MeasurableSpace α]
         ← NNReal.coe_le_coe, coe_nnnorm, coe_nnnorm]
       exact hbound n x
     · exact (lintegral_rpow_enorm_lt_top_of_eLpNorm_lt_top two_ne_zero
-        ENNReal.ofNat_ne_top hboundLp.2).ne
+        ENNReal.ofNat_ne_top hboundLp).ne
     · filter_upwards [hpoint] with x hx
       have henorm : Tendsto (fun n => ‖F n x‖ₑ) atTop (𝓝 0) := by
         simpa only [Function.comp_def, enorm_zero] using
