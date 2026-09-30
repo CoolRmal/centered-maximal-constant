@@ -186,4 +186,148 @@ theorem smoothPositive_deriv_tendsto (t : ℝ) :
     rw [hrewrite]
     simpa only [hval] using hlim
 
+variable {d : ℕ} {Ω : Set (EuclideanSpace ℝ (Fin d))}
+
+/-- Positive part preserves the zero-boundary Sobolev space and has the expected
+weak gradient, including at the zero level. -/
+theorem exists_isPositivePartGraph (U : H01 Ω) :
+    ∃ P : H01 Ω, IsPositivePartGraph U P := by
+  classical
+  let ε : ℕ → ℝ := fun n => 1 / (n + 1 : ℝ)
+  have hεpos : ∀ n, 0 < ε n := fun n => by positivity
+  set v : EuclideanSpace ℝ (Fin d) → ℝ := fun x => ((U : H1amb Ω) 0 x : ℝ) with hvdef
+  set g : Fin d → EuclideanSpace ℝ (Fin d) → ℝ :=
+    fun i x => ((U : H1amb Ω) i.succ x : ℝ) with hgdef
+  have hvm : MemLp v 2 (volume.restrict Ω) := Lp.memLp _
+  have hgm : ∀ i, MemLp (g i) 2 (volume.restrict Ω) := fun i => Lp.memLp _
+  have hP : ∀ n : ℕ, ∃ W ∈ H01 Ω,
+      ((W 0 : L2D Ω) : EuclideanSpace ℝ (Fin d) → ℝ)
+        =ᵐ[volume.restrict Ω] (fun x => smoothPositive (ε n) (v x)) ∧
+      ∀ i : Fin d, ((W i.succ : L2D Ω) : EuclideanSpace ℝ (Fin d) → ℝ)
+        =ᵐ[volume.restrict Ω]
+          (fun x => deriv (smoothPositive (ε n)) (v x) * g i x) := by
+    intro n
+    exact exists_mem_H01_smooth_comp U.2 (smoothPositive_contDiff (hεpos n))
+      (smoothPositive_lipschitz (hεpos n)) (smoothPositive_zero (hεpos n))
+      (smoothPositive_deriv_bound (hεpos n))
+  choose W hW hW0 hWi using hP
+  let Pₙ : ℕ → H01 Ω := fun n => ⟨W n, hW n⟩
+  let p0 : L2D Ω := Lp.posPart ((U : H1amb Ω) 0)
+  have hp0ae : (p0 : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x => max (v x) 0 := by
+    simpa only [p0, v] using Lp.coeFn_posPart ((U : H1amb Ω) 0)
+  have hgradmeas (i : Fin d) : AEStronglyMeasurable
+      (fun x => if 0 < v x then g i x else 0) (volume.restrict Ω) := by
+    have hs : NullMeasurableSet {x | 0 < v x} (volume.restrict Ω) :=
+      stronglyMeasurable_const.aestronglyMeasurable.nullMeasurableSet_lt hvm.1
+    convert (hgm i).1.indicator₀ hs using 1
+    · rfl
+    · funext x
+      by_cases hx : 0 < v x <;> simp [Set.indicator, hx]
+  have hgradMem (i : Fin d) : MemLp
+      (fun x => if 0 < v x then g i x else 0) 2 (volume.restrict Ω) := by
+    refine (hgm i).of_le (hgradmeas i) (Eventually.of_forall fun x => ?_)
+    split_ifs <;> simp
+  let P : H1amb Ω := WithLp.toLp 2 (Fin.cons p0 fun i =>
+    (hgradMem i).toLp (fun x => if 0 < v x then g i x else 0))
+  have hP0 : ((P 0 : L2D Ω) : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x => max (v x) 0 := by simpa [P] using hp0ae
+  have hPi : ∀ i : Fin d, ((P i.succ : L2D Ω) : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x => if 0 < v x then g i x else 0 := by
+    intro i
+    simpa [P] using (hgradMem i).coeFn_toLp
+  have hvalMem : MemLp (fun x => max (v x) 0) 2 (volume.restrict Ω) :=
+    (Lp.memLp p0).ae_eq hp0ae
+  have hvalDCT : Tendsto (fun n => eLpNorm
+      ((fun x => smoothPositive (ε n) (v x)) - fun x => max (v x) 0)
+      2 (volume.restrict Ω)) atTop (𝓝 0) := by
+    let F : ℕ → EuclideanSpace ℝ (Fin d) → ℝ :=
+      fun n x => smoothPositive (ε n) (v x) - max (v x) 0
+    have hFm : ∀ n, AEStronglyMeasurable (F n) (volume.restrict Ω) := fun n =>
+      ((smoothPositive_contDiff (hεpos n)).continuous.comp_aestronglyMeasurable
+        hvm.1).sub (((continuous_id.max continuous_const).comp_aestronglyMeasurable hvm.1))
+    have hFb : ∀ n x, ‖F n x‖ ≤ ‖(2 : ℝ) * v x‖ := by
+      intro n x
+      have hFbound : ‖smoothPositive (ε n) (v x)‖ ≤ ‖v x‖ := by
+        have h := (smoothPositive_lipschitz (hεpos n)).norm_sub_le (v x) 0
+        simpa only [smoothPositive_zero (hεpos n), sub_zero, NNReal.coe_one,
+          one_mul] using h
+      have hmax : ‖max (v x) 0‖ ≤ ‖v x‖ := by
+        rw [Real.norm_eq_abs, abs_of_nonneg (le_max_right _ _)]
+        rw [Real.norm_eq_abs]
+        exact max_le (le_abs_self _) (abs_nonneg _)
+      calc
+        ‖F n x‖ ≤ ‖smoothPositive (ε n) (v x)‖ + ‖max (v x) 0‖ := norm_sub_le _ _
+        _ ≤ ‖v x‖ + ‖v x‖ := add_le_add hFbound hmax
+        _ = ‖(2 : ℝ) * v x‖ := by simp [norm_mul, Real.norm_eq_abs]; ring
+    have hFp : ∀ᵐ x ∂(volume.restrict Ω), Tendsto (fun n => F n x) atTop (𝓝 0) := by
+      filter_upwards with x
+      have ht := (smoothPositive_tendsto (v x)).sub_const (max (v x) 0)
+      simpa only [F, sub_self] using ht
+    exact tendsto_eLpNorm_two_zero_of_dominated (volume.restrict Ω)
+      ((hvm).const_mul 2) hFm hFb hFp
+  have hgradDCT : ∀ i : Fin d, Tendsto (fun n => eLpNorm
+      ((fun x => deriv (smoothPositive (ε n)) (v x) * g i x) -
+        fun x => if 0 < v x then g i x else 0)
+      2 (volume.restrict Ω)) atTop (𝓝 0) := by
+    intro i
+    let F : ℕ → EuclideanSpace ℝ (Fin d) → ℝ := fun n x =>
+      deriv (smoothPositive (ε n)) (v x) * g i x -
+        (if 0 < v x then g i x else 0)
+    have hderivcont : ∀ n, Continuous (deriv (smoothPositive (ε n))) := fun n =>
+      (smoothPositive_contDiff (hεpos n)).continuous_deriv (by simp)
+    have hFm : ∀ n, AEStronglyMeasurable (F n) (volume.restrict Ω) := fun n =>
+      ((hderivcont n).comp_aestronglyMeasurable hvm.1).mul (hgm i).1 |>.sub (hgradmeas i)
+    have hFb : ∀ n x, ‖F n x‖ ≤ ‖(2 : ℝ) * g i x‖ := by
+      intro n x
+      have hpart : ‖(if 0 < v x then g i x else 0)‖ ≤ ‖g i x‖ := by
+        split_ifs <;> simp
+      calc
+        ‖F n x‖ ≤ ‖deriv (smoothPositive (ε n)) (v x) * g i x‖ +
+          ‖(if 0 < v x then g i x else 0)‖ := norm_sub_le _ _
+        _ ≤ ‖g i x‖ + ‖g i x‖ := by
+          rw [norm_mul]
+          have hmul : ‖deriv (smoothPositive (ε n)) (v x)‖ * ‖g i x‖ ≤ ‖g i x‖ := by
+            simpa only [one_mul] using
+              mul_le_mul_of_nonneg_right
+                (smoothPositive_deriv_bound (hεpos n) (v x)) (norm_nonneg (g i x))
+          exact add_le_add hmul hpart
+        _ = ‖(2 : ℝ) * g i x‖ := by simp [norm_mul, Real.norm_eq_abs]; ring
+    have hFp : ∀ᵐ x ∂(volume.restrict Ω), Tendsto (fun n => F n x) atTop (𝓝 0) := by
+      filter_upwards with x
+      have ht := (smoothPositive_deriv_tendsto (v x)).mul_const (g i x)
+      have htarget : (if 0 < v x then (1 : ℝ) else 0) * g i x =
+          if 0 < v x then g i x else 0 := by split_ifs <;> simp
+      rw [htarget] at ht
+      have hs := ht.sub_const (if 0 < v x then g i x else 0)
+      simpa only [F, sub_self] using hs
+    exact tendsto_eLpNorm_two_zero_of_dominated (volume.restrict Ω)
+      ((hgm i).const_mul 2) hFm hFb hFp
+  have hPt : Tendsto (fun n => W n) atTop (𝓝 P) := by
+    have hWt0 : Tendsto (fun n => W n 0) atTop (𝓝 p0) := by
+      apply (Lp.tendsto_Lp_iff_tendsto_eLpNorm' (fun n => W n 0) p0).2
+      convert hvalDCT using 1
+      funext n
+      apply eLpNorm_congr_ae
+      exact (hW0 n).sub hp0ae
+    have hWti (i : Fin d) : Tendsto (fun n => W n i.succ) atTop (𝓝 (P i.succ)) := by
+      apply (Lp.tendsto_Lp_iff_tendsto_eLpNorm' (fun n => W n i.succ) (P i.succ)).2
+      convert hgradDCT i using 1
+      funext n
+      apply eLpNorm_congr_ae
+      exact (hWi n i).sub (hPi i)
+    have hc : Tendsto (fun n => (W n).ofLp) atTop (𝓝 P.ofLp) := by
+      rw [tendsto_pi_nhds]
+      intro j
+      induction j using Fin.cases with
+      | zero => exact hWt0
+      | succ i => exact hWti i
+    convert ((PiLp.continuous_toLp (p := 2) (β := fun _ : Fin (d + 1) => L2D Ω)).tendsto
+      P.ofLp).comp hc using 1
+    funext n
+    exact (WithLp.toLp_ofLp 2 (W n)).symm
+  have hPmem : P ∈ H01 Ω := by
+    exact (Submodule.isClosed_topologicalClosure _).mem_of_tendsto hPt
+      (Eventually.of_forall hW)
+  exact ⟨⟨P, hPmem⟩, ⟨hP0, hPi⟩⟩
 end CenteredMaximal.Ball.DirichletSobolev
