@@ -6,6 +6,7 @@ Authors: Yongxi Lin
 module
 
 public import CenteredMaximal.Ball.PairingComparison
+public import CenteredMaximal.Ball.BallDensityExtension
 
 /-!
 # Kernel comparison from a local Laplacian equation
@@ -26,6 +27,43 @@ namespace CenteredMaximal.Ball
 
 variable {E : Type*} [MeasurableSpace E] (μ : Measure E)
 
+/-- The real zero extension is a representative of the extended-real density already used in
+the obstacle certificate. -/
+theorem extendRestrictedDensity_eq_ofReal_indicator
+    (D : Set E) (ρ : E → ℝ) (x : E) :
+    extendRestrictedDensity D ρ x = ENNReal.ofReal (D.indicator ρ x) := by
+  classical
+  by_cases hx : x ∈ D
+  · simp [extendRestrictedDensity, hx]
+  · simp [extendRestrictedDensity, hx]
+
+/-- A local source identity is enough for comparison when the kernel is supported inside the
+domain. The certificate density is extended by zero. -/
+theorem source_relation_on_kernel_support
+    (D : Set E) (hD : MeasurableSet D)
+    (q f ρ g : E → ℝ)
+    (hsupport : ∀ᵐ y ∂μ, q y ≠ 0 → y ∈ D)
+    (hlocal : ∀ᵐ y ∂(μ.restrict D), g y = ρ y - f y) :
+    ∀ᵐ y ∂μ, q y ≠ 0 → f y = D.indicator ρ y - g y := by
+  have hlocal' : ∀ᵐ y ∂μ, y ∈ D → g y = ρ y - f y :=
+    (ae_restrict_iff' hD).mp hlocal
+  filter_upwards [hsupport, hlocal'] with y hqD hgrel hqy
+  have hyD := hqD hqy
+  rw [Set.indicator_of_mem hyD]
+  linarith [hgrel hyD]
+
+/-- Nonnegativity of a local real density passes to its real zero extension. -/
+theorem ae_nonneg_indicator_of_ae_restrict
+    (D : Set E) (hD : MeasurableSet D) (ρ : E → ℝ)
+    (hρ : 0 ≤ᵐ[μ.restrict D] ρ) :
+    0 ≤ᵐ[μ] D.indicator ρ := by
+  have hρ' : ∀ᵐ y ∂μ, y ∈ D → 0 ≤ ρ y :=
+    (ae_restrict_iff' hD).mp hρ
+  filter_upwards [hρ'] with y hy
+  by_cases hyD : y ∈ D
+  · simpa only [Set.indicator_of_mem hyD, Pi.zero_apply] using hy hyD
+  · simp [Set.indicator_of_notMem hyD]
+
 /-- An integrable weight times a measurable function is integrable when the function is bounded
 wherever the weight is nonzero. Values away from the kernel support are irrelevant. -/
 theorem integrable_weighted_of_bound_on_support
@@ -41,6 +79,18 @@ theorem integrable_weighted_of_bound_on_support
       ‖q y * v y‖ = ‖q y‖ * ‖v y‖ := norm_mul _ _
       _ ≤ ‖q y‖ * B := mul_le_mul_of_nonneg_left (hy hzero) (norm_nonneg _)
       _ = B * ‖q y‖ := mul_comm _ _
+
+/-- Integrability specialized to a weight supported almost everywhere in a region where the
+second factor is bounded. -/
+theorem integrable_weighted_of_local_bound
+    (q v : E → ℝ) (D : Set E)
+    (hq : Integrable q μ) (hv : AEStronglyMeasurable v μ)
+    (hsupport : ∀ᵐ y ∂μ, q y ≠ 0 → y ∈ D)
+    (B : ℝ) (hbound : ∀ᵐ y ∂μ, y ∈ D → ‖v y‖ ≤ B) :
+    Integrable (fun y => q y * v y) μ := by
+  apply integrable_weighted_of_bound_on_support μ q v hq hv B
+  filter_upwards [hsupport, hbound] with y hqD hvD hqy
+  exact hvD (hqD hqy)
 
 /-- A real pairing and the source identity on the support of the weight suffice for an
 extended-real weighted comparison. The extended-real density may merely agree almost
