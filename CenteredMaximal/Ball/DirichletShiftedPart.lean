@@ -262,4 +262,22 @@ theorem laplaceBilin_nonneg_of_upperTruncationGraph (U M : H01 Ω) (t : ℝ)
   rw [hx]
   split_ifs <;> simp [sq_nonneg]
 
+/-- The negative-part test has exactly the opposite Dirichlet energy:
+`B(U, (-U-t)⁺) = -B((-U-t)⁺, (-U-t)⁺)`. -/
+theorem laplaceBilin_shiftedNegativePart_identity (U P : H01 Ω) (t : ℝ)
+    (hPi : ∀ i : Fin d, ((P : H1amb Ω) i.succ : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x =>
+        if t < (((-U : H01 Ω) : H1amb Ω) 0 x : ℝ)
+        then (((-U : H01 Ω) : H1amb Ω) i.succ x : ℝ) else 0) :
+    laplaceBilin Ω U P = -laplaceBilin Ω P P := by
+  rw [laplaceBilin_apply, laplaceBilin_apply, ← Finset.sum_neg_distrib]
+  apply Finset.sum_congr rfl
+  intro i _
+  rw [L2.inner_def, L2.inner_def, ← integral_neg]
+  apply integral_congr_ae
+  filter_upwards [hPi i, Lp.coeFn_neg ((U : H1amb Ω) i.succ)] with x hp hn
+  simp only [Submodule.coe_neg, PiLp.neg_apply, hn] at hp
+  rw [hp]
+  split_ifs <;> simp [pow_two]
+
 end CenteredMaximal.Ball.DirichletSobolev
