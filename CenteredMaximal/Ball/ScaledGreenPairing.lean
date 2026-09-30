@@ -6,6 +6,7 @@ Authors: Yongxi Lin
 module
 
 public import CenteredMaximal.Ball.GreenPairing
+public import CenteredMaximal.Ball.BallFlux
 
 /-!
 # Green pairing at an arbitrary scale
@@ -317,6 +318,88 @@ theorem integral_normalized_newtonianKernel_mul_laplacian_nonneg_of_ball_flux
         Laplacian.laplacian w y) := by
   rw [integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux
     n hn w hw hsupp x hx hr hflux]
+  exact mul_nonneg (mul_nonneg ENNReal.toReal_nonneg (pow_nonneg hr.le _))
+    (mul_nonneg (Nat.cast_nonneg _) (integral_nonneg fun ω ↦ hw₀ _))
+
+/-- The exact planar Green pairing at any radius, with the Euclidean ball flux
+identity discharged. -/
+theorem integral_normalized_planarKernel_mul_laplacian_general
+    (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin 2))
+    {r : ℝ} (hr : 0 < r) :
+    (∫ y : EuclideanSpace ℝ (Fin 2),
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) =
+      ((volume (Metric.ball x r))⁻¹).toReal *
+        (2 * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          w (x + r • (planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2))))
+            ∂(volume.toSphere)) -
+          (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+            w x ∂(volume.toSphere)))) := by
+  apply integral_normalized_planarKernel_mul_laplacian_of_ball_flux_general
+    w hw hsupp x hr
+  intro s hs
+  have hv : ContDiff ℝ 2 (fun z ↦ w (x + r • z)) :=
+    contDiff_comp_add_smul 2 w hw x r
+  have hvsupp : HasCompactSupport (fun z ↦ w (x + r • z)) :=
+    hasCompactSupport_comp_add_smul 2 w hsupp x hr
+  simpa only [Nat.reduceSub, pow_one, zero_add] using
+    integral_laplacian_ball_eq_sphere_flux 2 _ hv hvsupp 0 hs.1
+
+/-- The exact Newtonian Green pairing at any radius, with ball flux discharged. -/
+theorem integral_normalized_newtonianKernel_mul_laplacian_general
+    (n : ℕ) (hn : 3 ≤ n)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin n))
+    {r : ℝ} (hr : 0 < r) :
+    (∫ y : EuclideanSpace ℝ (Fin n),
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) =
+      ((volume (Metric.ball x r))⁻¹).toReal * r ^ (n - 2) *
+        ((n : ℝ) * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          w (x + r • (greenRadius n • (ω : EuclideanSpace ℝ (Fin n))))
+            ∂(volume.toSphere)) -
+          (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+            w x ∂(volume.toSphere)))) := by
+  letI : NeZero n := ⟨by omega⟩
+  apply integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux_general
+    n hn w hw hsupp x hr
+  intro s hs
+  have hv : ContDiff ℝ 2 (fun z ↦ w (x + r • z)) :=
+    contDiff_comp_add_smul n w hw x r
+  have hvsupp : HasCompactSupport (fun z ↦ w (x + r • z)) :=
+    hasCompactSupport_comp_add_smul n w hsupp x hr
+  simpa only [zero_add] using
+    integral_laplacian_ball_eq_sphere_flux n _ hv hvsupp 0 hs.1
+
+/-- At a zero of a nonnegative smooth obstacle, every normalized planar Green
+pairing with its Laplacian is nonnegative. -/
+theorem integral_normalized_planarKernel_mul_laplacian_nonneg
+    (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (hw₀ : ∀ y, 0 ≤ w y)
+    (x : EuclideanSpace ℝ (Fin 2)) (hx : w x = 0)
+    {r : ℝ} (hr : 0 < r) :
+    0 ≤ (∫ y : EuclideanSpace ℝ (Fin 2),
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) := by
+  rw [integral_normalized_planarKernel_mul_laplacian_general w hw hsupp x hr]
+  simp only [hx, integral_zero, sub_zero]
+  exact mul_nonneg ENNReal.toReal_nonneg
+    (mul_nonneg (by norm_num) (integral_nonneg fun ω ↦ hw₀ _))
+
+/-- At a zero of a nonnegative smooth obstacle, every normalized Newtonian
+Green pairing with its Laplacian is nonnegative. -/
+theorem integral_normalized_newtonianKernel_mul_laplacian_nonneg
+    (n : ℕ) (hn : 3 ≤ n)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (hw₀ : ∀ y, 0 ≤ w y)
+    (x : EuclideanSpace ℝ (Fin n)) (hx : w x = 0)
+    {r : ℝ} (hr : 0 < r) :
+    0 ≤ (∫ y : EuclideanSpace ℝ (Fin n),
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) := by
+  rw [integral_normalized_newtonianKernel_mul_laplacian_general n hn w hw hsupp x hr]
+  simp only [hx, integral_zero, sub_zero]
   exact mul_nonneg (mul_nonneg ENNReal.toReal_nonneg (pow_nonneg hr.le _))
     (mul_nonneg (Nat.cast_nonneg _) (integral_nonneg fun ω ↦ hw₀ _))
 

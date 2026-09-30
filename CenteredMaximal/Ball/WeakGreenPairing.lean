@@ -105,9 +105,50 @@ theorem green_pairing_stable_under_bounded_approximation (n : ℕ) [NeZero n]
   have hright := (houter.sub hcenter).const_mul c
   exact tendsto_nhds_unique (hleft.congr' (Filter.Eventually.of_forall hpair)) hright
 
+/-- Stability under convergence of the single weighted Laplacian pairing. This is the
+form supplied by weak Lᵖ or weak-star L∞ convergence of the penalized obstacle
+Laplacians; pointwise convergence of those Laplacians is unnecessary. -/
+theorem green_pairing_stable_under_weighted_integral_convergence (n : ℕ) [NeZero n]
+    (K : EuclideanSpace ℝ (Fin n) → ℝ)
+    (w g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (wₖ gₖ : ℕ → EuclideanSpace ℝ (Fin n) → ℝ)
+    (hwₖ : ∀ k, Continuous (wₖ k))
+    (hlimw : ∀ y, Tendsto (fun k ↦ wₖ k y) atTop (𝓝 (w y)))
+    (B : ℝ) (hB : ∀ k y, ‖wₖ k y‖ ≤ B)
+    (hweighted : Tendsto (fun k ↦ ∫ y, K y * gₖ k y) atTop
+      (𝓝 (∫ y, K y * g y)))
+    (x : EuclideanSpace ℝ (Fin n)) (ρ c : ℝ)
+    (hpair : ∀ k,
+      (∫ y, K y * gₖ k y) = c *
+        ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          wₖ k (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere)) -
+         (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          wₖ k x ∂(volume.toSphere)))) :
+    (∫ y, K y * g y) = c *
+      ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere)) -
+       (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w x ∂(volume.toSphere))) := by
+  have houter : Tendsto (fun k ↦
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        wₖ k (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere)) atTop
+      (𝓝 (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w (x + ρ • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere))) :=
+    tendsto_sphereIntegral_of_bounded_approximations n w wₖ hwₖ hlimw B hB
+      (fun ω ↦ x + ρ • (ω : EuclideanSpace ℝ (Fin n))) (by fun_prop)
+  have hcenter : Tendsto (fun k ↦
+      ∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        wₖ k x ∂(volume.toSphere)) atTop
+      (𝓝 (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w x ∂(volume.toSphere))) :=
+    tendsto_sphereIntegral_of_bounded_approximations n w wₖ hwₖ hlimw B hB
+      (fun _ ↦ x) continuous_const
+  have hright := (houter.sub hcenter).const_mul c
+  exact tendsto_nhds_unique (hweighted.congr' (Filter.Eventually.of_forall hpair)) hright
+
 /-- The planar Green identity extends to a continuous obstacle with bounded weak
 Laplacian once it has uniformly bounded smooth approximants whose Laplacians converge
-almost everywhere. The flux premise is needed only for the smooth approximants. -/
+almost everywhere. -/
 theorem integral_normalized_planarKernel_mul_weakLaplacian_of_approximation
     (w g : EuclideanSpace ℝ (Fin 2) → ℝ)
     (wₖ : ℕ → EuclideanSpace ℝ (Fin 2) → ℝ)
@@ -118,14 +159,7 @@ theorem integral_normalized_planarKernel_mul_weakLaplacian_of_approximation
       Tendsto (fun k ↦ Laplacian.laplacian (wₖ k) y) atTop (𝓝 (g y)))
     (B₁ B₂ : ℝ) (hB₁ : ∀ k y, ‖wₖ k y‖ ≤ B₁)
     (hB₂ : ∀ k y, ‖Laplacian.laplacian (wₖ k) y‖ ≤ B₂)
-    (x : EuclideanSpace ℝ (Fin 2)) {r : ℝ} (hr : 0 < r)
-    (hfluxₖ : ∀ k, ∀ s ∈ Set.Ioc (0 : ℝ) planarGreenRadius,
-      (∫ y in Metric.ball (0 : EuclideanSpace ℝ (Fin 2)) s,
-        Laplacian.laplacian (fun z ↦ wₖ k (x + r • z)) y) =
-        s * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
-          fderiv ℝ (fun z ↦ wₖ k (x + r • z))
-            (s • (ω : EuclideanSpace ℝ (Fin 2)))
-            (ω : EuclideanSpace ℝ (Fin 2)) ∂(volume.toSphere))) :
+    (x : EuclideanSpace ℝ (Fin 2)) {r : ℝ} (hr : 0 < r) :
     (∫ y : EuclideanSpace ℝ (Fin 2),
       ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal * g y) =
       ((volume (Metric.ball x r))⁻¹).toReal * 2 *
@@ -144,8 +178,8 @@ theorem integral_normalized_planarKernel_mul_weakLaplacian_of_approximation
     hlimw hlimg B₁ B₂ hB₁ hB₂ x (r * planarGreenRadius)
     (((volume (Metric.ball x r))⁻¹).toReal * 2)
   intro k
-  have h := integral_normalized_planarKernel_mul_laplacian_of_ball_flux_general
-    (wₖ k) (hwₖ k) (hsuppₖ k) x hr (hfluxₖ k)
+  have h := integral_normalized_planarKernel_mul_laplacian_general
+    (wₖ k) (hwₖ k) (hsuppₖ k) x hr
   simpa only [K, mul_assoc, smul_smul, mul_comm r planarGreenRadius] using h
 
 /-- The Newtonian Green identity extends to a continuous obstacle with bounded weak
@@ -161,15 +195,7 @@ theorem integral_normalized_newtonianKernel_mul_weakLaplacian_of_approximation
       Tendsto (fun k ↦ Laplacian.laplacian (wₖ k) y) atTop (𝓝 (g y)))
     (B₁ B₂ : ℝ) (hB₁ : ∀ k y, ‖wₖ k y‖ ≤ B₁)
     (hB₂ : ∀ k y, ‖Laplacian.laplacian (wₖ k) y‖ ≤ B₂)
-    (x : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r)
-    (hfluxₖ : ∀ k, ∀ s ∈ Set.Ioc (0 : ℝ) (greenRadius n),
-      (∫ y in Metric.ball (0 : EuclideanSpace ℝ (Fin n)) s,
-        Laplacian.laplacian (fun z ↦ wₖ k (x + r • z)) y) =
-        s ^ (n - 1) *
-          (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
-            fderiv ℝ (fun z ↦ wₖ k (x + r • z))
-              (s • (ω : EuclideanSpace ℝ (Fin n)))
-              (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere))) :
+    (x : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r) :
     (∫ y : EuclideanSpace ℝ (Fin n),
       ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
         g y) =
@@ -190,8 +216,8 @@ theorem integral_normalized_newtonianKernel_mul_weakLaplacian_of_approximation
     hlimw hlimg B₁ B₂ hB₁ hB₂ x (r * greenRadius n)
     (((volume (Metric.ball x r))⁻¹).toReal * r ^ (n - 2) * (n : ℝ))
   intro k
-  have h := integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux_general
-    n hn (wₖ k) (hwₖ k) (hsuppₖ k) x hr (hfluxₖ k)
+  have h := integral_normalized_newtonianKernel_mul_laplacian_general
+    n hn (wₖ k) (hwₖ k) (hsuppₖ k) x hr
   simpa only [K, mul_assoc, smul_smul, mul_comm r (greenRadius n)] using h
 
 end CenteredMaximal.Ball
