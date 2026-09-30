@@ -95,21 +95,25 @@ theorem ball_obstacle_truncation_variation
   rw [hint1, hint2] at hsource
   linarith
 
-/-- A nonnegative ball obstacle solution has a contact set whose κ-weighted volume
-is bounded by the mass of the input density. -/
-theorem exists_ball_obstacle_contact_bound
+/-- Every nonnegative solution of the ball obstacle variational inequality has a
+contact set whose κ-weighted volume is bounded by the input mass. -/
+theorem ball_obstacle_contact_bound_of_variational
     (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
-    (f : L2D (ball center R)) (κ : ℝ) (hκ : 0 ≤ κ) (hf : 0 ≤ f) :
-    ∃ U : H01 (ball center R),
-      0 ≤ (U : H1amb (ball center R)) 0 ∧
-      ENNReal.ofReal κ *
-        (volume.restrict (ball center R))
-          {x | 0 < ((U : H1amb (ball center R)) 0 x : ℝ)} ≤
-        ∫⁻ x in ball center R, ‖(f x : ℝ)‖ₑ := by
+    (f : L2D (ball center R)) (κ : ℝ) (hκ : 0 ≤ κ) (hf : 0 ≤ f)
+    (U : H01 (ball center R))
+    (hU : 0 ≤ (U : H1amb (ball center R)) 0)
+    (hVI : ∀ V : H01 (ball center R),
+      0 ≤ (V : H1amb (ball center R)) 0 →
+        (l2Functional (ball center R) f -
+          κ • l2Functional (ball center R) (ballUnitL2 center R)) (V - U) ≤
+          laplaceBilin (ball center R) U (V - U)) :
+    ENNReal.ofReal κ *
+      (volume.restrict (ball center R))
+        {x | 0 < ((U : H1amb (ball center R)) 0 x : ℝ)} ≤
+      ∫⁻ x in ball center R, ‖(f x : ℝ)‖ₑ := by
   let D := ball center R
   letI : IsFiniteMeasure (volume.restrict D) :=
     isFiniteMeasure_restrict.mpr measure_ball_ne_top
-  obtain ⟨U, hU, hVI⟩ := exists_ball_obstacle_variational center R f κ
   let u : EuclideanSpace ℝ (Fin (n + 1)) → ℝ :=
     fun x => max ((U : H1amb D) 0 x : ℝ) 0
   let fpos : EuclideanSpace ℝ (Fin (n + 1)) → ℝ := fun x => max (f x : ℝ) 0
@@ -122,7 +126,7 @@ theorem exists_ball_obstacle_contact_bound
   have hcontact := contact_measure_le_lintegral_of_variational_truncations
     (volume.restrict D) u fpos (ENNReal.ofReal κ) (by simp) hu_meas
     (fun x => le_max_right _ _) hf_int (fun x => le_max_right _ _) ?_
-  · refine ⟨U, hU, ?_⟩
+  ·
     have hset : {x | 0 < u x} =
         {x | 0 < ((U : H1amb D) 0 x : ℝ)} := by
       ext x
@@ -135,5 +139,19 @@ theorem exists_ball_obstacle_contact_bound
   · intro t ht
     simpa only [u, fpos, ENNReal.toReal_ofReal hκ] using
       ball_obstacle_truncation_variation center R f κ hf U hU hVI t ht
+
+/-- The ball obstacle variational problem has a solution satisfying the direct
+contact-set mass bound. -/
+theorem exists_ball_obstacle_contact_bound
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (f : L2D (ball center R)) (κ : ℝ) (hκ : 0 ≤ κ) (hf : 0 ≤ f) :
+    ∃ U : H01 (ball center R),
+      0 ≤ (U : H1amb (ball center R)) 0 ∧
+      ENNReal.ofReal κ *
+        (volume.restrict (ball center R))
+          {x | 0 < ((U : H1amb (ball center R)) 0 x : ℝ)} ≤
+        ∫⁻ x in ball center R, ‖(f x : ℝ)‖ₑ := by
+  obtain ⟨U, hU, hVI⟩ := exists_ball_obstacle_variational center R f κ
+  exact ⟨U, hU, ball_obstacle_contact_bound_of_variational center R f κ hκ hf U hU hVI⟩
 
 end CenteredMaximal.Ball.DirichletSobolev
