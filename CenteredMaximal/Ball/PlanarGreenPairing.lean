@@ -26,6 +26,14 @@ open scoped Real Interval Topology
 
 namespace CenteredMaximal.Ball
 
+/-- The angular measure obtained by polar decomposition of planar Lebesgue measure has total
+mass `2π`. -/
+theorem planar_toSphere_mass :
+    (volume.toSphere : Measure (Metric.sphere
+      (0 : EuclideanSpace ℝ (Fin 2)) 1)).real Set.univ = 2 * Real.pi := by
+  rw [Measure.toSphere_real_apply_univ]
+  simp [measureReal_def, EuclideanSpace.volume_ball_fin_two, Real.pi_nonneg]
+
 /-- Integrate a real function over a planar ball using the spherical measure and radial
 Lebesgue measure. The radius factor is the two-dimensional polar Jacobian. -/
 theorem integral_polar_ball_two
