@@ -12,6 +12,9 @@ public import CenteredMaximal.Lattice.LowerBound
 public import CenteredMaximal.Ball.PlanarNormalized
 public import CenteredMaximal.Ball.NewtonianMass
 public import CenteredMaximal.Ball.ObstacleCriterion
+public import CenteredMaximal.Ball.SmoothReduction
+public import CenteredMaximal.Ball.PairingComparison
+public import CenteredMaximal.Ball.GreenIdentity
 
 /-!
 # The weak type constant of the centred maximal operator over cubes

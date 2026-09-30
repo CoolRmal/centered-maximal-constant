@@ -41,9 +41,16 @@ The same normalized mass is proved at every centre and positive scale.
 set, a capped density, and local Green comparison imply the level-set estimate. It also supplies
 the contact-set measure lemma, a radius cutoff from integrability, and an almost-everywhere
 density variant. `Ball/ObstacleCriterion.lean` packages these ingredients into the weak type
-estimate for smooth nonnegative compactly supported functions. The remaining analytic work is to
-construct that obstacle certificate and prove the Green identity used in its local comparison;
-the smooth-to-`L¹` transfer must then connect the result to the two challenge theorems.
+estimate for smooth nonnegative compactly supported functions. `Ball/SmoothReduction.lean`
+proves that any such estimate extends to every integrable function: it approximates the square
+root of the absolute value in `L²`, squares the approximant, and passes to level sets by a
+lower-limit argument. `Ball/PairingComparison.lean` turns a signed Green pairing into the
+nonnegative-kernel inequality needed by the certificate. `Ball/GreenIdentity.lean` establishes
+the planar and Newtonian radial profile derivatives and their constant flux.
+
+The remaining analytic work is to construct the obstacle solution, control its density and
+contact set, and prove the full weighted Laplacian Green identity. Only then can the two ball
+theorems be added to `Solution.lean` and the comparator check pass.
 
 ## The statement
 
@@ -159,6 +166,9 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/KernelScaling.lean` | Euclidean scaling and translation of kernel mass |
 | `CenteredMaximal/Ball/ObstacleTransfer.lean` | three-radius level-set argument from an obstacle certificate |
 | `CenteredMaximal/Ball/ObstacleCriterion.lean` | smooth weak type estimate from obstacle certificates |
+| `CenteredMaximal/Ball/SmoothReduction.lean` | nonnegative smooth approximation and transfer to all `L¹` inputs |
+| `CenteredMaximal/Ball/PairingComparison.lean` | signed Green pairing to kernel comparison |
+| `CenteredMaximal/Ball/GreenIdentity.lean` | radial Green profiles, derivatives and flux |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
 | `CenteredMaximal/Obstacle/` | the obstacle problem for the generator |
