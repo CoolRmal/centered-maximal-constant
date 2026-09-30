@@ -38,6 +38,7 @@ public import CenteredMaximal.Ball.AEObstacleTransfer
 public import CenteredMaximal.Ball.BallWeakDistribution
 public import CenteredMaximal.Ball.BallPositiveRepresentative
 public import CenteredMaximal.Ball.KernelComparisonOnSupport
+public import CenteredMaximal.Ball.AEChallengeReduction
 
 /-!
 # The weak type constant of the centred maximal operator over cubes
