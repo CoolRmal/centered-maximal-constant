@@ -69,7 +69,8 @@ private theorem exists_smooth_compact_integral_norm_sub_le (n : ℕ)
   have hφint : Integrable φ := hφsmooth.continuous.integrable_of_hasCompactSupport hφsupp
   have hdiff : Integrable (K - φ) := hK.sub hφint
   have hreal := ENNReal.toReal_le_of_le_ofReal hε.le hclose
-  simp only [eLpNorm_one_eq_lintegral_enorm, Pi.sub_apply] at hreal
+  simp only [eLpNorm_one_eq_lintegral_enorm hdiff.aestronglyMeasurable,
+    Pi.sub_apply] at hreal
   have hEq := integral_norm_eq_lintegral_enorm hdiff.aestronglyMeasurable
   simp only [Pi.sub_apply] at hEq
   exact hEq.trans_le hreal

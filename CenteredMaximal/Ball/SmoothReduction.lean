@@ -50,9 +50,9 @@ private theorem eLpNorm_square_sub_square_le
     eLpNorm (fun x ↦ u x ^ 2 - g x ^ 2) 1 volume ≤
       eLpNorm (u - g) 2 volume * eLpNorm (u + g) 2 volume := by
   have h := eLpNorm_le_eLpNorm_mul_eLpNorm_of_nnnorm
+    (fun a b : ℝ ↦ a * b) 1 (by fun_prop)
     (hu.aestronglyMeasurable.sub hg.aestronglyMeasurable)
     (hu.aestronglyMeasurable.add hg.aestronglyMeasurable)
-    (fun a b : ℝ ↦ a * b) 1
     (Filter.Eventually.of_forall fun x ↦ by simp [nnnorm_mul])
     (p := 2) (q := 2) (r := 1)
   convert h using 1
@@ -73,7 +73,7 @@ theorem exists_smooth_nonneg_approx
   let u : EuclideanSpace ℝ (Fin d) → ℝ := fun x ↦ Real.sqrt |f x|
   have hu : MemLp u 2 volume := memLp_sqrt_abs_of_integrable hf
   let U : ℝ≥0∞ := eLpNorm u 2 volume
-  have hU : U ≠ (⊤ : ℝ≥0∞) := hu.2.ne
+  have hU : U ≠ (⊤ : ℝ≥0∞) := (ne_of_lt hu.eLpNorm_lt_top)
   have hA : 2 * U + 1 ≠ (⊤ : ℝ≥0∞) := by finiteness
   have hε₀ : ENNReal.ofReal ε ≠ 0 := by positivity
   obtain ⟨δ, hδ₀, hδ⟩ := ENNReal.exists_nnreal_pos_mul_lt hA hε₀
@@ -104,8 +104,7 @@ theorem exists_smooth_nonneg_approx
     calc
       eLpNorm v 2 volume = eLpNorm ((v - u) + u) 2 volume := by simp
       _ ≤ eLpNorm (v - u) 2 volume + eLpNorm u 2 volume :=
-        eLpNorm_add_le (hv.aestronglyMeasurable.sub hu.aestronglyMeasurable)
-          hu.aestronglyMeasurable (by norm_num)
+        eLpNorm_add_le (by norm_num)
       _ ≤ U + (η : ℝ≥0∞) := by
         rw [eLpNorm_sub_comm]
         calc
@@ -115,7 +114,7 @@ theorem exists_smooth_nonneg_approx
   have hsum : eLpNorm (u + v) 2 volume ≤ 2 * U + (η : ℝ≥0∞) := by
     calc
       _ ≤ eLpNorm u 2 volume + eLpNorm v 2 volume :=
-        eLpNorm_add_le hu.aestronglyMeasurable hv.aestronglyMeasurable (by norm_num)
+        eLpNorm_add_le (by norm_num)
       _ ≤ 2 * U + (η : ℝ≥0∞) := by
         calc
           eLpNorm u 2 volume + eLpNorm v 2 volume ≤ U + (U + (η : ℝ≥0∞)) :=
@@ -153,8 +152,15 @@ private theorem tendsto_setLIntegral_enorm_of_eLpNorm_sub
       (nhds (haμ.toLp a)) :=
     (Lp.tendsto_Lp_iff_tendsto_eLpNorm'' g hgμ a haμ).2 hconvμ
   have hnorm := hLp.enorm
-  simpa only [Lp.enorm_def, eLpNorm_one_eq_lintegral_enorm,
-    eLpNorm_congr_ae (MemLp.coeFn_toLp _)] using hnorm
+  have hnorm' : Filter.Tendsto (fun n ↦ eLpNorm (g n) 1 μ) Filter.atTop
+      (nhds (eLpNorm a 1 μ)) := by
+    simpa only [Lp.enorm_def,
+      eLpNorm_congr_ae (MemLp.coeFn_toLp _)] using hnorm
+  convert hnorm' using 1
+  · funext n
+    exact (eLpNorm_one_eq_lintegral_enorm (hgμ n).aestronglyMeasurable).symm
+  · exact congrArg nhds
+      (eLpNorm_one_eq_lintegral_enorm haμ.aestronglyMeasurable).symm
 
 private theorem ballMaximalFunction_abs
     (f : EuclideanSpace ℝ (Fin d) → ℝ) (x : EuclideanSpace ℝ (Fin d)) :
