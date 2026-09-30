@@ -220,4 +220,46 @@ theorem exists_shiftedPositivePartGraph (U : H01 Ω) (t : ℝ) (ht : 0 ≤ t) :
   exact ⟨⟨P, hPmem⟩, ⟨hP0, hPi⟩⟩
 
 
+/-- Upper truncation `min u t` belongs to `H₀¹` for `t ≥ 0`, with the expected
+weak gradient. At the level `u=t` the gradient is that of `u`. -/
+theorem exists_upperTruncationGraph (U : H01 Ω) (t : ℝ) (ht : 0 ≤ t) :
+    ∃ M : H01 Ω,
+      (((M : H1amb Ω) 0 : EuclideanSpace ℝ (Fin d) → ℝ)
+        =ᵐ[volume.restrict Ω] fun x => min (((U : H1amb Ω) 0 x : ℝ)) t) ∧
+      ∀ i : Fin d, ((M : H1amb Ω) i.succ : EuclideanSpace ℝ (Fin d) → ℝ)
+        =ᵐ[volume.restrict Ω] fun x =>
+          if t < ((U : H1amb Ω) 0 x : ℝ) then 0
+          else ((U : H1amb Ω) i.succ x : ℝ) := by
+  obtain ⟨P, hP0, hPi⟩ := exists_shiftedPositivePartGraph U t ht
+  refine ⟨U - P, ?_, ?_⟩
+  · filter_upwards [hP0, Lp.coeFn_sub ((U : H1amb Ω) 0) ((P : H1amb Ω) 0)] with x hp hm
+    simp only [Submodule.coe_sub, PiLp.sub_apply, Pi.sub_apply, hm, hp]
+    by_cases hx : t < ((U : H1amb Ω) 0 x : ℝ)
+    · rw [max_eq_left (sub_nonneg.mpr hx.le), min_eq_right hx.le]
+      ring
+    · have hle := le_of_not_gt hx
+      rw [max_eq_right (sub_nonpos.mpr hle), min_eq_left hle]
+      ring
+  · intro i
+    filter_upwards [hPi i, Lp.coeFn_sub ((U : H1amb Ω) i.succ) ((P : H1amb Ω) i.succ)]
+      with x hp hm
+    simp only [Submodule.coe_sub, PiLp.sub_apply, Pi.sub_apply, hm, hp]
+    split_ifs <;> ring
+
+/-- The Dirichlet pairing of a function with its upper truncation is nonnegative. -/
+theorem laplaceBilin_nonneg_of_upperTruncationGraph (U M : H01 Ω) (t : ℝ)
+    (hMi : ∀ i : Fin d, ((M : H1amb Ω) i.succ : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x =>
+        if t < ((U : H1amb Ω) 0 x : ℝ) then 0
+        else ((U : H1amb Ω) i.succ x : ℝ)) :
+    0 ≤ laplaceBilin Ω U M := by
+  rw [laplaceBilin_apply]
+  apply Finset.sum_nonneg
+  intro i _
+  rw [L2.inner_def]
+  apply integral_nonneg_of_ae
+  filter_upwards [hMi i] with x hx
+  rw [hx]
+  split_ifs <;> simp [sq_nonneg]
+
 end CenteredMaximal.Ball.DirichletSobolev
