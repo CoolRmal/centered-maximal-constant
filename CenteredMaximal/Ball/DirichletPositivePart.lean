@@ -330,4 +330,11 @@ theorem exists_isPositivePartGraph (U : H01 Ω) :
     exact (Submodule.isClosed_topologicalClosure _).mem_of_tendsto hPt
       (Eventually.of_forall hW)
   exact ⟨⟨P, hPmem⟩, ⟨hP0, hPi⟩⟩
+
+/-- The minimum of two zero-boundary Sobolev functions has the expected weak gradient. -/
+theorem exists_isMinimumGraph (U V : H01 Ω) :
+    ∃ M : H01 Ω, IsMinimumGraph U V M := by
+  obtain ⟨P, hP⟩ := exists_isPositivePartGraph (U - V)
+  exact ⟨U - P, isMinimumGraph_of_isPositivePartGraph U V P hP⟩
+
 end CenteredMaximal.Ball.DirichletSobolev
