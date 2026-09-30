@@ -192,4 +192,84 @@ theorem integral_laplacian_mul_smoothBallCutoff (n : ℕ)
   filter_upwards with y
   ring
 
+/-- The one-dimensional radial profile of `smoothBallCutoff`. -/
+noncomputable def radialBallCutoff (R δ s : ℝ) : ℝ :=
+  Real.smoothTransition (((R + δ) ^ 2 - s ^ 2) / ((R + δ) ^ 2 - R ^ 2))
+
+theorem smoothBallCutoff_eq_radial (n : ℕ)
+    (x y : EuclideanSpace ℝ (Fin n)) (R δ : ℝ) :
+    smoothBallCutoff n x R δ y = radialBallCutoff R δ ‖y - x‖ := rfl
+
+/-- Derivative of the radial cutoff profile. -/
+theorem radialBallCutoff_hasDerivAt (R δ s : ℝ) :
+    HasDerivAt (radialBallCutoff R δ)
+      ((deriv Real.smoothTransition
+        (((R + δ) ^ 2 - s ^ 2) / ((R + δ) ^ 2 - R ^ 2))) *
+        (-(2 * s) / ((R + δ) ^ 2 - R ^ 2))) s := by
+  let q : ℝ → ℝ := fun t => ((R + δ) ^ 2 - t ^ 2) / ((R + δ) ^ 2 - R ^ 2)
+  have hpow : HasDerivAt (fun t : ℝ => t ^ 2) (2 * s) s := by
+    simpa only [Nat.reduceSub, pow_one, Nat.cast_ofNat] using hasDerivAt_pow 2 s
+  have hnum : HasDerivAt (fun t : ℝ => (R + δ) ^ 2 - t ^ 2) (-(2 * s)) s :=
+    hpow.const_sub ((R + δ) ^ 2)
+  have hq : HasDerivAt q (-(2 * s) / ((R + δ) ^ 2 - R ^ 2)) s :=
+    hnum.div_const _
+  have htrans : HasDerivAt Real.smoothTransition
+      (deriv Real.smoothTransition (q s)) (q s) :=
+    ((Real.smoothTransition.contDiff : ContDiff ℝ 1 Real.smoothTransition).differentiable
+      (by norm_num) (q s)).hasDerivAt
+  change HasDerivAt (Real.smoothTransition ∘ q) _ s
+  exact htrans.comp s hq
+
+theorem radialBallCutoff_deriv (R δ s : ℝ) :
+    deriv (radialBallCutoff R δ) s =
+      -(deriv Real.smoothTransition
+        (((R + δ) ^ 2 - s ^ 2) / ((R + δ) ^ 2 - R ^ 2))) *
+        (2 * s) / ((R + δ) ^ 2 - R ^ 2) := by
+  have h := (radialBallCutoff_hasDerivAt R δ s).deriv
+  convert h using 1
+  ring
+
+theorem radialBallCutoff_contDiff (R δ : ℝ) :
+    ContDiff ℝ 1 (radialBallCutoff R δ) := by
+  unfold radialBallCutoff
+  have hinner : ContDiff ℝ 1
+      (fun s : ℝ => ((R + δ) ^ 2 - s ^ 2) / ((R + δ) ^ 2 - R ^ 2)) := by
+    fun_prop
+  exact Real.smoothTransition.contDiff.comp hinner
+
+theorem radialBallCutoff_inner {R δ : ℝ} (hR : 0 < R) (hδ : 0 < δ) :
+    radialBallCutoff R δ R = 1 := by
+  have hgap := smoothBallCutoff_gap_pos hR hδ
+  simp only [radialBallCutoff, div_self hgap.ne', Real.smoothTransition.one]
+
+theorem radialBallCutoff_outer (R δ : ℝ) :
+    radialBallCutoff R δ (R + δ) = 0 := by
+  simp [radialBallCutoff, Real.smoothTransition.zero]
+
+/-- The negative derivative of the profile has total mass one in the transition shell. -/
+theorem radialBallCutoff_deriv_mass {R δ : ℝ} (hR : 0 < R) (hδ : 0 < δ) :
+    (∫ s in R..(R + δ), -(deriv (radialBallCutoff R δ) s)) = 1 := by
+  have hc := radialBallCutoff_contDiff R δ
+  have hFTC : (∫ s in R..(R + δ), deriv (radialBallCutoff R δ) s) =
+      radialBallCutoff R δ (R + δ) - radialBallCutoff R δ R :=
+    intervalIntegral.integral_deriv_eq_sub
+      (fun s _ => hc.differentiable (by norm_num) s)
+      ((hc.continuous_deriv (by norm_num)).intervalIntegrable R (R + δ))
+  rw [intervalIntegral.integral_neg, hFTC]
+  rw [radialBallCutoff_outer, radialBallCutoff_inner hR hδ]
+  ring
+
+theorem radialBallCutoff_deriv_nonpos {R δ s : ℝ}
+    (hR : 0 < R) (hδ : 0 < δ) (hs : R ≤ s) :
+    deriv (radialBallCutoff R δ) s ≤ 0 := by
+  rw [radialBallCutoff_deriv]
+  have htrans : 0 ≤ deriv Real.smoothTransition
+      (((R + δ) ^ 2 - s ^ 2) / ((R + δ) ^ 2 - R ^ 2)) :=
+    Real.smoothTransition.monotone.deriv_nonneg
+  have hs0 : 0 ≤ s := le_trans hR.le hs
+  have hgap := smoothBallCutoff_gap_pos hR hδ
+  exact div_nonpos_of_nonpos_of_nonneg
+    (mul_nonpos_of_nonpos_of_nonneg (neg_nonpos.mpr htrans)
+      (mul_nonneg (by norm_num) hs0)) hgap.le
+
 end CenteredMaximal.Ball
