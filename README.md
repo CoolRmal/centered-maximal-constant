@@ -52,6 +52,8 @@ integration formula for Euclidean balls.
 both Green profiles from the cumulative Laplacian mass and spherical-mean flux relation.
 `Ball/RadialMassDerivative.lean` proves that the derivative of a smooth compactly supported
 density's mass inside a ball is its spherical integral times the polar Jacobian.
+`Ball/CenterLimits.lean` controls the inner boundary terms, and `Ball/RadialGreenLimit.lean`
+passes the planar and Newtonian identities to the full interval from the center.
 `Ball/PlanarGreenPairing.lean` proves differentiation of a circle average with respect to its
 radius and a planar polar formula for disk integrals. `Ball/ObstacleExistence.lean` proves an
 abstract Hilbert-space minimizer and its
