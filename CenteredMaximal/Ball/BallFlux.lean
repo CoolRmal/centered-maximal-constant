@@ -91,4 +91,52 @@ theorem integral_laplacian_mul_smoothBallCutoff_tendsto (n : ℕ) [NeZero n]
     hmeas hbound hΔint.norm hlim
   simpa only [F, f, integral_indicator measurableSet_ball] using h
 
+/-- The sphere integral of the radial directional derivative is continuous in the radius. -/
+theorem continuous_sphereFlux (n : ℕ) [NeZero n]
+    (w : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hw : ContDiff ℝ 2 w) (hsw : HasCompactSupport w)
+    (x : EuclideanSpace ℝ (Fin n)) :
+    Continuous (fun s : ℝ =>
+      ∫ ω : sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        fderiv ℝ w (x + s • (ω : EuclideanSpace ℝ (Fin n)))
+          (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere)) := by
+  let E := EuclideanSpace ℝ (Fin n)
+  let S := sphere (0 : E) 1
+  let ν : Measure S := volume.toSphere
+  obtain ⟨C, hC⟩ := (hsw.fderiv ℝ).exists_bound_of_continuous
+    (hw.continuous_fderiv (by norm_num))
+  have hfw : Continuous (fderiv ℝ w) := hw.continuous_fderiv (by norm_num)
+  apply continuous_iff_continuousAt.mpr
+  intro s₀
+  have hmeas : ∀ᶠ s in 𝓝 s₀,
+      AEStronglyMeasurable
+        (fun ω : S => fderiv ℝ w (x + s • (ω : E)) (ω : E)) ν := by
+    filter_upwards with s
+    exact (by fun_prop : Continuous (fun ω : S =>
+      fderiv ℝ w (x + s • (ω : E)) (ω : E))).aestronglyMeasurable
+  have hbound : ∀ᶠ s in 𝓝 s₀, ∀ᵐ (ω : S) ∂ν,
+      ‖fderiv ℝ w (x + s • (ω : E)) (ω : E)‖ ≤ C := by
+    filter_upwards with s
+    filter_upwards with ω
+    have hω : ‖(ω : E)‖ = 1 := by
+      have h := ω.property
+      simpa only [S, mem_sphere, dist_zero_right] using h
+    calc
+      ‖fderiv ℝ w (x + s • (ω : E)) (ω : E)‖ ≤
+          ‖fderiv ℝ w (x + s • (ω : E))‖ * ‖(ω : E)‖ :=
+        ContinuousLinearMap.le_opNorm _ _
+      _ = ‖fderiv ℝ w (x + s • (ω : E))‖ := by rw [hω, mul_one]
+      _ ≤ C := hC _
+  have hlim : ∀ᵐ (ω : S) ∂ν, Tendsto
+      (fun s : ℝ => fderiv ℝ w (x + s • (ω : E)) (ω : E))
+      (𝓝 s₀) (𝓝 (fderiv ℝ w (x + s₀ • (ω : E)) (ω : E))) := by
+    filter_upwards with ω
+    exact (by fun_prop : Continuous (fun s : ℝ =>
+      fderiv ℝ w (x + s • (ω : E)) (ω : E))).continuousAt
+  exact tendsto_integral_filter_of_dominated_convergence
+    (μ := ν) (l := 𝓝 s₀) (F := fun s (ω : S) =>
+      fderiv ℝ w (x + s • (ω : E)) (ω : E))
+    (fun _ => C) hmeas hbound (integrable_const C) hlim
+
+
 end CenteredMaximal.Ball
