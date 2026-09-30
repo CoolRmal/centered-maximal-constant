@@ -1,4 +1,4 @@
-# Bounds 1.6855 and 3.879 for the planar centred maximal constant over squares
+# Centred maximal constants for squares and Euclidean balls
 
 A complete Lean 4 proof, checked against Mathlib, of a new lower bound for the weak type `(1, 1)`
 constant of the centred Hardy–Littlewood maximal operator over axis-parallel squares in the plane:
@@ -10,20 +10,19 @@ The previously published lower bound is `3/4 - √2/4 + √6/2 = 1.62119…` (Al
 It also proves an upper bound below the classical one, `c₂ ≤ 3.879 < 4`, by comparing the maximal
 operator with an explicit kernel, and the classical covering bound `c_d ≤ 2ᵈ` in every dimension.
 
-## Euclidean ball extension (in progress)
+## Euclidean ball bounds
 
 The separate definitions `ballMaximalFunction`, `IsBallWeakTypeBound`, and
 `ballWeakTypeConstant` use `EuclideanSpace ℝ (Fin n)` and its Euclidean norm. Thus their averaging
 sets are Euclidean balls, whereas the original `weakTypeConstant` continues to describe cubes.
-The new challenge asks for the bounds
+The ball theorems prove
 
 $$c^{\mathrm{ball}}_2 \le e, \qquad
   c^{\mathrm{ball}}_n \le (n/2)^{n/(n-2)} \quad (n \ge 3).$$
 
-These are the theorems `ballWeakTypeConstant_two_le_exp` and
-`ballWeakTypeConstant_le_rpow` in `Challenge.lean`. Their proofs are still absent from
-`Solution.lean`, so the comparator does **not** yet pass for the ball additions. The proof target
-is the [disc maximal constant manuscript](https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a):
+These are stated in `Challenge.lean` and proved in `Solution.lean` as
+`ballWeakTypeConstant_two_le_exp` and `ballWeakTypeConstant_le_rpow`. The proof follows the
+[disc maximal constant manuscript](https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a):
 it uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
 
 The Lean development now proves the kernel calculations needed by that argument. Both kernels
@@ -87,17 +86,20 @@ right sign in the weak equation.
 
 `Ball/BallWeakDistribution.lean` derives the local distributional Laplacian from the weak
 equation. `Ball/BallPositiveRepresentative.lean` supplies a nonnegative integrable,
-compactly supported representative that vanishes outside the contact set. Localized Green
-pairing and one cutoff for every relevant center and radius are proved in
-`Ball/LocalWeakPairing.lean`, `Ball/AEGreenFromMollifiers.lean`, and
-`Ball/BallKernelSupport.lean`. The extended-real maximal-function transfer needs Green
-comparison only for almost every center, as formalized in `Ball/AEObstacleTransfer.lean`.
+compactly supported representative that vanishes outside the contact set. One cutoff contains
+the support of every relevant Green kernel (`Ball/BallKernelSupport.lean`).
 
-The remaining analytic step is to show that the Laplacians of smooth mollifications of the
-weak obstacle converge to its bounded local density, with a uniform bound in the interior.
-The mollifiers and their Laplacian identities are already formalized. After that step, the
-almost-everywhere Green comparison must be connected to the complementary density, the two
-proofs must be added to `Solution.lean`, and the comparator must pass.
+`Ball/LocalMollifierDistribution.lean` identifies the Laplacian of a mollification with the
+mollified local density. `Ball/BallPositiveMollifierPackage.lean` constructs one sequence of
+smooth nonnegative compactly supported obstacles whose Laplacians have a common interior bound
+and converge almost everywhere to the density. The Green identity then gives a nonnegative
+pairing outside the contact set at almost every center, simultaneously for all radii
+(`Ball/AEGreenFromMollifiers.lean` and `Ball/BallComplementGreenPairing.lean`).
+`Ball/BallComplementKernelComparison.lean` converts that real pairing into the extended-real
+kernel comparison. `Ball/BallGreenCertificates.lean` assembles the planar and Newtonian
+certificates. `Ball/AEObstacleTransfer.lean`, `Ball/AERealCertificate.lean`, and
+`Ball/AEChallengeReduction.lean` transfer them to the two optimal weak type bounds. The final
+theorems are in `Solution.lean`.
 
 ## The statement
 
@@ -116,6 +118,8 @@ and `phi` (= `Φ`) using only Mathlib, and states:
 | `CenteredMaximal.ofReal_phi_le_weakTypeConstant_two` | `Φ ≤ c₂` |
 | `CenteredMaximal.lt_phi` | `1.685 < Φ` |
 | `CenteredMaximal.phi_lt` | `Φ < 1.686` |
+| `CenteredMaximal.ballWeakTypeConstant_two_le_exp` | $$c^{\mathrm{ball}}_2 \le e$$ |
+| `CenteredMaximal.ballWeakTypeConstant_le_rpow` | $$c^{\mathrm{ball}}_n \le (n/2)^{n/(n-2)}$$ for $$n\ge3$$ |
 
 In Mathlib `Fin d → ℝ` carries the sup norm, so `Metric.closedBall x r` is exactly the cube
 `Q(x, r)`. The maximal function takes values in `[0, ∞]` and the level set is measured with outer
@@ -192,8 +196,8 @@ lake exe cache get
 lake build CenteredMaximal Challenge Solution
 ```
 
-CI builds the project, checks source hygiene (no `sorry`, `native_decide`, `Lean.ofReduceBool`,
-`admit` or `axiom`; files under 1 500 lines; lines under 100 characters) and runs
+CI builds the project, checks source hygiene (no `native_decide`, `Lean.ofReduceBool`,
+`admit` or `axiom` declarations; files under 1 500 lines; lines under 100 characters) and runs
 [Lean Comparator](https://github.com/leanprover/comparator) on `comparator.json`. The compared
 theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 
@@ -225,6 +229,10 @@ theorems depend only on `propext`, `Classical.choice` and `Quot.sound`.
 | `CenteredMaximal/Ball/MonotoneSurjectivity.lean`, `L2Penalty.lean`, `BallPenalized.lean` | penalized weak equation on a ball |
 | `CenteredMaximal/Ball/L2PenaltyCap.lean`, `BallPenaltyCap.lean` | uniform cap for penalized density |
 | `CenteredMaximal/Ball/BallFlux.lean` | exact ball divergence identity |
+| `CenteredMaximal/Ball/BallComplementCertificate.lean` | weak obstacle and capped complementary density |
+| `CenteredMaximal/Ball/BallPositiveMollifierPackage.lean` | bounded smooth approximations of the weak obstacle |
+| `CenteredMaximal/Ball/BallComplementGreenPairing.lean` | almost-everywhere Green pairing for all radii |
+| `CenteredMaximal/Ball/BallGreenCertificates.lean` | direct certificates for planar and Newtonian kernels |
 | `CenteredMaximal/Ball/FinalReduction.lean`, `ChallengeReduction.lean` | conditional bounds for the optimal ball constant |
 | `CenteredMaximal/UpperBound.lean` | `c_d ≤ 2ᵈ` |
 | `CenteredMaximal/Cauchy/` | the comparison kernel, its generator and the certificate |
