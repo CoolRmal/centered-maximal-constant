@@ -7,6 +7,7 @@ module
 
 public import CenteredMaximal.Ball.LocalWeakPairing
 public import CenteredMaximal.Ball.BallWeakDistribution
+public import CenteredMaximal.Ball.BallPositiveRepresentative
 
 /-!
 # From a weak ball equation to the local Green-pairing interface
@@ -96,5 +97,58 @@ theorem DirichletSobolev.ball_obstacle_hasLocalDistributionalLaplacian
       ring
     _ = ∫ x in D,
         ((U : DirichletSobolev.H1amb D) 0 x : ℝ) * Laplacian.laplacian φ x := hweak.symm
+
+/-- Replacing the Sobolev value class by its nonnegative zero extension leaves
+the local distributional equation unchanged. This is the representative used
+for positive mollification. -/
+theorem DirichletSobolev.ballPositiveRepresentative_hasLocalDistributionalLaplacian
+    {n : ℕ} (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (U : DirichletSobolev.H01 (ball center R))
+    (hU : 0 ≤ (U : DirichletSobolev.H1amb (ball center R)) 0)
+    (f ν : DirichletSobolev.L2D (ball center R)) (κ : ℝ)
+    (heq : ∀ V : DirichletSobolev.H01 (ball center R),
+      DirichletSobolev.laplaceBilin (ball center R) U V =
+        DirichletSobolev.l2Functional (ball center R) f V -
+          κ * DirichletSobolev.l2Functional (ball center R)
+            (DirichletSobolev.ballUnitL2 center R) V +
+          ⟪ν, DirichletSobolev.valueEmbedding (ball center R) V⟫) :
+    HasLocalDistributionalLaplacian (n + 1) (ball center R)
+      (DirichletSobolev.ballPositiveRepresentative center R U)
+      (fun x ↦ -((f - κ • DirichletSobolev.ballUnitL2 center R + ν) x : ℝ)) := by
+  let D := ball center R
+  have hraw := DirichletSobolev.ball_obstacle_hasLocalDistributionalLaplacian
+    center R U f ν κ heq
+  have hrep := DirichletSobolev.ballPositiveRepresentative_ae_eq_value center R U hU
+  intro φ hφsupp hφsmooth hφD
+  have hΔzero (x : EuclideanSpace ℝ (Fin (n + 1))) (hx : x ∉ D) :
+      Laplacian.laplacian φ x = 0 :=
+    laplacian_eq_zero_outside_tsupport φ D hφD x hx
+  have hraw_integral :
+      (∫ x, ((U : DirichletSobolev.H1amb D) 0 x : ℝ) *
+        Laplacian.laplacian φ x) =
+      ∫ x in D, ((U : DirichletSobolev.H1amb D) 0 x : ℝ) *
+        Laplacian.laplacian φ x :=
+    integral_eq_setIntegral_of_zero_outside D measurableSet_ball _
+      (fun x hx ↦ by simp [hΔzero x hx])
+  have hrep_integral :
+      (∫ x, DirichletSobolev.ballPositiveRepresentative center R U x *
+        Laplacian.laplacian φ x) =
+      ∫ x in D, DirichletSobolev.ballPositiveRepresentative center R U x *
+        Laplacian.laplacian φ x :=
+    integral_eq_setIntegral_of_zero_outside D measurableSet_ball _
+      (fun x hx ↦ by simp [hΔzero x hx])
+  calc
+    (∫ x, φ x * -((f - κ • DirichletSobolev.ballUnitL2 center R + ν) x : ℝ)) =
+        ∫ x, ((U : DirichletSobolev.H1amb D) 0 x : ℝ) *
+          Laplacian.laplacian φ x := hraw φ hφsupp hφsmooth hφD
+    _ = ∫ x in D, ((U : DirichletSobolev.H1amb D) 0 x : ℝ) *
+          Laplacian.laplacian φ x := hraw_integral
+    _ = ∫ x in D, DirichletSobolev.ballPositiveRepresentative center R U x *
+          Laplacian.laplacian φ x := by
+        apply integral_congr_ae
+        filter_upwards [hrep] with x hx
+        rw [hx]
+    _ = ∫ x, DirichletSobolev.ballPositiveRepresentative center R U x *
+          Laplacian.laplacian φ x := hrep_integral.symm
 
 end CenteredMaximal.Ball
