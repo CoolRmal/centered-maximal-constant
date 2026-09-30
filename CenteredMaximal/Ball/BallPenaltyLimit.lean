@@ -41,6 +41,33 @@ def ballPenaltyDensity
     (k : ℕ) (U : H01 (ball center R)) : L2D (ball center R) :=
   (ballPenaltyEpsilon k)⁻¹ • Lp.negPart (valueEmbedding (ball center R) U)
 
+/-- The penalty density is nonnegative as an `L²` function. -/
+theorem ballPenaltyDensity_nonneg
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (k : ℕ) (U : H01 (ball center R)) :
+    0 ≤ ballPenaltyDensity center R k U := by
+  rw [← Lp.coeFn_nonneg]
+  filter_upwards [Lp.coeFn_zero ℝ 2 (volume.restrict (ball center R)),
+    Lp.coeFn_smul (ballPenaltyEpsilon k)⁻¹
+      (Lp.negPart (valueEmbedding (ball center R) U)),
+    Lp.coeFn_negPart_eq_max (valueEmbedding (ball center R) U)]
+      with x hzero hsmul hneg
+  change (0 : ℝ) ≤ (ballPenaltyDensity center R k U) x
+  simp only [ballPenaltyDensity, hsmul, Pi.smul_apply, smul_eq_mul, hneg]
+  exact mul_nonneg (inv_pos.mpr (ballPenaltyEpsilon_pos k)).le (le_max_right _ _)
+
+/-- The pointwise cap from the penalty estimate is an order bound by the constant `L²` cap. -/
+theorem ballPenaltyDensity_le_cap
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (k : ℕ) (U : H01 (ball center R)) (κ : ℝ)
+    (hcap : ∀ᵐ x ∂(volume.restrict (ball center R)),
+      (ballPenaltyDensity center R k U) x ≤ κ) :
+    ballPenaltyDensity center R k U ≤ κ • ballUnitL2 center R := by
+  rw [← Lp.coeFn_le]
+  filter_upwards [hcap, Lp.coeFn_smul κ (ballUnitL2 center R),
+    ballUnitL2_coeFn center R] with x hx hsmul hunit
+  simpa only [hsmul, Pi.smul_apply, smul_eq_mul, hunit, mul_one] using hx
+
 /-- Select one capped solution for each penalty parameter, with one common state norm bound. -/
 theorem exists_ball_penalized_sequence
     (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
@@ -70,5 +97,59 @@ theorem exists_ball_penalized_sequence
       Lp.coeFn_smul (ballPenaltyEpsilon k)⁻¹
         (Lp.negPart (valueEmbedding (ball center R) (U k)))] with x hx hsmul
     simpa only [ballPenaltyDensity, hsmul, Pi.smul_apply, smul_eq_mul] using hx
+
+/-- A uniformly bounded capped penalty sequence has a weak state and density limit obeying
+the Dirichlet equation. -/
+theorem ball_penalized_weak_limit_of_sequence
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ)
+    (f : L2D (ball center R)) (κ : ℝ)
+    (U : ℕ → H01 (ball center R)) (C : ℝ)
+    (hbound : ∀ k, ‖U k‖ ≤ C)
+    (hweak : ∀ k, ∀ V : H01 (ball center R),
+      laplaceBilin (ball center R) (U k) V =
+        l2Functional (ball center R) f V -
+          κ * l2Functional (ball center R) (ballUnitL2 center R) V +
+          ⟪ballPenaltyDensity center R k (U k),
+            valueEmbedding (ball center R) V⟫_ℝ)
+    (hcap : ∀ k, ∀ᵐ x ∂(volume.restrict (ball center R)),
+      (ballPenaltyDensity center R k (U k)) x ≤ κ) :
+    ∃ Ulim : H01 (ball center R), ∃ νlim : L2D (ball center R),
+      ∃ χ : ℕ → ℕ,
+        (0 ≤ νlim ∧ νlim ≤ κ • ballUnitL2 center R) ∧
+        StrictMono χ ∧
+        Tendsto (fun k => toWeakSpace ℝ (H01 (ball center R)) (U (χ k))) atTop
+          (𝓝 (toWeakSpace ℝ (H01 (ball center R)) Ulim)) ∧
+        Tendsto (fun k => toWeakSpace ℝ (L2D (ball center R))
+          (ballPenaltyDensity center R (χ k) (U (χ k)))) atTop
+          (𝓝 (toWeakSpace ℝ (L2D (ball center R)) νlim)) ∧
+        (∀ V : H01 (ball center R),
+          laplaceBilin (ball center R) Ulim V =
+            l2Functional (ball center R) f V -
+              κ * l2Functional (ball center R) (ballUnitL2 center R) V +
+              ⟪νlim, valueEmbedding (ball center R) V⟫_ℝ) := by
+  let D := ball center R
+  let K : L2D D := κ • ballUnitL2 center R
+  let ν : ℕ → L2D D := fun k => ballPenaltyDensity center R k (U k)
+  let source : H01 D →L[ℝ] ℝ :=
+    l2Functional D f - κ • l2Functional D (ballUnitL2 center R)
+  letI : TopologicalSpace.SeparableSpace (H01 D) :=
+    CenteredMaximal.Ball.separableSpace_H01_ball center R
+  have hν : ∀ k, 0 ≤ ν k ∧ ν k ≤ K := by
+    intro k
+    exact ⟨ballPenaltyDensity_nonneg center R k (U k),
+      ballPenaltyDensity_le_cap center R k (U k) κ (hcap k)⟩
+  have hνbound : ∀ k, ‖ν k‖ ≤ ‖K‖ := by
+    intro k
+    exact norm_l2_le_of_nonneg_le (ν k) K (hν k).1 (hν k).2
+  have heq : ∀ k V,
+      laplaceBilin D (U k) V = source V + ⟪ν k, valueEmbedding D V⟫_ℝ := by
+    intro k V
+    simpa only [D, source, sub_apply, smul_apply, smul_eq_mul, ν] using hweak k V
+  obtain ⟨Ulim, νlim, χ, hνlim, hχ, hUlim, hνlimweak, hlimEq⟩ :=
+    exists_weak_limit_of_bounded_penalized_equations
+      (laplaceBilin D) (valueEmbedding D) source U ν K C ‖K‖
+      hbound hνbound hν heq
+  exact ⟨Ulim, νlim, χ, hνlim, hχ, hUlim, hνlimweak,
+    fun V => by simpa only [D, source, sub_apply, smul_apply, smul_eq_mul] using hlimEq V⟩
 
 end CenteredMaximal.Ball.DirichletSobolev
