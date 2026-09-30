@@ -174,4 +174,26 @@ theorem ball_level_bound_of_obstacle_certificate
     _ ≤ C * ∫⁻ y, ‖f y‖ₑ := by
       simpa only [mul_comm] using (mul_le_mul_left hcontact C)
 
+omit [Nonempty (Fin n)] in
+/-- Reparameterize a family of estimates at levels `C * κ` as a weak type bound at every
+`ENNReal` level, including zero and infinity. -/
+theorem ball_level_bound_of_scaled_levels
+    (C : ℝ≥0∞) (hC₀ : 0 < C) (hCtop : C ≠ ∞)
+    (f : EuclideanSpace ℝ (Fin n) → ℝ)
+    (h : ∀ κ : ℝ≥0∞, 0 < κ → κ ≠ ∞ →
+      (C * κ) * volume {x | C * κ < ballMaximalFunction f x} ≤
+        C * ∫⁻ y, ‖f y‖ₑ) (α : ℝ≥0∞) :
+    α * volume {x | α < ballMaximalFunction f x} ≤ C * ∫⁻ y, ‖f y‖ₑ := by
+  by_cases hα₀ : α = 0
+  · subst α
+    simp
+  by_cases hαtop : α = ∞
+  · subst α
+    simp
+  let κ := α / C
+  have hκ₀ : 0 < κ := ENNReal.div_pos_iff.mpr ⟨hα₀, hCtop⟩
+  have hκtop : κ ≠ ∞ := ENNReal.div_ne_top hαtop hC₀.ne'
+  have hlevel : C * κ = α := ENNReal.mul_div_cancel hC₀.ne' hCtop
+  simpa only [hlevel] using h κ hκ₀ hκtop
+
 end CenteredMaximal.Ball
