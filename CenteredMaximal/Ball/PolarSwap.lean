@@ -5,7 +5,7 @@ Authors: Yongxi Lin
 -/
 module
 
-public import CenteredMaximal.Ball.GreenIdentity
+public import CenteredMaximal.Ball.CenterLimits
 
 /-!
 # Swapping radial and angular integration
@@ -153,5 +153,177 @@ theorem integral_radial_mul_polar_swapped_of_support (n : ℕ) [NeZero n]
         simp [Set.indicator_of_notMem (show s ∉ Set.Iio R from hsR), hs0]
     _ = ∫ s in Set.Ioo (0 : ℝ) R, H s := by
       rw [setIntegral_indicator measurableSet_Iio, Set.Ioi_inter_Iio]
+
+/-- The positive part of the planar profile vanishes outside its Green radius. -/
+theorem planarGreenProfile_posPart_eq_zero_of_radius_le {s : ℝ}
+    (hs : planarGreenRadius ≤ s) : max (planarGreenProfile s) 0 = 0 := by
+  have hR : 0 < planarGreenRadius := by unfold planarGreenRadius; positivity
+  have hlog : Real.log planarGreenRadius ≤ Real.log s :=
+    Real.log_le_log hR hs
+  have hlogR : Real.log planarGreenRadius = 1 / 2 := by
+    simp [planarGreenRadius, Real.log_sqrt (Real.exp_pos 1).le]
+  apply max_eq_right
+  unfold planarGreenProfile
+  linarith
+
+/-- The positive part of the Newtonian profile vanishes outside its Green radius. -/
+theorem newtonianGreenProfile_posPart_eq_zero_of_radius_le
+    (n : ℕ) (hn : 3 ≤ n) {s : ℝ} (hs : greenRadius n ≤ s) :
+    max (newtonianGreenProfile n s) 0 = 0 := by
+  have hR : 0 < greenRadius n := greenRadius_pos n hn
+  have hn' : (3 : ℝ) ≤ n := by exact_mod_cast hn
+  have hn0 : (n : ℝ) ≠ 0 := by linarith
+  have hexp : (2 : ℝ) - (n : ℝ) ≤ 0 := by linarith
+  have hRpow : greenRadius n ^ ((2 : ℝ) - (n : ℝ)) = 2 / (n : ℝ) := by
+    calc
+      _ = (greenRadius n ^ ((n : ℝ) - 2))⁻¹ := by
+        rw [show (2 : ℝ) - (n : ℝ) = -((n : ℝ) - 2) by ring]
+        exact Real.rpow_neg hR.le _
+      _ = ((n : ℝ) / 2)⁻¹ := by rw [greenRadius_rpow_sub_two n hn]
+      _ = 2 / (n : ℝ) := by field_simp
+  have hpow : s ^ ((2 : ℝ) - (n : ℝ)) ≤ 2 / (n : ℝ) :=
+    (Real.rpow_le_rpow_of_nonpos hR hs hexp).trans_eq hRpow
+  have hprod : (n : ℝ) * s ^ ((2 : ℝ) - (n : ℝ)) ≤ 2 := by
+    calc
+      _ ≤ (n : ℝ) * (2 / (n : ℝ)) := mul_le_mul_of_nonneg_left hpow (by linarith)
+      _ = 2 := by field_simp
+  apply max_eq_right
+  unfold newtonianGreenProfile
+  exact div_nonpos_of_nonpos_of_nonneg (by linarith) (by linarith)
+
+/-- A bounded measurable function is integrable against the positive part of the planar
+Green profile. -/
+theorem integrable_planarGreenProfile_posPart_mul_bdd
+    (x : EuclideanSpace ℝ (Fin 2))
+    (g : EuclideanSpace ℝ (Fin 2) → ℝ)
+    (hg : AEStronglyMeasurable g volume)
+    {B : ℝ} (hB : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))), ‖g y‖ ≤ B) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin 2) ↦
+      max (planarGreenProfile ‖y - x‖) 0 * g y) := by
+  let a : ℝ := ((volume (Metric.ball x 1))⁻¹).toReal
+  have ha : a ≠ 0 := by
+    have hvolpos : 0 < volume (Metric.ball x 1) := measure_ball_pos volume x (by norm_num)
+    have hvolfin : volume (Metric.ball x 1) < ∞ := measure_ball_lt_top
+    exact (ENNReal.toReal_pos
+      (ENNReal.inv_pos.mpr hvolfin.ne).ne'
+      (ENNReal.inv_lt_top.mpr hvolpos).ne).ne'
+  have hNorm : Integrable (fun y : EuclideanSpace ℝ (Fin 2) ↦
+      a * (max (planarGreenProfile ‖y - x‖) 0 * g y)) := by
+    apply (integrable_normalized_planarKernel_mul_bdd x (r := 1) (by norm_num) g hg hB).congr
+    filter_upwards [normalized_planarKernel_toReal_ae_eq_profile x
+      (r := 1) (by norm_num)] with y hy
+    simpa only [inv_one, one_smul, div_one, a, mul_assoc] using
+      congrArg (fun t : ℝ ↦ t * g y) hy
+  exact (integrable_const_mul_iff (isUnit_iff_ne_zero.mpr ha) _).mp hNorm
+
+/-- A bounded measurable function is integrable against the positive part of the Newtonian
+Green profile. -/
+theorem integrable_newtonianGreenProfile_posPart_mul_bdd
+    (n : ℕ) (hn : 3 ≤ n) (x : EuclideanSpace ℝ (Fin n))
+    (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hg : AEStronglyMeasurable g volume)
+    {B : ℝ} (hB : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))), ‖g y‖ ≤ B) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦
+      max (newtonianGreenProfile n ‖y - x‖) 0 * g y) := by
+  letI : NeZero n := ⟨by omega⟩
+  let a : ℝ := ((volume (Metric.ball x 1))⁻¹).toReal
+  have ha : a ≠ 0 := by
+    have hvolpos : 0 < volume (Metric.ball x 1) := measure_ball_pos volume x (by norm_num)
+    have hvolfin : volume (Metric.ball x 1) < ∞ := measure_ball_lt_top
+    exact (ENNReal.toReal_pos
+      (ENNReal.inv_pos.mpr hvolfin.ne).ne'
+      (ENNReal.inv_lt_top.mpr hvolpos).ne).ne'
+  have hNorm : Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦
+      a * (max (newtonianGreenProfile n ‖y - x‖) 0 * g y)) := by
+    apply (integrable_normalized_newtonianKernel_mul_bdd n hn x
+      (r := 1) (by norm_num) g hg hB).congr
+    filter_upwards [normalized_newtonianKernel_toReal_ae_eq_profile n hn x
+      (r := 1) (by norm_num)] with y hy
+    simpa only [inv_one, one_smul, div_one, a, mul_assoc] using
+      congrArg (fun t : ℝ ↦ t * g y) hy
+  exact (integrable_const_mul_iff (isUnit_iff_ne_zero.mpr ha) _).mp hNorm
+
+/-- Radial integrability of a Green profile times the spherical integral of a bounded
+continuous function. -/
+theorem integrableOn_radial_profile_mul_sphereIntegral
+    (n : ℕ) [NeZero n] (φ : ℝ → ℝ)
+    (hφ : Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦ φ ‖y‖))
+    (x : EuclideanSpace ℝ (Fin n)) (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hg : Continuous g) (B : ℝ) (hB : ∀ y, ‖g y‖ ≤ B) (R : ℝ) :
+    IntegrableOn (fun s : ℝ ↦ φ s * (s ^ (n - 1) *
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        g (x + s • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere)))
+      (Set.Ioo (0 : ℝ) R) := by
+  let S := Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1
+  let ν : Measure S := volume.toSphere
+  let m : ℝ → ℝ := fun s ↦ ∫ ω : S, g (x + s • (ω : EuclideanSpace ℝ (Fin n))) ∂ν
+  have hrad : IntegrableOn (fun s : ℝ ↦ s ^ (n - 1) * φ s) (Set.Ioi (0 : ℝ)) := by
+    simpa only [finrank_euclideanSpace_fin, smul_eq_mul] using
+      (integrable_fun_norm_addHaar volume).mp hφ
+  have hradR : IntegrableOn (fun s : ℝ ↦ s ^ (n - 1) * φ s)
+      (Set.Ioo (0 : ℝ) R) := hrad.mono_set (by intro s hs; exact hs.1)
+  have hm : Continuous m := continuous_sphereIntegral n g hg x
+  have hbound : ∀ᵐ s ∂(volume.restrict (Set.Ioo (0 : ℝ) R)),
+      ‖m s‖ ≤ B * ν.real Set.univ := by
+    filter_upwards with s
+    exact norm_integral_le_of_norm_le_const
+      (Filter.Eventually.of_forall fun ω : S ↦ hB _)
+  have hprod := hradR.mul_bdd
+    (hm.aestronglyMeasurable (μ := volume.restrict (Set.Ioo (0 : ℝ) R))) hbound
+  change Integrable (fun s : ℝ ↦ φ s * (s ^ (n - 1) * m s))
+    (volume.restrict (Set.Ioo (0 : ℝ) R))
+  convert hprod using 1
+  funext s
+  dsimp [m]
+  ring
+
+/-- The radial planar Green pairing with a bounded continuous function is integrable on
+its support interval. -/
+theorem integrableOn_planarGreenProfile_mul_sphereIntegral
+    (x : EuclideanSpace ℝ (Fin 2)) (g : EuclideanSpace ℝ (Fin 2) → ℝ)
+    (hg : Continuous g) (B : ℝ) (hB : ∀ y, ‖g y‖ ≤ B) :
+    IntegrableOn (fun s : ℝ ↦ planarGreenProfile s *
+      (s * ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+        g (x + s • (ω : EuclideanSpace ℝ (Fin 2))) ∂(volume.toSphere)))
+      (Set.Ioo (0 : ℝ) planarGreenRadius) := by
+  let φ : ℝ → ℝ := fun s ↦ max (planarGreenProfile s) 0
+  have hφ : Integrable (fun y : EuclideanSpace ℝ (Fin 2) ↦ φ ‖y‖) := by
+    have h := integrable_planarGreenProfile_posPart_mul_bdd
+      (0 : EuclideanSpace ℝ (Fin 2)) (fun _ ↦ (1 : ℝ))
+      (by fun_prop) (B := 1) (by simp)
+    simpa [φ] using h
+  have hrad := integrableOn_radial_profile_mul_sphereIntegral
+    2 φ hφ x g hg B hB planarGreenRadius
+  apply hrad.congr_fun ?_ measurableSet_Ioo
+  intro s hs
+  have hnonneg : 0 ≤ planarGreenProfile s :=
+    planarGreenProfile_nonneg hs.1 hs.2.le
+  simp [φ, max_eq_left hnonneg]
+
+/-- The radial Newtonian Green pairing with a bounded continuous function is integrable on
+its support interval. -/
+theorem integrableOn_newtonianGreenProfile_mul_sphereIntegral
+    (n : ℕ) (hn : 3 ≤ n)
+    (x : EuclideanSpace ℝ (Fin n)) (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hg : Continuous g) (B : ℝ) (hB : ∀ y, ‖g y‖ ≤ B) :
+    IntegrableOn (fun s : ℝ ↦ newtonianGreenProfile n s *
+      (s ^ (n - 1) *
+        ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          g (x + s • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere)))
+      (Set.Ioo (0 : ℝ) (greenRadius n)) := by
+  letI : NeZero n := ⟨by omega⟩
+  let φ : ℝ → ℝ := fun s ↦ max (newtonianGreenProfile n s) 0
+  have hφ : Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦ φ ‖y‖) := by
+    have h := integrable_newtonianGreenProfile_posPart_mul_bdd n hn
+      (0 : EuclideanSpace ℝ (Fin n)) (fun _ ↦ (1 : ℝ))
+      (by fun_prop) (B := 1) (by simp)
+    simpa [φ] using h
+  have hrad := integrableOn_radial_profile_mul_sphereIntegral
+    n φ hφ x g hg B hB (greenRadius n)
+  apply hrad.congr_fun ?_ measurableSet_Ioo
+  intro s hs
+  have hnonneg : 0 ≤ newtonianGreenProfile n s :=
+    newtonianGreenProfile_nonneg n hn hs.1 hs.2.le
+  simp [φ, max_eq_left hnonneg]
 
 end CenteredMaximal.Ball
