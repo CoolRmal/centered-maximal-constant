@@ -144,6 +144,16 @@ automation:
       hardware: local machine for Lean builds, API-only for inference
     prompting_notes: |-
       Human-directed. The maintainer asked for the manuscript's constant 3.615749; the elementary alpha = 1 case was formalized as a tractable target and is what this repository contains. Several agents corrected errors in the briefs they were given, including a false Lipschitz claim, an unprovable pointwise bound, and a kernel majorant that was quantitatively insufficient.
+  - method: agent
+    models:
+    - GPT-6
+    framework: Codex
+    tool_setup: Formalized the Euclidean-ball bounds from the maintainer's proof using Lean, Mathlib, and parallel proof reviews.
+    cost:
+      wall_time: about three hours (2026-09-30)
+      spend_usd: subscription-based
+      hardware: local machine for Lean builds, API-only for inference
+    prompting_notes: Human-directed; the maintainer supplied the proof and requested the challenge statements, comparator check, and documentation.
   - method: manual
     models: []
     framework: n/a
@@ -155,7 +165,7 @@ automation:
     prompting_notes: n/a
   spend_usd: subscription-based; not separately tracked
   notes: |-
-    The mathematics and the Lean formalization were produced by AI agents under the maintainer's direction, in two stages with an explicit handover summarised in docs/HISTORY.md. No AI system is listed as an author.
+    The mathematics and Lean formalization were produced with Claude Code and Codex under the maintainer's direction. No AI system is listed as an author.
 fidelity:
   divergences: |-
     No cited source result is formalized for the principal theorem, which is stated here for the first time. The upper bound 3.879 DIVERGES from its source manuscript: the manuscript proves 3.615749 with a fractional generator of order 6/5 and a 1201-coefficient spline kernel, whereas the formalization carries the same comparison method through the elementary case alpha = 1 with a two-parameter kernel, giving a weaker constant; the manuscript's existence proof for the obstacle problem, which uses a fractional Sobolev inequality, is replaced by Gagliardo averaging inequalities. The upper bound follows Tao's Exercise 42 except that Mathlib's Vitali lemma needs an enlargement tau > 1, so the proof gives (1 + tau)^d for each tau > 1 and passes to the limit. The smearing of point masses follows Aldaz's Lemma 1.1, adapted to atoms of unequal mass.
@@ -214,4 +224,4 @@ alignment:
     status: proved
     note: The analytic core of the lower bound.
 acknowledgements: |-
-  Built on Lean 4 and Mathlib, and checked with Lean Comparator. The lattice approach to lower bounds for c_d goes back to Trinidad Menarguez and Soria and to Aldaz; the covering argument for the upper bound is classical. The search, certificate and formalization were carried out with Claude Code; no AI system is listed as an author, in line with Palomar's human-authorship requirement.
+  Built on Lean 4 and Mathlib, and checked with Lean Comparator. The lattice approach to lower bounds for c_d goes back to Trinidad Menarguez and Soria and to Aldaz; the covering argument for the upper bound is classical. The formalization used Claude Code and Codex; no AI system is listed as an author, in line with Palomar's human-authorship requirement.
