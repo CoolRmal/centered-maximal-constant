@@ -6,6 +6,7 @@ Authors: Yongxi Lin
 module
 
 public import CenteredMaximal.Analysis.WeakCompact
+public import CenteredMaximal.Ball.DirichletH01
 public import Mathlib.MeasureTheory.Function.L2Space
 public import Mathlib.MeasureTheory.Function.LpOrder
 public import Mathlib.MeasureTheory.Measure.SeparableMeasure
@@ -173,5 +174,13 @@ theorem exists_weak_limit_of_bounded_penalized_equations
   have hrhs := tendsto_const_nhds.add hνinner (a := source v)
   exact tendsto_nhds_unique
     (hBu.congr' (Filter.Eventually.of_forall fun k => heq (χ k) v)) hrhs
+
+/-- The ball Dirichlet space is separable, so its norm-bounded sequences have weakly
+convergent subsequences. -/
+theorem separableSpace_H01_ball {n : ℕ}
+    (center : EuclideanSpace ℝ (Fin (n + 1))) (R : ℝ) :
+    TopologicalSpace.SeparableSpace (DirichletSobolev.H01 (ball center R)) := by
+  letI : Fact ((2 : ℝ≥0∞) ≠ ∞) := ⟨by norm_num⟩
+  infer_instance
 
 end CenteredMaximal.Ball
