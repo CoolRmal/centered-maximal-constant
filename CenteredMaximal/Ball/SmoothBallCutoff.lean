@@ -272,4 +272,44 @@ theorem radialBallCutoff_deriv_nonpos {R δ s : ℝ}
     (mul_nonpos_of_nonpos_of_nonneg (neg_nonpos.mpr htrans)
       (mul_nonneg (by norm_num) hs0)) hgap.le
 
+/-- The radial profile is one up to the inner radius. -/
+theorem radialBallCutoff_one_of_nonneg_le {R δ s : ℝ}
+    (hR : 0 < R) (hδ : 0 < δ) (hs0 : 0 ≤ s) (hsR : s ≤ R) :
+    radialBallCutoff R δ s = 1 := by
+  unfold radialBallCutoff
+  have hsq : s^2 ≤ R^2 := (sq_le_sq₀ hs0 hR.le).mpr hsR
+  apply Real.smoothTransition.one_of_one_le
+  apply (one_le_div (smoothBallCutoff_gap_pos hR hδ)).mpr
+  nlinarith
+
+/-- The radial profile vanishes beyond the outer radius. -/
+theorem radialBallCutoff_zero_of_outer_le {R δ s : ℝ}
+    (hR : 0 < R) (hδ : 0 < δ) (hs : R + δ ≤ s) :
+    radialBallCutoff R δ s = 0 := by
+  unfold radialBallCutoff
+  have houter : 0 ≤ R + δ := by linarith
+  have hsq : (R+δ)^2 ≤ s^2 := (sq_le_sq₀ houter (by linarith)).mpr hs
+  apply Real.smoothTransition.zero_of_nonpos
+  exact div_nonpos_of_nonpos_of_nonneg (by linarith)
+    (smoothBallCutoff_gap_pos hR hδ).le
+
+/-- The radial profile has zero derivative strictly inside the ball. -/
+theorem radialBallCutoff_deriv_eq_zero_inner {R δ s : ℝ}
+    (hR : 0 < R) (hδ : 0 < δ) (hs0 : 0 < s) (hsR : s < R) :
+    deriv (radialBallCutoff R δ) s = 0 := by
+  have heq : radialBallCutoff R δ =ᶠ[𝓝 s] (fun _ => 1) := by
+    filter_upwards [isOpen_Ioo.mem_nhds ⟨hs0, hsR⟩] with t ht
+    exact radialBallCutoff_one_of_nonneg_le hR hδ ht.1.le ht.2.le
+  rw [heq.deriv_eq, deriv_const]
+
+/-- The radial profile has zero derivative strictly outside the enlarged ball. -/
+theorem radialBallCutoff_deriv_eq_zero_outer {R δ s : ℝ}
+    (hR : 0 < R) (hδ : 0 < δ) (hs : R + δ < s) :
+    deriv (radialBallCutoff R δ) s = 0 := by
+  have heq : radialBallCutoff R δ =ᶠ[𝓝 s] (fun _ => 0) := by
+    filter_upwards [isOpen_Ioi.mem_nhds (show s ∈ Ioi (R+δ) from hs)] with t ht
+    exact radialBallCutoff_zero_of_outer_le hR hδ ht.le
+  rw [heq.deriv_eq, deriv_const]
+
+
 end CenteredMaximal.Ball
