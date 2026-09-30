@@ -48,6 +48,8 @@ lower-limit argument. `Ball/PairingComparison.lean` turns a signed Green pairing
 nonnegative-kernel inequality needed by the certificate. `Ball/GreenIdentity.lean` establishes
 the planar and Newtonian radial profile derivatives, their constant flux, and a general polar
 integration formula for Euclidean balls.
+`Ball/RadialGreenCalculus.lean` proves the finite-annulus integration-by-parts identity for
+both Green profiles from the cumulative Laplacian mass and spherical-mean flux relation.
 `Ball/PlanarGreenPairing.lean` proves differentiation of a circle average with respect to its
 radius and a planar polar formula for disk integrals. `Ball/ObstacleExistence.lean` proves an
 abstract Hilbert-space minimizer and its
@@ -56,13 +58,14 @@ variational inequality, and connects a positive cone to the concrete `H¹₀` sp
 license, from [EllipticPDE](https://github.com/alejandro-soto-franco/EllipticPDE) at the
 revision documented in the file. `Ball/ChallengeReduction.lean` states the two requested bounds
 as consequences of the respective obstacle certificates, with all other reductions discharged.
-`Ball/DirichletPoincareDensity.lean` and `Ball/DirichletPoincareOneDim.lean` provide the density
-extension and a one dimensional base for the Poincaré inequality; `Ball/DirichletForm.lean`
-defines the pure gradient form and proves its coercivity assuming the domain Poincaré bound.
+`Ball/DirichletPoincareOneDim.lean` through `Ball/DirichletPoincareBounded.lean` establish
+the Poincaré inequality on arbitrary bounded domains by one dimensional slices, Fubini,
+box transport, and density. `Ball/DirichletForm.lean` defines the pure gradient form,
+and the bounded-domain result now proves its coercivity on a ball.
 
-The remaining analytic work is to instantiate the minimizer in the Dirichlet energy space,
-prove coercivity of its pure-gradient form, control its density and contact set, and prove the
-full weighted Laplacian Green identity. Once those pieces are proved, the two ball theorems can
+The remaining analytic work is to instantiate the constrained minimizer in the Dirichlet
+energy space, control its density and contact set, and prove the full ball flux and weighted
+Laplacian Green identities. Once those pieces are proved, the two ball theorems can
 be added to `Solution.lean` and checked by the comparator.
 
 ## The statement
