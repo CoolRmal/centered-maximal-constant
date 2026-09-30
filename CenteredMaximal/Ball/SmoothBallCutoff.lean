@@ -124,4 +124,72 @@ theorem smoothBallCutoff_fderiv (n : ℕ)
     (gap⁻¹ * (-(2 * inner ℝ (y - x) v))) = _
   ring
 
+/-- Reconstruct a directional derivative from its orthonormal coordinate derivatives. -/
+theorem sum_partial_mul_inner (n : ℕ)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ)
+    (y z : EuclideanSpace ℝ (Fin n)) :
+    (∑ i : Fin (Module.finrank ℝ (EuclideanSpace ℝ (Fin n))),
+      fderiv ℝ w y ((stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))) i) *
+      inner ℝ z ((stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))) i)) =
+    fderiv ℝ w y z := by
+  let b := stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))
+  have h := congrArg (fderiv ℝ w y) (b.sum_repr' z)
+  simp only [map_sum, map_smul, smul_eq_mul] at h
+  change (∑ i, fderiv ℝ w y (b i) * inner ℝ z (b i)) = _
+  rw [← h]
+  apply Finset.sum_congr rfl
+  intro i _
+  simp only [real_inner_comm]
+  ring
+
+/-- The coordinate pairing with the cutoff gradient is a radial directional derivative. -/
+theorem smoothBallCutoff_gradient_pair (n : ℕ)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ)
+    (x y : EuclideanSpace ℝ (Fin n)) (R δ : ℝ) :
+    (∑ i : Fin (Module.finrank ℝ (EuclideanSpace ℝ (Fin n))),
+      fderiv ℝ w y ((stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))) i) *
+      fderiv ℝ (smoothBallCutoff n x R δ) y
+        ((stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))) i)) =
+      (-(deriv Real.smoothTransition
+        (((R + δ) ^ 2 - ‖y - x‖ ^ 2) / ((R + δ) ^ 2 - R ^ 2))) * 2 /
+          ((R + δ) ^ 2 - R ^ 2)) *
+        fderiv ℝ w y (y - x) := by
+  let b := stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))
+  let a : ℝ := -(deriv Real.smoothTransition
+    (((R + δ) ^ 2 - ‖y - x‖ ^ 2) / ((R + δ) ^ 2 - R ^ 2))) * 2 /
+      ((R + δ) ^ 2 - R ^ 2)
+  simp_rw [smoothBallCutoff_fderiv]
+  change (∑ i, fderiv ℝ w y (b i) *
+    (-(deriv Real.smoothTransition
+      (((R + δ) ^ 2 - ‖y - x‖ ^ 2) / ((R + δ) ^ 2 - R ^ 2))) *
+      (2 * inner ℝ (y - x) (b i)) / ((R + δ) ^ 2 - R ^ 2))) =
+    a * fderiv ℝ w y (y - x)
+  rw [← sum_partial_mul_inner n w y (y - x), Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  dsimp [a]
+  ring
+
+/-- The finite-shell Green identity: integration of `Δw` against the smooth cutoff equals a
+radial weighted integral of the derivative of `w`. Letting the shell width tend to zero gives
+the Euclidean ball flux identity. -/
+theorem integral_laplacian_mul_smoothBallCutoff (n : ℕ)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hw : ContDiff ℝ 2 w) (hsw : HasCompactSupport w)
+    (x : EuclideanSpace ℝ (Fin n)) {R δ : ℝ} (hR : 0 < R) (hδ : 0 < δ) :
+    (∫ y, Laplacian.laplacian w y * smoothBallCutoff n x R δ y) =
+      ∫ y, ((deriv Real.smoothTransition
+        (((R + δ) ^ 2 - ‖y - x‖ ^ 2) / ((R + δ) ^ 2 - R ^ 2))) * 2 /
+        ((R + δ) ^ 2 - R ^ 2)) * fderiv ℝ w y (y - x) := by
+  have h := integral_laplacian_mul_eq_neg_gradient n w
+    (smoothBallCutoff n x R δ) hw
+    ((smoothBallCutoff_contDiff n x R δ).of_le (by norm_num))
+    hsw (smoothBallCutoff_hasCompactSupport n x hR hδ)
+  simp_rw [smoothBallCutoff_gradient_pair] at h
+  rw [← integral_neg] at h
+  apply h.trans
+  apply integral_congr_ae
+  filter_upwards with y
+  ring
+
 end CenteredMaximal.Ball
