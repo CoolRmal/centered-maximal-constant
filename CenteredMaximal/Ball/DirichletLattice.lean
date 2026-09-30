@@ -55,4 +55,28 @@ theorem partialD_comp_smooth {φ : EuclideanSpace ℝ (Fin d) → ℝ}
   simp only [ContinuousLinearMap.comp_apply, fderiv_eq_deriv_mul]
   rfl
 
+/-- Positive and negative truncations have disjoint gradients. This is the Dirichlet
+form's Markov identity in the exact coordinate format delivered by a Sobolev lattice
+theorem. -/
+theorem laplaceBilin_positive_negative_eq_zero
+    (U P N : H01 Ω)
+    (hP : ∀ i : Fin d, ((P : H1amb Ω) i.succ : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x =>
+        if 0 < ((U : H1amb Ω) 0 x : ℝ) then ((U : H1amb Ω) i.succ x : ℝ) else 0)
+    (hN : ∀ i : Fin d, ((N : H1amb Ω) i.succ : EuclideanSpace ℝ (Fin d) → ℝ)
+      =ᵐ[volume.restrict Ω] fun x =>
+        if ((U : H1amb Ω) 0 x : ℝ) < 0 then -((U : H1amb Ω) i.succ x : ℝ) else 0) :
+    laplaceBilin Ω P N = 0 := by
+  rw [laplaceBilin_apply]
+  apply Finset.sum_eq_zero
+  intro i _
+  rw [L2.inner_def]
+  have hzero : ∀ᵐ x ∂(volume.restrict Ω),
+      (((P : H1amb Ω) i.succ x : ℝ) * ((N : H1amb Ω) i.succ x : ℝ)) = 0 := by
+    filter_upwards [hP i, hN i] with x hp hn
+    rw [hp, hn]
+    split_ifs <;> simp_all; linarith
+  rw [integral_eq_zero_of_ae]
+  exact hzero.mono fun x hx => by simpa only [Real.inner_apply, Pi.zero_apply] using hx
+
 end CenteredMaximal.Ball.DirichletSobolev
