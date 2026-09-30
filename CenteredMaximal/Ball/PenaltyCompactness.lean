@@ -84,6 +84,13 @@ private instance l2PosSMulMono
     rw [hfy, hgy]
     exact mul_le_mul_of_nonneg_left hy ha
 
+/-- A nonnegative density bounded by an `L²` cap has no larger `L²` norm. -/
+theorem norm_l2_le_of_nonneg_le
+    {X : Type*} [MeasurableSpace X] {μ : Measure X}
+    (ν κ : Lp ℝ 2 μ) (hν : 0 ≤ ν) (hνκ : ν ≤ κ) : ‖ν‖ ≤ ‖κ‖ := by
+  apply norm_le_norm_of_abs_le_abs
+  simpa only [abs_of_nonneg hν, abs_of_nonneg (hν.trans hνκ)] using hνκ
+
 /-- Uniformly bounded `L²` densities satisfying `0 ≤ νₖ ≤ κ` have a weakly convergent
 subsequence. Its limit satisfies the same almost-everywhere bounds. -/
 theorem exists_weakly_convergent_l2_density_subsequence
@@ -101,6 +108,19 @@ theorem exists_weakly_convergent_l2_density_subsequence
     (fun k => hν k) hbound
   obtain ⟨νlim, hmem, φ, hmono, hweak⟩ := h
   exact ⟨νlim, hmem, φ, hmono, hweak⟩
+
+/-- The cap alone supplies the uniform `L²` bound needed for weak sequential compactness. -/
+theorem exists_weakly_convergent_l2_density_subsequence_of_cap
+    {X : Type*} [MeasurableSpace X] {μ : Measure X} [IsSeparable μ]
+    (ν : ℕ → Lp ℝ 2 μ) (κ : Lp ℝ 2 μ)
+    (hν : ∀ k, 0 ≤ ν k ∧ ν k ≤ κ) :
+    ∃ νlim : Lp ℝ 2 μ, (0 ≤ νlim ∧ νlim ≤ κ) ∧
+      ∃ φ : ℕ → ℕ, StrictMono φ ∧
+        Tendsto (fun k => toWeakSpace ℝ (Lp ℝ 2 μ) (ν (φ k))) atTop
+          (𝓝 (toWeakSpace ℝ (Lp ℝ 2 μ) νlim)) := by
+  apply exists_weakly_convergent_l2_density_subsequence ν κ ‖κ‖ hν
+  intro k
+  exact norm_l2_le_of_nonneg_le (ν k) κ (hν k).1 (hν k).2
 
 /-- Bounded states and capped densities have a common weakly convergent subsequence. A
 bounded bilinear weak equation passes to the two limits. -/
