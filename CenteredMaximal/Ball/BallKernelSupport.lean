@@ -32,6 +32,50 @@ def greenCutoffDomain (n : ℕ) (R r₀ G : ℝ) :
     Set (EuclideanSpace ℝ (Fin n)) :=
   ball 0 (greenCutoffInnerRadius R r₀ G + 2 * r₀)
 
+/-- A larger Dirichlet ball with two units of room around the common cutoff domain. -/
+def greenObstacleDomain (n : ℕ) (R r₀ G : ℝ) :
+    Set (EuclideanSpace ℝ (Fin n)) :=
+  ball 0 (greenCutoffInnerRadius R r₀ G + 2 * r₀ + 2)
+
+/-- Points in the closure of the common cutoff domain stay within its closed radius. -/
+theorem norm_le_of_mem_closure_greenCutoffDomain (n : ℕ) (R r₀ G : ℝ)
+    (y : EuclideanSpace ℝ (Fin n))
+    (hy : y ∈ closure (greenCutoffDomain n R r₀ G)) :
+    ‖y‖ ≤ greenCutoffInnerRadius R r₀ G + 2 * r₀ := by
+  have hclosed : closure (greenCutoffDomain n R r₀ G) ⊆
+      closedBall (0 : EuclideanSpace ℝ (Fin n))
+        (greenCutoffInnerRadius R r₀ G + 2 * r₀) := by
+    apply closure_minimal
+    · exact ball_subset_closedBall
+    · exact isClosed_closedBall
+  simpa only [mem_closedBall, dist_zero_right] using hclosed hy
+
+/-- A whole closed unit ball around every point in the closure of the cutoff domain remains
+inside the larger obstacle domain. -/
+theorem closedBall_subset_greenObstacleDomain_of_mem_closure (n : ℕ)
+    (R r₀ G : ℝ) (y : EuclideanSpace ℝ (Fin n))
+    (hy : y ∈ closure (greenCutoffDomain n R r₀ G)) :
+    closedBall y 1 ⊆ greenObstacleDomain n R r₀ G := by
+  intro z hz
+  have hyNorm := norm_le_of_mem_closure_greenCutoffDomain n R r₀ G y hy
+  have hzNorm : ‖z‖ ≤ ‖z - y‖ + ‖y‖ := by
+    convert norm_add_le (z - y) y using 1; simp
+  have hzy : ‖z - y‖ ≤ 1 := by
+    simpa only [mem_closedBall, dist_eq_norm] using hz
+  change z ∈ ball (0 : EuclideanSpace ℝ (Fin n))
+    (greenCutoffInnerRadius R r₀ G + 2 * r₀ + 2)
+  simpa only [mem_ball, dist_zero_right] using
+    (by linarith : ‖z‖ < greenCutoffInnerRadius R r₀ G + 2 * r₀ + 2)
+
+/-- The cutoff domain has closure strictly inside the larger obstacle ball. -/
+theorem closure_greenCutoffDomain_subset_greenObstacleDomain (n : ℕ)
+    (R r₀ G : ℝ) :
+    closure (greenCutoffDomain n R r₀ G) ⊆
+      greenObstacleDomain n R r₀ G := by
+  intro y hy
+  exact closedBall_subset_greenObstacleDomain_of_mem_closure n R r₀ G y hy
+    (mem_closedBall_self (by norm_num : (0 : ℝ) ≤ 1))
+
 /-- A single smooth cutoff for all centers and radii in the transfer region. -/
 def greenCutoff (n : ℕ) (R r₀ G : ℝ) : EuclideanSpace ℝ (Fin n) → ℝ :=
   smoothBallCutoff n 0 (greenCutoffInnerRadius R r₀ G) r₀
