@@ -9,6 +9,7 @@ public import CenteredMaximal.Ball.PlanarNormalized
 public import CenteredMaximal.Ball.NewtonianMass
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
+public import Mathlib.Analysis.Calculus.ParametricIntegral
 public import Mathlib.MeasureTheory.Constructions.HaarToSphere
 
 /-!
@@ -22,7 +23,7 @@ have constant flux, the scalar identity behind the Green pairing with the Laplac
 
 noncomputable section
 
-open MeasureTheory Metric Set
+open MeasureTheory Metric Set Filter Topology
 open scoped ENNReal
 
 namespace CenteredMaximal.Ball
@@ -184,6 +185,63 @@ theorem integral_radial_mul_polar (n : ℕ) [NeZero n]
     g (x + s • (ω : EuclideanSpace ℝ (Fin n)))) = _
   rw [hnorm]
   ring
+
+/-- Differentiate the unnormalized sphere integral of a smooth function in its radius. A global
+gradient bound supplies the integrable domination; smooth compactly supported functions satisfy
+such a bound. -/
+theorem hasDerivAt_sphereIntegral (n : ℕ) [NeZero n]
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (x : EuclideanSpace ℝ (Fin n)) (r C : ℝ)
+    (hC : ∀ z, ‖fderiv ℝ w z‖ ≤ C) :
+    HasDerivAt
+      (fun t : ℝ ↦ ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        w (x + t • (ω : EuclideanSpace ℝ (Fin n))) ∂(volume.toSphere))
+      (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+        fderiv ℝ w (x + r • (ω : EuclideanSpace ℝ (Fin n)))
+          (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere)) r := by
+  let E := EuclideanSpace ℝ (Fin n)
+  let S := Metric.sphere (0 : E) 1
+  let ν : Measure S := volume.toSphere
+  have hF_meas : ∀ᶠ t in 𝓝 r, AEStronglyMeasurable
+      (fun ω : S ↦ w (x + t • (ω : E))) ν := by
+    filter_upwards [] with t
+    exact (hw.continuous.comp (by fun_prop)).aestronglyMeasurable
+  have hF_int : Integrable (fun ω : S ↦ w (x + r • (ω : E))) ν := by
+    have hcont : Continuous (fun ω : S ↦ w (x + r • (ω : E))) :=
+      hw.continuous.comp (by fun_prop)
+    simpa [IntegrableOn] using hcont.continuousOn.integrableOn_compact isCompact_univ
+  have hF'_meas : AEStronglyMeasurable (fun ω : S ↦
+      fderiv ℝ w (x + r • (ω : E)) (ω : E)) ν := by
+    have hc : Continuous (fderiv ℝ w) := hw.continuous_fderiv (by norm_num)
+    exact (by fun_prop : Continuous (fun ω : S ↦
+      fderiv ℝ w (x + r • (ω : E)) (ω : E))).aestronglyMeasurable
+  have hbound : ∀ᵐ (ω : S) ∂ν, ∀ t ∈ (Set.univ : Set ℝ),
+      ‖fderiv ℝ w (x + t • (ω : E)) (ω : E)‖ ≤ C := by
+    filter_upwards with ω
+    intro t _
+    have hω : ‖(ω : E)‖ = 1 := by
+      have h := ω.property
+      simpa only [S, Metric.mem_sphere, dist_zero_right] using h
+    calc
+      ‖fderiv ℝ w (x + t • (ω : E)) (ω : E)‖ ≤
+        ‖fderiv ℝ w (x + t • (ω : E))‖ * ‖(ω : E)‖ :=
+          ContinuousLinearMap.le_opNorm _ _
+      _ = ‖fderiv ℝ w (x + t • (ω : E))‖ := by rw [hω, mul_one]
+      _ ≤ C := hC _
+  have hdiff : ∀ᵐ (ω : S) ∂ν, ∀ t ∈ (Set.univ : Set ℝ),
+      HasDerivAt (fun u : ℝ ↦ w (x + u • (ω : E)))
+        (fderiv ℝ w (x + t • (ω : E)) (ω : E)) t := by
+    filter_upwards with ω
+    intro t _
+    have hline : HasDerivAt (fun u : ℝ ↦ x + u • (ω : E)) (ω : E) t := by
+      simpa using ((hasDerivAt_id t).smul_const (ω : E)).const_add x
+    simpa only [Function.comp_def] using
+      (hw.differentiable (by norm_num) (x + t • (ω : E))).hasFDerivAt.comp_hasDerivAt
+        t hline
+  exact (hasDerivAt_integral_of_dominated_loc_of_deriv_le (s := Set.univ)
+    (bound := fun _ : S ↦ C) (F := fun t ω ↦ w (x + t • (ω : E)))
+    (F' := fun t ω ↦ fderiv ℝ w (x + t • (ω : E)) (ω : E))
+    (by simp) hF_meas hF_int hF'_meas hbound (integrable_const C) hdiff).2
 
 /-- The untruncated radial logarithmic profile in dimension two. -/
 def planarGreenProfile (s : ℝ) : ℝ := 1 - 2 * Real.log s
