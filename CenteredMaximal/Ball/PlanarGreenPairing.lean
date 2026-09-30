@@ -5,6 +5,7 @@ Authors: Yongxi Lin
 -/
 module
 
+public import CenteredMaximal.Ball.GreenIdentity
 public import Mathlib.MeasureTheory.Integral.CircleAverage
 public import Mathlib.Analysis.Calculus.ParametricIntervalIntegral
 
@@ -24,6 +25,49 @@ open Complex MeasureTheory Metric Set Filter
 open scoped Real Interval Topology
 
 namespace CenteredMaximal.Ball
+
+/-- Integrate a real function over a planar ball using the spherical measure and radial
+Lebesgue measure. The radius factor is the two-dimensional polar Jacobian. -/
+theorem integral_polar_ball_two
+    (x : EuclideanSpace ℝ (Fin 2)) (R : ℝ)
+    (F : EuclideanSpace ℝ (Fin 2) → ℝ) (hF : Integrable F) :
+    (∫ y in ball x R, F y) =
+      ∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+        ∫ s in Set.Ioo (0 : ℝ) R,
+          s * F (x + s • (ω : EuclideanSpace ℝ (Fin 2))) ∂volume
+        ∂(volume.toSphere) := by
+  let E := EuclideanSpace ℝ (Fin 2)
+  have hFb : Integrable ((ball x R).indicator F) :=
+    hF.integrableOn.integrable_indicator measurableSet_ball
+  rw [← integral_indicator measurableSet_ball,
+    integral_polar_ball 2 x ((ball x R).indicator F) hFb]
+  simp only [Nat.reduceSub, pow_one]
+  apply integral_congr_ae
+  filter_upwards with ω
+  have hωnorm : ‖(ω : E)‖ = 1 := by
+    have hω : dist (ω : E) 0 = 1 := mem_sphere.mp ω.property
+    simpa only [dist_zero_right] using hω
+  have hmem (s : ℝ) (hs : 0 < s) :
+      x + s • (ω : E) ∈ ball x R ↔ s < R := by
+    simp [mem_ball, dist_eq_norm, norm_smul, Real.norm_eq_abs,
+      abs_of_pos hs, hωnorm]
+  calc
+    (∫ s in Set.Ioi (0 : ℝ),
+      s * (ball x R).indicator F (x + s • (ω : E))) =
+        ∫ s in Set.Ioi (0 : ℝ),
+          (Set.Iio R).indicator (fun s ↦ s * F (x + s • (ω : E))) s := by
+      apply setIntegral_congr_fun measurableSet_Ioi
+      intro s hs
+      by_cases hsr : s < R
+      · have hb := (hmem s hs).2 hsr
+        simp only [Set.indicator_of_mem hb,
+          Set.indicator_of_mem (show s ∈ Set.Iio R from hsr)]
+      · have hb : x + s • (ω : E) ∉ ball x R := fun h ↦ hsr ((hmem s hs).1 h)
+        simp only [Set.indicator_of_notMem hb,
+          Set.indicator_of_notMem (show s ∉ Set.Iio R from hsr), mul_zero]
+    _ = ∫ s in Set.Ioo (0 : ℝ) R,
+          s * F (x + s • (ω : E)) := by
+      rw [setIntegral_indicator measurableSet_Iio, Set.Ioi_inter_Iio]
 
 /-- Differentiate a circle average by differentiating its integrand in the radial variable.
 The uniform bound is needed only near the radius at which the derivative is taken. -/
