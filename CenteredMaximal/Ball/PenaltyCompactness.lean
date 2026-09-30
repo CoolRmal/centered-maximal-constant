@@ -30,7 +30,7 @@ open scoped RealInnerProductSpace ENNReal
 
 namespace CenteredMaximal.Ball
 
-/-- Bounded sequences in a separable real Hilbert space admit a weakly convergent subsequence,
+/-- Bounded sequences in a separable real Hilbert space have a weakly convergent subsequence,
 and every closed convex constraint passes to its limit. -/
 theorem exists_weakly_convergent_subsequence_of_bounded
     {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
