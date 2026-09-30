@@ -70,6 +70,24 @@ theorem normalized_newtonianKernel_real_representative (n : ℕ) (hn : 3 ≤ n)
   · rw [lintegral_normalized_newtonianKernel n hn x hr]
     exact ENNReal.ofReal_ne_top
 
+/-- A bounded measurable function can be paired integrably with the normalized planar kernel. -/
+theorem integrable_normalized_planarKernel_mul_bdd
+    (x : EuclideanSpace ℝ (Fin 2)) {r : ℝ} (hr : 0 < r)
+    (g : EuclideanSpace ℝ (Fin 2) → ℝ) (hg : AEStronglyMeasurable g volume)
+    {C : ℝ} (hC : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))), ‖g y‖ ≤ C) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin 2) ↦
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal * g y) :=
+  (normalized_planarKernel_real_representative x hr).1.mul_bdd hg hC
+
+/-- A bounded measurable function can be paired integrably with the normalized Newtonian kernel. -/
+theorem integrable_normalized_newtonianKernel_mul_bdd (n : ℕ) (hn : 3 ≤ n)
+    (x : EuclideanSpace ℝ (Fin n)) {r : ℝ} (hr : 0 < r)
+    (g : EuclideanSpace ℝ (Fin n) → ℝ) (hg : AEStronglyMeasurable g volume)
+    {C : ℝ} (hC : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))), ‖g y‖ ≤ C) :
+    Integrable (fun y : EuclideanSpace ℝ (Fin n) ↦
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal * g y) :=
+  (normalized_newtonianKernel_real_representative n hn x hr).1.mul_bdd hg hC
+
 /-- Polar integration for an arbitrary integrable test function, with the natural sphere measure.
 This is the integral identity underlying the Green-kernel pairing. -/
 private theorem integral_polar_ball_aux (n : ℕ) [NeZero n]
