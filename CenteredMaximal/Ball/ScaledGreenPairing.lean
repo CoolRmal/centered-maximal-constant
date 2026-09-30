@@ -102,6 +102,63 @@ private theorem integral_scaled_radial_mul_laplacian (n : ℕ)
 /-- The normalized planar kernel has a nonnegative Green pairing at every radius,
 expressed exactly as a positive multiple of the spherical value. The geometric
 ball flux formula is the only remaining premise. -/
+theorem integral_normalized_planarKernel_mul_laplacian_of_ball_flux_general
+    (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin 2))
+    {r : ℝ} (hr : 0 < r)
+    (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) planarGreenRadius,
+      (∫ y in Metric.ball (0 : EuclideanSpace ℝ (Fin 2)) s,
+        Laplacian.laplacian (fun z ↦ w (x + r • z)) y) =
+        s * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          fderiv ℝ (fun z ↦ w (x + r • z))
+            (s • (ω : EuclideanSpace ℝ (Fin 2)))
+            (ω : EuclideanSpace ℝ (Fin 2)) ∂(volume.toSphere))) :
+    (∫ y : EuclideanSpace ℝ (Fin 2),
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) =
+      ((volume (Metric.ball x r))⁻¹).toReal *
+        (2 * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          w (x + r • (planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2))))
+            ∂(volume.toSphere)) -
+          (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+            w x ∂(volume.toSphere)))) := by
+  let v : EuclideanSpace ℝ (Fin 2) → ℝ := fun z ↦ w (x + r • z)
+  have hv : ContDiff ℝ 2 v := contDiff_comp_add_smul 2 w hw x r
+  have hvsupp : HasCompactSupport v := hasCompactSupport_comp_add_smul 2 w hsupp x hr
+  have hunit := integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux_general
+    v hv hvsupp 0 (by simpa only [zero_add, v] using hflux)
+  simp only [sub_zero, zero_add, v, smul_zero, add_zero] at hunit
+  have hscale := integral_scaled_radial_mul_laplacian 2 w hw x
+    (fun t ↦ max (planarGreenProfile t) 0) hr
+  have hr2 : r ^ 2 ≠ 0 := pow_ne_zero 2 hr.ne'
+  have hprofile :
+      (∫ y : EuclideanSpace ℝ (Fin 2),
+        max (planarGreenProfile (‖y - x‖ / r)) 0 *
+          Laplacian.laplacian w y) =
+        2 * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+          w (x + r • (planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2))))
+            ∂(volume.toSphere)) -
+          (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
+            w x ∂(volume.toSphere))) := by
+    have hbase := (mul_left_cancel₀ hr2 hscale)
+    rw [hbase]
+    exact hunit
+  calc
+    (∫ y : EuclideanSpace ℝ (Fin 2),
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) =
+      ∫ y : EuclideanSpace ℝ (Fin 2),
+        ((volume (Metric.ball x r))⁻¹).toReal *
+          (max (planarGreenProfile (‖y - x‖ / r)) 0 *
+            Laplacian.laplacian w y) := by
+        apply integral_congr_ae
+        filter_upwards [normalized_planarKernel_toReal_ae_eq_profile x hr] with y hy
+        rw [hy]
+        ring
+    _ = _ := by rw [integral_const_mul, hprofile]
+
+/-- At a zero of the obstacle, the normalized planar Green pairing is its positive
+spherical value. -/
 theorem integral_normalized_planarKernel_mul_laplacian_of_ball_flux
     (w : EuclideanSpace ℝ (Fin 2) → ℝ) (hw : ContDiff ℝ 2 w)
     (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin 2))
@@ -120,42 +177,79 @@ theorem integral_normalized_planarKernel_mul_laplacian_of_ball_flux
         (2 * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
           w (x + r • (planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2))))
             ∂(volume.toSphere))) := by
-  let v : EuclideanSpace ℝ (Fin 2) → ℝ := fun z ↦ w (x + r • z)
-  have hv : ContDiff ℝ 2 v := contDiff_comp_add_smul 2 w hw x r
-  have hvsupp : HasCompactSupport v := hasCompactSupport_comp_add_smul 2 w hsupp x hr
-  have hv0 : v 0 = 0 := by simpa only [v, smul_zero, add_zero] using hx
-  have hunit := integral_planarGreenProfile_posPart_mul_laplacian_of_ball_flux
-    v hv hvsupp 0 hv0 (by simpa only [zero_add, v] using hflux)
-  simp only [sub_zero, zero_add, v] at hunit
-  have hscale := integral_scaled_radial_mul_laplacian 2 w hw x
-    (fun t ↦ max (planarGreenProfile t) 0) hr
-  have hr2 : r ^ 2 ≠ 0 := pow_ne_zero 2 hr.ne'
-  have hprofile :
-      (∫ y : EuclideanSpace ℝ (Fin 2),
-        max (planarGreenProfile (‖y - x‖ / r)) 0 *
-          Laplacian.laplacian w y) =
-        2 * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin 2)) 1,
-          w (x + r • (planarGreenRadius • (ω : EuclideanSpace ℝ (Fin 2))))
-            ∂(volume.toSphere)) := by
-    have hbase := (mul_left_cancel₀ hr2 hscale)
-    rw [hbase]
-    exact hunit
-  calc
-    (∫ y : EuclideanSpace ℝ (Fin 2),
-      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal *
-        Laplacian.laplacian w y) =
-      ∫ y : EuclideanSpace ℝ (Fin 2),
-        ((volume (Metric.ball x r))⁻¹).toReal *
-          (max (planarGreenProfile (‖y - x‖ / r)) 0 *
-            Laplacian.laplacian w y) := by
-        apply integral_congr_ae
-        filter_upwards [normalized_planarKernel_toReal_ae_eq_profile x hr] with y hy
-        rw [hy]
-        ring
-    _ = _ := by rw [integral_const_mul, hprofile]
+  simpa only [hx, integral_zero, sub_zero] using
+    integral_normalized_planarKernel_mul_laplacian_of_ball_flux_general
+      w hw hsupp x hr hflux
 
 /-- The arbitrary-radius Newtonian pairing. Its coefficient is the dilation
 factor `r^(n−2)` times the normalized kernel density. -/
+theorem integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux_general
+    (n : ℕ) (hn : 3 ≤ n)
+    (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
+    (hsupp : HasCompactSupport w) (x : EuclideanSpace ℝ (Fin n))
+    {r : ℝ} (hr : 0 < r)
+    (hflux : ∀ s ∈ Set.Ioc (0 : ℝ) (greenRadius n),
+      (∫ y in Metric.ball (0 : EuclideanSpace ℝ (Fin n)) s,
+        Laplacian.laplacian (fun z ↦ w (x + r • z)) y) =
+        s ^ (n - 1) *
+          (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+            fderiv ℝ (fun z ↦ w (x + r • z))
+              (s • (ω : EuclideanSpace ℝ (Fin n)))
+              (ω : EuclideanSpace ℝ (Fin n)) ∂(volume.toSphere))) :
+    (∫ y : EuclideanSpace ℝ (Fin n),
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) =
+      ((volume (Metric.ball x r))⁻¹).toReal * r ^ (n - 2) *
+        ((n : ℝ) * ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+          w (x + r • (greenRadius n • (ω : EuclideanSpace ℝ (Fin n))))
+            ∂(volume.toSphere)) -
+          (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+            w x ∂(volume.toSphere)))) := by
+  letI : NeZero n := ⟨by omega⟩
+  let v : EuclideanSpace ℝ (Fin n) → ℝ := fun z ↦ w (x + r • z)
+  have hv : ContDiff ℝ 2 v := contDiff_comp_add_smul n w hw x r
+  have hvsupp : HasCompactSupport v := hasCompactSupport_comp_add_smul n w hsupp x hr
+  have hunit := integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux_general
+    n hn v hv hvsupp 0 (by simpa only [zero_add, v] using hflux)
+  simp only [sub_zero, zero_add, v, smul_zero, add_zero] at hunit
+  have hscale := integral_scaled_radial_mul_laplacian n w hw x
+    (fun t ↦ max (newtonianGreenProfile n t) 0) hr
+  have hr2 : r ^ 2 ≠ 0 := pow_ne_zero 2 hr.ne'
+  have hpow : r ^ n = r ^ 2 * r ^ (n - 2) := by
+    rw [← pow_add]
+    congr 1
+    omega
+  have hprofile :
+      (∫ y : EuclideanSpace ℝ (Fin n),
+        max (newtonianGreenProfile n (‖y - x‖ / r)) 0 *
+          Laplacian.laplacian w y) =
+        r ^ (n - 2) * ((n : ℝ) *
+          ((∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+            w (x + r • (greenRadius n • (ω : EuclideanSpace ℝ (Fin n))))
+              ∂(volume.toSphere)) -
+            (∫ _ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
+              w x ∂(volume.toSphere)))) := by
+    rw [hpow, mul_assoc] at hscale
+    have hbase := (mul_left_cancel₀ hr2 hscale)
+    rw [hbase]
+    rw [hunit]
+  calc
+    (∫ y : EuclideanSpace ℝ (Fin n),
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
+        Laplacian.laplacian w y) =
+      ∫ y : EuclideanSpace ℝ (Fin n),
+        ((volume (Metric.ball x r))⁻¹).toReal *
+          (max (newtonianGreenProfile n (‖y - x‖ / r)) 0 *
+            Laplacian.laplacian w y) := by
+        apply integral_congr_ae
+        filter_upwards [normalized_newtonianKernel_toReal_ae_eq_profile n hn x hr]
+          with y hy
+        rw [hy]
+        ring
+    _ = _ := by rw [integral_const_mul, hprofile]; ring
+
+/-- At a zero of the obstacle, the normalized Newtonian Green pairing is its
+positive spherical value. -/
 theorem integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux
     (n : ℕ) (hn : 3 ≤ n)
     (w : EuclideanSpace ℝ (Fin n) → ℝ) (hw : ContDiff ℝ 2 w)
@@ -176,47 +270,9 @@ theorem integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux
         ((n : ℝ) * (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
           w (x + r • (greenRadius n • (ω : EuclideanSpace ℝ (Fin n))))
             ∂(volume.toSphere))) := by
-  letI : NeZero n := ⟨by omega⟩
-  let v : EuclideanSpace ℝ (Fin n) → ℝ := fun z ↦ w (x + r • z)
-  have hv : ContDiff ℝ 2 v := contDiff_comp_add_smul n w hw x r
-  have hvsupp : HasCompactSupport v := hasCompactSupport_comp_add_smul n w hsupp x hr
-  have hv0 : v 0 = 0 := by simpa only [v, smul_zero, add_zero] using hx
-  have hunit := integral_newtonianGreenProfile_posPart_mul_laplacian_of_ball_flux
-    n hn v hv hvsupp 0 hv0 (by simpa only [zero_add, v] using hflux)
-  simp only [sub_zero, zero_add, v] at hunit
-  have hscale := integral_scaled_radial_mul_laplacian n w hw x
-    (fun t ↦ max (newtonianGreenProfile n t) 0) hr
-  have hr2 : r ^ 2 ≠ 0 := pow_ne_zero 2 hr.ne'
-  have hpow : r ^ n = r ^ 2 * r ^ (n - 2) := by
-    rw [← pow_add]
-    congr 1
-    omega
-  have hprofile :
-      (∫ y : EuclideanSpace ℝ (Fin n),
-        max (newtonianGreenProfile n (‖y - x‖ / r)) 0 *
-          Laplacian.laplacian w y) =
-        r ^ (n - 2) * ((n : ℝ) *
-          (∫ ω : Metric.sphere (0 : EuclideanSpace ℝ (Fin n)) 1,
-            w (x + r • (greenRadius n • (ω : EuclideanSpace ℝ (Fin n))))
-              ∂(volume.toSphere))) := by
-    rw [hpow, mul_assoc] at hscale
-    have hbase := (mul_left_cancel₀ hr2 hscale)
-    rw [hbase]
-    rw [hunit]
-  calc
-    (∫ y : EuclideanSpace ℝ (Fin n),
-      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
-        Laplacian.laplacian w y) =
-      ∫ y : EuclideanSpace ℝ (Fin n),
-        ((volume (Metric.ball x r))⁻¹).toReal *
-          (max (newtonianGreenProfile n (‖y - x‖ / r)) 0 *
-            Laplacian.laplacian w y) := by
-        apply integral_congr_ae
-        filter_upwards [normalized_newtonianKernel_toReal_ae_eq_profile n hn x hr]
-          with y hy
-        rw [hy]
-        ring
-    _ = _ := by rw [integral_const_mul, hprofile]; ring
+  simpa only [hx, integral_zero, sub_zero] using
+    integral_normalized_newtonianKernel_mul_laplacian_of_ball_flux_general
+      n hn w hw hsupp x hr hflux
 
 /-- A nonnegative obstacle vanishing at the center has nonnegative planar
 Green pairing at every scale. -/
