@@ -110,7 +110,7 @@ theorem integral_second_partial_selfadjoint (n : ℕ)
 
 private theorem integrable_second_partial_mul (n : ℕ)
     (f g : EuclideanSpace ℝ (Fin n) → ℝ)
-    (hf : ContDiff ℝ 2 f) (hg : ContDiff ℝ 2 g)
+    (hf : ContDiff ℝ 2 f) (hg : ContDiff ℝ 1 g)
     (hsg : HasCompactSupport g)
     (v : EuclideanSpace ℝ (Fin n)) :
     Integrable (fun y => iteratedFDeriv ℝ 2 f y ![v,v] * g y) := by
@@ -140,16 +140,50 @@ theorem integral_laplacian_mul_eq_integral_mul_laplacian (n : ℕ)
   simp_rw [hlf, hlg, Finset.sum_mul, Finset.mul_sum]
   rw [integral_finsetSum Finset.univ (by
       intro i _
-      exact integrable_second_partial_mul n f g hf hg hsg (b i)),
+      exact integrable_second_partial_mul n f g hf
+        (hg.of_le (by norm_num)) hsg (b i)),
     integral_finsetSum Finset.univ (by
       intro i _
       have h : Integrable (fun y => iteratedFDeriv ℝ 2 g y ![b i,b i] * f y) :=
-        integrable_second_partial_mul n g f hg hf hsf (b i)
+        integrable_second_partial_mul n g f hg
+          (hf.of_le (by norm_num)) hsf (b i)
       convert h using 1
       funext y
       ring)]
   apply Finset.sum_congr rfl
   intro i _
   exact integral_second_partial_selfadjoint n f g hf hg hsf hsg (b i)
+
+/-- Weak integration by parts for the Laplacian. This is the form needed to pair a Laplacian
+with a smooth radial cutoff and recover the ball boundary flux. -/
+theorem integral_laplacian_mul_eq_neg_gradient (n : ℕ)
+    (f g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (hf : ContDiff ℝ 2 f) (hg : ContDiff ℝ 1 g)
+    (hsf : HasCompactSupport f) (hsg : HasCompactSupport g) :
+    (∫ y, Laplacian.laplacian f y * g y) =
+      -(∫ y, ∑ i : Fin (Module.finrank ℝ (EuclideanSpace ℝ (Fin n))),
+        fderiv ℝ f y ((stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))) i) *
+        fderiv ℝ g y ((stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))) i)) := by
+  let b := stdOrthonormalBasis ℝ (EuclideanSpace ℝ (Fin n))
+  have hlf : ∀ y, Laplacian.laplacian f y =
+      ∑ i, iteratedFDeriv ℝ 2 f y ![b i, b i] := by
+    intro y
+    exact congrFun (InnerProductSpace.laplacian_eq_iteratedFDeriv_stdOrthonormalBasis f) y
+  have hint (i) : Integrable (fun y => fderiv ℝ f y (b i) * fderiv ℝ g y (b i)) := by
+    have hfc : Continuous (fderiv ℝ f) := hf.continuous_fderiv (by norm_num)
+    have hgc : Continuous (fderiv ℝ g) := hg.continuous_fderiv (by norm_num)
+    have hc : Continuous (fun y => fderiv ℝ f y (b i) * fderiv ℝ g y (b i)) := by
+      fun_prop
+    exact hc.integrable_of_hasCompactSupport (hsf.fderiv_apply ℝ (b i)).mul_right
+  simp_rw [hlf, Finset.sum_mul]
+  rw [integral_finsetSum Finset.univ (by
+      intro i _
+      exact integrable_second_partial_mul n f g hf hg hsg (b i))]
+  change (∑ i, ∫ y, iteratedFDeriv ℝ 2 f y ![b i,b i] * g y) =
+    -(∫ y, ∑ i, fderiv ℝ f y (b i) * fderiv ℝ g y (b i))
+  rw [integral_finsetSum Finset.univ (by intro i _; exact hint i), ← Finset.sum_neg_distrib]
+  apply Finset.sum_congr rfl
+  intro i _
+  exact integral_second_partial_mul_eq_neg n f g hf hg hsf hsg (b i)
 
 end CenteredMaximal.Ball
