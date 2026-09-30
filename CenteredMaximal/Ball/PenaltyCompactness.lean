@@ -102,4 +102,56 @@ theorem exists_weakly_convergent_l2_density_subsequence
   obtain ⟨νlim, hmem, φ, hmono, hweak⟩ := h
   exact ⟨νlim, hmem, φ, hmono, hweak⟩
 
+/-- Bounded states and capped densities have a common weakly convergent subsequence. A
+bounded bilinear weak equation passes to the two limits. -/
+theorem exists_weak_limit_of_bounded_penalized_equations
+    {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
+    [TopologicalSpace.SeparableSpace H]
+    {X : Type*} [MeasurableSpace X] {μ : Measure X} [IsSeparable μ]
+    (B : H →L[ℝ] H →L[ℝ] ℝ)
+    (J : H →L[ℝ] Lp ℝ 2 μ) (source : H →L[ℝ] ℝ)
+    (u : ℕ → H) (ν : ℕ → Lp ℝ 2 μ) (κ : Lp ℝ 2 μ)
+    (Bu Bν : ℝ)
+    (hboundu : ∀ k, ‖u k‖ ≤ Bu)
+    (hboundν : ∀ k, ‖ν k‖ ≤ Bν)
+    (hν : ∀ k, 0 ≤ ν k ∧ ν k ≤ κ)
+    (heq : ∀ k v, B (u k) v = source v + ⟪ν k, J v⟫_ℝ) :
+    ∃ ulim : H, ∃ νlim : Lp ℝ 2 μ, ∃ χ : ℕ → ℕ,
+      (0 ≤ νlim ∧ νlim ≤ κ) ∧ StrictMono χ ∧
+      Tendsto (fun k => toWeakSpace ℝ H (u (χ k))) atTop
+        (𝓝 (toWeakSpace ℝ H ulim)) ∧
+      Tendsto (fun k => toWeakSpace ℝ (Lp ℝ 2 μ) (ν (χ k))) atTop
+        (𝓝 (toWeakSpace ℝ (Lp ℝ 2 μ) νlim)) ∧
+      ∀ v, B ulim v = source v + ⟪νlim, J v⟫_ℝ := by
+  obtain ⟨ulim, -, φ, hφ, huweak⟩ :=
+    exists_weakly_convergent_subsequence_of_bounded
+      (C := Set.univ) convex_univ isClosed_univ u Bu
+      (fun _ => Set.mem_univ _) hboundu
+  obtain ⟨νlim, hνlim, ψ, hψ, hνweak⟩ :=
+    exists_weakly_convergent_l2_density_subsequence
+      (fun k => ν (φ k)) κ Bν (fun k => hν (φ k))
+      (fun k => hboundν (φ k))
+  let χ := φ ∘ ψ
+  have hχ : StrictMono χ := hφ.comp hψ
+  have huweak' : Tendsto (fun k => toWeakSpace ℝ H (u (χ k))) atTop
+      (𝓝 (toWeakSpace ℝ H ulim)) := by
+    convert huweak.comp hψ.tendsto_atTop using 1
+    funext k
+    rfl
+  refine ⟨ulim, νlim, χ, hνlim, hχ, huweak', hνweak, ?_⟩
+  intro v
+  have hBu : Tendsto (fun k => B (u (χ k)) v) atTop (𝓝 (B ulim v)) := by
+    have hc := (B.flip v).continuous_comp_toWeakSpace_symm
+    have h := hc.continuousAt.tendsto.comp huweak'
+    simpa [Function.comp_def] using h
+  have hνinner : Tendsto (fun k => ⟪ν (χ k), J v⟫_ℝ) atTop
+      (𝓝 ⟪νlim, J v⟫_ℝ) := by
+    let ℓ : Lp ℝ 2 μ →L[ℝ] ℝ := toDual ℝ (Lp ℝ 2 μ) (J v)
+    have hc := ℓ.continuous_comp_toWeakSpace_symm
+    have h := hc.continuousAt.tendsto.comp hνweak
+    simpa [ℓ, χ, Function.comp_def, real_inner_comm] using h
+  have hrhs := tendsto_const_nhds.add hνinner (a := source v)
+  exact tendsto_nhds_unique
+    (hBu.congr' (Filter.Eventually.of_forall fun k => heq (χ k) v)) hrhs
+
 end CenteredMaximal.Ball
