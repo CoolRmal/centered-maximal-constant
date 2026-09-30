@@ -414,4 +414,80 @@ theorem integral_normalized_newtonianKernel_mul_local_weakLaplacian_nonneg
     n hn (wₖ k) (hwₖ k) (hsuppₖ k) x hr
   simpa only [K, mul_assoc, smul_smul, mul_comm r (greenRadius n)] using h
 
+/-- A.e. convergence of locally capped Laplacians gives planar Green comparison
+at a zero approached by nonnegative smooth obstacles. -/
+theorem integral_normalized_planarKernel_mul_local_aeLaplacian_nonneg
+    (D : Set (EuclideanSpace ℝ (Fin 2)))
+    (g : EuclideanSpace ℝ (Fin 2) → ℝ)
+    (wₖ : ℕ → EuclideanSpace ℝ (Fin 2) → ℝ)
+    (hwₖ : ∀ k, ContDiff ℝ 2 (wₖ k))
+    (hsuppₖ : ∀ k, HasCompactSupport (wₖ k))
+    (hwₖ_nonneg : ∀ k y, 0 ≤ wₖ k y)
+    (B : ℝ)
+    (hBgₖ : ∀ k, ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))),
+      y ∈ D → ‖Laplacian.laplacian (wₖ k) y‖ ≤ B)
+    (hlimΔ : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))),
+      y ∈ D → Tendsto (fun k ↦ Laplacian.laplacian (wₖ k) y) atTop (𝓝 (g y)))
+    (x : EuclideanSpace ℝ (Fin 2))
+    (hcenter : Tendsto (fun k ↦ wₖ k x) atTop (𝓝 0))
+    {r : ℝ} (hr : 0 < r)
+    (hKzero : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin 2))),
+      y ∉ D →
+        ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal = 0) :
+    0 ≤ (∫ y : EuclideanSpace ℝ (Fin 2),
+      ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal * g y) := by
+  let K : EuclideanSpace ℝ (Fin 2) → ℝ := fun y ↦
+    ((volume (Metric.ball x r))⁻¹ * planarKernel (r⁻¹ • (x - y))).toReal
+  have hK : Integrable K := (normalized_planarKernel_real_representative x hr).1
+  apply nonneg_green_pairing_of_local_ae_convergence 2 D K hK hKzero g wₖ
+    (fun k ↦ Laplacian.laplacian (wₖ k)) hwₖ_nonneg
+    (fun k ↦ (continuous_laplacian 2 (wₖ k) (hwₖ k)).aestronglyMeasurable)
+    B hBgₖ hlimΔ x hcenter (r * planarGreenRadius)
+    (((volume (Metric.ball x r))⁻¹).toReal * 2)
+    (mul_nonneg ENNReal.toReal_nonneg (by norm_num))
+  intro k
+  have h := integral_normalized_planarKernel_mul_laplacian_general
+    (wₖ k) (hwₖ k) (hsuppₖ k) x hr
+  simpa only [K, mul_assoc, smul_smul, mul_comm r planarGreenRadius] using h
+
+/-- The corresponding Newtonian comparison using a.e. interior convergence of
+the smooth Laplacians. -/
+theorem integral_normalized_newtonianKernel_mul_local_aeLaplacian_nonneg
+    (n : ℕ) (hn : 3 ≤ n)
+    (D : Set (EuclideanSpace ℝ (Fin n)))
+    (g : EuclideanSpace ℝ (Fin n) → ℝ)
+    (wₖ : ℕ → EuclideanSpace ℝ (Fin n) → ℝ)
+    (hwₖ : ∀ k, ContDiff ℝ 2 (wₖ k))
+    (hsuppₖ : ∀ k, HasCompactSupport (wₖ k))
+    (hwₖ_nonneg : ∀ k y, 0 ≤ wₖ k y)
+    (B : ℝ)
+    (hBgₖ : ∀ k, ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∈ D → ‖Laplacian.laplacian (wₖ k) y‖ ≤ B)
+    (hlimΔ : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∈ D → Tendsto (fun k ↦ Laplacian.laplacian (wₖ k) y) atTop (𝓝 (g y)))
+    (x : EuclideanSpace ℝ (Fin n))
+    (hcenter : Tendsto (fun k ↦ wₖ k x) atTop (𝓝 0))
+    {r : ℝ} (hr : 0 < r)
+    (hKzero : ∀ᵐ y ∂(volume : Measure (EuclideanSpace ℝ (Fin n))),
+      y ∉ D →
+        ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal = 0) :
+    0 ≤ (∫ y : EuclideanSpace ℝ (Fin n),
+      ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal *
+        g y) := by
+  letI : NeZero n := ⟨by omega⟩
+  let K : EuclideanSpace ℝ (Fin n) → ℝ := fun y ↦
+    ((volume (Metric.ball x r))⁻¹ * newtonianKernel n (r⁻¹ • (x - y))).toReal
+  have hK : Integrable K := (normalized_newtonianKernel_real_representative n hn x hr).1
+  apply nonneg_green_pairing_of_local_ae_convergence n D K hK hKzero g wₖ
+    (fun k ↦ Laplacian.laplacian (wₖ k)) hwₖ_nonneg
+    (fun k ↦ (continuous_laplacian n (wₖ k) (hwₖ k)).aestronglyMeasurable)
+    B hBgₖ hlimΔ x hcenter (r * greenRadius n)
+    (((volume (Metric.ball x r))⁻¹).toReal * r ^ (n - 2) * (n : ℝ))
+    (mul_nonneg (mul_nonneg ENNReal.toReal_nonneg (pow_nonneg hr.le _))
+      (Nat.cast_nonneg _))
+  intro k
+  have h := integral_normalized_newtonianKernel_mul_laplacian_general
+    n hn (wₖ k) (hwₖ k) (hsuppₖ k) x hr
+  simpa only [K, mul_assoc, smul_smul, mul_comm r (greenRadius n)] using h
+
 end CenteredMaximal.Ball
