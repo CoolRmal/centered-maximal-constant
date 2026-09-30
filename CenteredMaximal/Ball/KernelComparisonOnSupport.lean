@@ -26,6 +26,22 @@ namespace CenteredMaximal.Ball
 
 variable {E : Type*} [MeasurableSpace E] (μ : Measure E)
 
+/-- An integrable weight times a measurable function is integrable when the function is bounded
+wherever the weight is nonzero. Values away from the kernel support are irrelevant. -/
+theorem integrable_weighted_of_bound_on_support
+    (q v : E → ℝ) (hq : Integrable q μ) (hv : AEStronglyMeasurable v μ)
+    (B : ℝ)
+    (hbound : ∀ᵐ y ∂μ, q y ≠ 0 → ‖v y‖ ≤ B) :
+    Integrable (fun y => q y * v y) μ := by
+  apply (hq.norm.const_mul B).mono' (hq.aestronglyMeasurable.mul hv)
+  filter_upwards [hbound] with y hy
+  by_cases hzero : q y = 0
+  · simp [hzero]
+  · calc
+      ‖q y * v y‖ = ‖q y‖ * ‖v y‖ := norm_mul _ _
+      _ ≤ ‖q y‖ * B := mul_le_mul_of_nonneg_left (hy hzero) (norm_nonneg _)
+      _ = B * ‖q y‖ := mul_comm _ _
+
 /-- A real pairing and the source identity on the support of the weight suffice for an
 extended-real weighted comparison. The extended-real density may merely agree almost
 everywhere with the real density viewed through `ofReal`. -/
