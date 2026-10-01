@@ -23,7 +23,16 @@ sources:
   type: original-proof
   relationship: other
   note: |-
-    The principal result is first presented in this repository (docs/PROOF.md, docs/HISTORY.md). Novelty: a literature search on 2026-09-18 covered arXiv (about 15 API queries), the works citing Aldaz (2000) and Melas (2003) in Semantic Scholar, the full history of the compilation page for constant 47a with its issues, pull requests and forks, a GitHub-wide code search, Zenodo, Hugging Face, Figshare, the Palomar registry, Epoch's FrontierMath open problems, erdosproblems.com, MathOverflow and google-deepmind/formal-conjectures, with exact-number searches for 1.6211914, 1.668558, 1.6855 and 3(2+sqrt6)/8. No lower bound above 1.6212 for centred squares in the plane was found; the most recent AI-driven work on the centred constant (arXiv:2511.02864, arXiv:2608.23691) treats dimension one only. Not reached: OpenAlex (rate-limited), zbMATH's cited-by pages (HTTP 403) and paywalled full texts. Novelty is asserted on this basis alone.
+    Original cube lower bound, first presented in this repository (docs/PROOF.md and docs/HISTORY.md). Distinct from the Euclidean-ball upper bounds, which follow the disc-maximal-constant manuscript below.
+- title: The centred maximal constant for discs is at most e
+  id: https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a
+  type: manuscript
+  location: Theorems 1 and 2 (Section 8)
+  relationship: formalizes
+  note: |-
+    Draft note dated 2026-09-30. Source for the Euclidean-ball bounds c_2 <= e and c_n <= (n/2)^(n/(n-2)) for n >= 3. The Lean proof follows its obstacle and Green-kernel argument, replacing its W²,p regularity route with weak H¹ and mollifier arguments. Separate from the original cube lower bound above.
+  license: unknown
+  author_endorsement: not-contacted
 - title: 'Kernel comparison for the centred maximal operator: an unpublished manuscript proving c_2 < 3.615749'
   type: other
   relationship: other
@@ -95,6 +104,10 @@ sources:
   relationship: background
   note: Public compilation of optimization constants; consulted 2026-09-18, when it listed 1.6211915 as the best lower bound and 4 as the best upper bound.
 related_formalizations:
+- id: https://github.com/alejandro-soto-franco/EllipticPDE/tree/eaf821d31b200bb6ea235f19eecc50cf0f38c294
+  relationship: adapts
+  note: |-
+    Adapts Alejandro Soto Franco's H¹/H₀¹ weak-gradient Hilbert-space construction and Poincaré chain at this pinned revision for the ball Dirichlet obstacle problem; see CenteredMaximal/Ball/DirichletH01.lean and DirichletPoincare*.lean. Attribution and Apache-2.0 licensing are retained in the adapted files.
 - id: https://github.com/fpvandoorn/carleson
   relationship: independent
   note: Formalizes an uncentred maximal function on doubling metric measure spaces with a non-sharp weak type bound. Not used here.
@@ -168,7 +181,7 @@ automation:
     The mathematics and Lean formalization were produced with Claude Code and Codex under the maintainer's direction. No AI system is listed as an author.
 fidelity:
   divergences: |-
-    No cited source result is formalized for the principal theorem, which is stated here for the first time. The upper bound 3.879 DIVERGES from its source manuscript: the manuscript proves 3.615749 with a fractional generator of order 6/5 and a 1201-coefficient spline kernel, whereas the formalization carries the same comparison method through the elementary case alpha = 1 with a two-parameter kernel, giving a weaker constant; the manuscript's existence proof for the obstacle problem, which uses a fractional Sobolev inequality, is replaced by Gagliardo averaging inequalities. The upper bound follows Tao's Exercise 42 except that Mathlib's Vitali lemma needs an enlargement tau > 1, so the proof gives (1 + tau)^d for each tau > 1 and passes to the limit. The smearing of point masses follows Aldaz's Lemma 1.1, adapted to atoms of unequal mass.
+    The cube lower bound is original to this repository; the Euclidean-ball bounds formalize the disc-maximal-constant manuscript, adapting its obstacle and Green-kernel argument to Mathlib. The upper bound 3.879 DIVERGES from its separate source manuscript: the manuscript proves 3.615749 with a fractional generator of order 6/5 and a 1201-coefficient spline kernel, whereas the formalization uses the elementary case alpha = 1 with a two-parameter kernel. Its fractional Sobolev inequality is replaced by Gagliardo averaging inequalities. The H¹/H₀¹ and Poincaré development adapts the pinned EllipticPDE formalization. The upper bound 2^d follows Tao's Exercise 42 with an enlargement parameter tending to 1. The smearing of point masses adapts Aldaz's Lemma 1.1 to atoms of unequal mass.
 review:
   status: agent-reviewed
   reviewers:
@@ -193,16 +206,16 @@ alignment:
     module: Solution
     status: proved
     note: Compared declaration; improves the classical 4 in the plane. The manuscript's own constant 3.615749 is not formalized.
-  - source: 'Euclidean discs in dimension 2: optimal weak type constant <= e'
+  - source: 'The centred maximal constant for discs is at most e, Theorem 1: Euclidean discs in dimension 2 have optimal weak type constant <= e'
     lean: CenteredMaximal.ballWeakTypeConstant_two_le_exp
     module: Solution
     status: proved
-    note: Compared declaration.
-  - source: 'Euclidean balls in dimensions n >= 3: optimal weak type constant <= (n/2)^(n/(n-2))'
+    note: Compared declaration; formalizes the cited manuscript's planar bound.
+  - source: 'The centred maximal constant for discs is at most e, Theorem 2: Euclidean balls in dimensions n >= 3 have optimal weak type constant <= (n/2)^(n/(n-2))'
     lean: CenteredMaximal.ballWeakTypeConstant_le_rpow
     module: Solution
     status: proved
-    note: Compared declaration.
+    note: Compared declaration; formalizes the cited manuscript's higher-dimensional bound.
   - source: 'Numerical value: 1.685 < Phi'
     lean: CenteredMaximal.lt_phi
     module: Solution

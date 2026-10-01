@@ -62,9 +62,9 @@ contact-set bound, including the extended-real integral form used by the certifi
 radius and a planar polar formula for disk integrals. `Ball/ObstacleExistence.lean` proves an
 abstract Hilbert-space minimizer and its
 variational inequality, and connects a positive cone to the concrete `H¹₀` space in
-`Ball/DirichletH01.lean`. The latter is adapted, with its original attribution and Apache 2.0
-license, from [EllipticPDE](https://github.com/alejandro-soto-franco/EllipticPDE) at the
-revision documented in the file. `Ball/ChallengeReduction.lean` states the two requested bounds
+`Ball/DirichletH01.lean`. Its H¹/H₀¹ construction and the Poincaré chain are adapted, with
+original attribution and Apache 2.0 licensing, from [EllipticPDE at revision `eaf821d`](https://github.com/alejandro-soto-franco/EllipticPDE/tree/eaf821d31b200bb6ea235f19eecc50cf0f38c294)
+for the ball Dirichlet obstacle problem. `Ball/ChallengeReduction.lean` states the two requested bounds
 as consequences of the respective obstacle certificates, with all other reductions discharged.
 `Ball/DirichletPoincareOneDim.lean` through `Ball/DirichletPoincareBounded.lean` establish
 the Poincaré inequality on arbitrary bounded domains by one dimensional slices, Fubini,
