@@ -20,8 +20,9 @@ The ball theorems prove
 $$c^{\mathrm{ball}}_2 \le e, \qquad
   c^{\mathrm{ball}}_n \le (n/2)^{n/(n-2)} \quad (n \ge 3).$$
 
-These are stated in `Challenge.lean` and proved in `Solution.lean` as
-`ballWeakTypeConstant_two_le_exp` and `ballWeakTypeConstant_le_rpow`. The proof follows the
+These are also original results of Yongxi Lin. They are stated in `Challenge.lean` and proved
+in `Solution.lean` as `ballWeakTypeConstant_two_le_exp` and
+`ballWeakTypeConstant_le_rpow`. The proof follows the author's
 [disc maximal constant manuscript](https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a):
 it uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
 
