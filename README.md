@@ -9,6 +9,9 @@ The previously published lower bound is `3/4 - √2/4 + √6/2 = 1.62119…` (Al
 
 It also proves an upper bound below the classical one, `c₂ ≤ 3.879 < 4`, by comparing the maximal
 operator with an explicit kernel, and the classical covering bound `c_d ≤ 2ᵈ` in every dimension.
+The new cube bounds and the Euclidean-ball bounds below are original work of Yongxi Lin. The cube
+lower bound was first presented in this repository; the ball bounds were first written in Lin's
+own draft manuscript.
 
 ## Euclidean ball bounds
 
@@ -20,10 +23,10 @@ The ball theorems prove
 $$c^{\mathrm{ball}}_2 \le e, \qquad
   c^{\mathrm{ball}}_n \le (n/2)^{n/(n-2)} \quad (n \ge 3).$$
 
-These are also original results of Yongxi Lin. They are stated in `Challenge.lean` and proved
-in `Solution.lean` as `ballWeakTypeConstant_two_le_exp` and
+They are stated in `Challenge.lean` and proved in `Solution.lean` as `ballWeakTypeConstant_two_le_exp` and
 `ballWeakTypeConstant_le_rpow`. The proof follows the author's
-[disc maximal constant manuscript](https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a):
+[disc maximal constant manuscript](https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a),
+which Lin generated using Claude Code:
 it uses a Dirichlet obstacle problem and a logarithmic or Newtonian Green kernel.
 
 The Lean development now proves the kernel calculations needed by that argument. Both kernels

@@ -3,7 +3,7 @@ version: v0.4
 project:
   name: Centred maximal constants for cubes and Euclidean balls
   description: |-
-    Lean proofs of Yongxi Lin's original weak type (1,1) bounds: c_2 >= 1.6855 for cubes, c_2 <= e for Euclidean discs, and c_n <= (n/2)^(n/(n-2)) for balls in n >= 3. Also proves cube upper bounds c_2 <= 3.879 and c_d <= 2^d.
+    Lean proofs of Yongxi Lin's original weak type (1,1) bounds: c_2 >= 1.6855 and c_2 <= 3.879 for cubes, c_2 <= e for Euclidean discs, and c_n <= (n/2)^(n/(n-2)) for balls in n >= 3. Also proves the classical cube bound c_d <= 2^d.
   authors:
   - Yongxi Lin
   license: Apache-2.0
@@ -18,29 +18,26 @@ classification:
   - 26D15
   - 35R11
 sources:
-- title: Original lower bound for the centred maximal operator over squares
-  type: original-proof
-  relationship: other
-  note: |-
-    Yongxi Lin's original cube lower bound, first presented in this repository; see docs/PROOF.md and docs/HISTORY.md. The original Euclidean-ball bounds are documented in the author's manuscript below.
 - title: The centred maximal constant for discs is at most e
   authors:
   - Yongxi Lin
   id: https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a
   type: manuscript
   location: Theorems 1 and 2 (Section 8)
-  relationship: other
+  relationship: formalizes
   note: |-
-    Relationship other: the author's own draft note (2026-09-30) records Yongxi Lin's original bounds c_2 <= e for discs and c_n <= (n/2)^(n/(n-2)) for balls in n >= 3. The Lean proof formalizes the author's obstacle and Green-kernel argument, replacing its W²,p regularity route with weak H¹ and mollifier arguments. This is not an external source of the result.
+    Yongxi Lin's own draft note, generated with Claude Code on 2026-09-30, records Lin's original disc and higher-dimensional ball bounds. The Lean proof formalizes its obstacle and Green-kernel argument, replacing the W²,p regularity route with weak H¹ and mollifier arguments. The author of the result and its source manuscript is the same person.
   license: unknown
   author_endorsement: participated
 - title: 'Kernel comparison for the centred maximal operator: an unpublished manuscript proving c_2 < 3.615749'
-  type: other
-  relationship: other
+  authors:
+  - Yongxi Lin
+  type: manuscript
+  relationship: adapts
   note: |-
-    Relationship other: an unpublished manuscript supplied by the maintainer, which proves c_2 < 3.615749 by comparing the maximal operator with an explicit kernel whose fractional generator of order 6/5 is nonnegative off the origin, using a cubic-spline kernel with 1201 coefficients and finite certificates (799 Bernstein triangles, 6739 rectangles). The manuscript is not in this repository and its constant is NOT formalized here. What is formalized is the same comparison method carried out in the elementary case alpha = 1 (the Cauchy generator), with a two-parameter kernel in place of the spline, which yields the weaker constant 3.879. The manuscript's Theorem 2.1 (kernel comparison) is unpublished; its analytic content is reproved here from scratch for alpha = 1, with the fractional Sobolev inequality of the manuscript replaced by Gagliardo averaging inequalities.
+    Yongxi Lin's unpublished manuscript proves c_2 < 3.615749 using a fractional generator of order 6/5 and a spline kernel. This repository adapts its comparison method to the Cauchy generator (alpha = 1) and a two-parameter kernel, yielding the distinct bound c_2 <= 3.879. The manuscript's stronger bound is not formalized here.
   license: unknown
-  author_endorsement: not-contacted
+  author_endorsement: participated
 - title: A remark on the centered n-dimensional Hardy-Littlewood maximal function
   authors:
   - J. M. Aldaz
@@ -179,10 +176,10 @@ automation:
     prompting_notes: n/a
   spend_usd: subscription-based; not separately tracked
   notes: |-
-    The original cube and Euclidean-ball bounds are Yongxi Lin's work. Claude Code and Codex assisted with Lean formalization under the author's direction; no AI system is listed as an author.
+    All new cube and Euclidean-ball bounds in this repository are Yongxi Lin's work. Lin generated the disc-and-ball source note with Claude Code; Claude Code and Codex assisted with Lean formalization under Lin's direction. No AI system is listed as an author.
 fidelity:
   divergences: |-
-    The cube lower bound and Euclidean-ball upper bounds are original results of Yongxi Lin. The ball proof follows the author's own manuscript, adapting its obstacle and Green-kernel argument to Mathlib. The cube upper bound 3.879 DIVERGES from a separate manuscript: that manuscript proves 3.615749 with a fractional generator of order 6/5 and a 1201-coefficient spline kernel, whereas the formalization uses the elementary case alpha = 1 with a two-parameter kernel. Its fractional Sobolev inequality is replaced by Gagliardo averaging inequalities. The H¹/H₀¹ and Poincaré development adapts the pinned EllipticPDE formalization. The upper bound 2^d follows Tao's Exercise 42 with an enlargement parameter tending to 1. The smearing of point masses adapts Aldaz's Lemma 1.1 to atoms of unequal mass.
+    All new bounds are original work of Yongxi Lin. The cube lower bound is first presented in this repository. The Euclidean-ball bounds were first written in Lin's own manuscript and are formalized here using weak H¹ and mollifier arguments. The original cube upper bound 3.879 adapts Lin's separate manuscript, which proves the stronger but unformalized bound 3.615749 with a fractional generator and spline kernel; the formalization uses the Cauchy generator and a two-parameter kernel. The H¹/H₀¹ and Poincaré development adapts the pinned EllipticPDE formalization. The classical upper bound 2^d follows Tao's Exercise 42 with an enlargement parameter tending to 1. The smearing of point masses adapts Aldaz's Lemma 1.1 to atoms of unequal mass.
 review:
   status: agent-reviewed
   reviewers:
@@ -192,21 +189,21 @@ review:
 alignment:
   namespace: CenteredMaximal
   statements:
-  - source: 'Original result: c_2 >= Phi = 1.68550999... for the centred maximal operator over squares'
+  - source: 'Yongxi Lin original result, first presented in this repository (docs/PROOF.md): c_2 >= Phi = 1.68550999... for centred squares'
     lean: CenteredMaximal.ofReal_phi_le_weakTypeConstant_two
     module: Solution
     status: proved
-    note: Compared declaration; the principal result.
+    note: Compared declaration; original cube lower bound, first presented here.
   - source: 'Classical upper bound (Tao, 245A Notes 5, Exercise 42): c_d <= 2^d in every dimension'
     lean: CenteredMaximal.weakTypeConstant_le_two_pow
     module: Solution
     status: proved
     note: Compared declaration; shows the constant is finite.
-  - source: 'Upper bound by kernel comparison, in the elementary case alpha = 1 of the source manuscript: c_2 <= 3.879'
+  - source: 'Yongxi Lin original cube upper bound c_2 <= 3.879, adapting the comparison method of Lin’s separate manuscript'
     lean: CenteredMaximal.weakTypeConstant_two_le_upper
     module: Solution
     status: proved
-    note: Compared declaration; improves the classical 4 in the plane. The manuscript's own constant 3.615749 is not formalized.
+    note: Compared declaration; improves the classical 4 in the plane. The separate manuscript's stronger constant 3.615749 is not formalized.
   - source: 'Original result of Yongxi Lin, documented in The centred maximal constant for discs is at most e, Theorem 1: Euclidean discs in dimension 2 have optimal weak type constant <= e'
     lean: CenteredMaximal.ballWeakTypeConstant_two_le_exp
     module: Solution
