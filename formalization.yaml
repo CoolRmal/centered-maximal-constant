@@ -3,7 +3,7 @@ version: v0.4
 project:
   name: Centred maximal constants for cubes and Euclidean balls
   description: |-
-    Lean proofs of weak type (1,1) bounds for centred maximal operators. For cubes: c_2 >= 1.6855, c_2 <= 3.879, and c_d <= 2^d. For Euclidean balls: c_2 <= e and c_n <= (n/2)^(n/(n-2)) for n >= 3.
+    Lean proofs of weak type (1,1) bounds for centred maximal operators. The original cube lower bound is c_2 >= 1.6855; cube upper bounds are c_2 <= 3.879 and c_d <= 2^d. Formalizing the cited manuscript gives Euclidean-ball bounds c_2 <= e and c_n <= (n/2)^(n/(n-2)) for n >= 3.
   authors:
   - Yongxi Lin
   license: Apache-2.0
@@ -18,19 +18,13 @@ classification:
   - 26D15
   - 35R11
 sources:
-- title: |-
-    The lower bound c_2 >= 1.68550999... for the weak type (1,1) constant of the centred Hardy-Littlewood maximal operator over squares, from a lattice with alternating masses 1 and (17 + 4 sqrt 22)/9
-  type: original-proof
-  relationship: other
-  note: |-
-    Original cube lower bound, first presented in this repository (docs/PROOF.md and docs/HISTORY.md). Distinct from the Euclidean-ball upper bounds, which follow the disc-maximal-constant manuscript below.
 - title: The centred maximal constant for discs is at most e
   id: https://claude.ai/artifact/H4Kdhs9dPAcGmEtzwkJ65a
   type: manuscript
   location: Theorems 1 and 2 (Section 8)
   relationship: formalizes
   note: |-
-    Draft note dated 2026-09-30. Source for the Euclidean-ball bounds c_2 <= e and c_n <= (n/2)^(n/(n-2)) for n >= 3. The Lean proof follows its obstacle and Green-kernel argument, replacing its W²,p regularity route with weak H¹ and mollifier arguments. Separate from the original cube lower bound above.
+    Draft note dated 2026-09-30. Source for the Euclidean-ball bounds c_2 <= e and c_n <= (n/2)^(n/(n-2)) for n >= 3. The Lean proof follows its obstacle and Green-kernel argument, replacing its W²,p regularity route with weak H¹ and mollifier arguments. The cube lower bound is original to this repository and is documented in docs/PROOF.md and docs/HISTORY.md.
   license: unknown
   author_endorsement: not-contacted
 - title: 'Kernel comparison for the centred maximal operator: an unpublished manuscript proving c_2 < 3.615749'
